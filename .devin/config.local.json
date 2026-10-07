@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Exec(python3)",
+      "Exec(curl)",
+      "Exec(find)",
+      "Exec(git status)",
+      "Exec(git ls-files)",
+      "Exec(sqlite3)",
+      "Exec(ls)",
+      "Exec(sudo systemctl)",
+      "Exec(node)",
+      "Exec(npm run)",
+      "Exec(sleep)",
+      "Exec(source)",
+      "Exec(/www/wwwroot/ghc/python-backend/.venv/bin/python3)"
+    ]
+  }
+}

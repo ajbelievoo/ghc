@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+# Private/app areas — don't index
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /configure/
+Disallow: /payment/
+Disallow: /profile/
+Disallow: /login/
+Disallow: /register/
+Disallow: /forgot-password/
+Disallow: /reset-password/
+Disallow: /verify-email/
+
+Sitemap: https://ghc.believoo.com/sitemap.xml

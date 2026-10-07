@@ -1,0 +1,388 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  passwordHash      String?
+  name              String
+  isEmailVerified   Boolean            @default(false)
+  emailVerifyToken  String?
+  emailVerifyExpires DateTime?
+  googleId          String?            @unique
+  role              Role               @default(CLIENT)
+  isSuspended       Boolean            @default(false)
+  phone             String?
+  twoFactorSecret   String?
+  twoFactorEnabled  Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  subscriptions     Subscription[]
+  orders            Order[]
+  invoices          Invoice[]
+  wallet            Wallet?
+  domains           DomainRegistration[]
+  teamMembers       TeamMember[]       @relation("UserTeamMembers")
+  ownedTeams        TeamMember[]       @relation("TeamOwner")
+  receivedInvites   TeamInvitation[]   @relation("Invitee")
+  sentInvites       TeamInvitation[]   @relation("Inviter")
+}
+
+enum Role {
+  CLIENT
+  ADMIN
+}
+
+model GatewayConfig {
+  id        String   @id @default(uuid())
+  name      String   @unique // e.g., "razorpay", "stripe", "paypal", "payu", "cashfree"
+  isActive  Boolean  @default(false)
+  config    Json     // Store API keys, secrets encrypted or safely
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Settings {
+  id                String   @id @default(uuid())
+  key               String   @unique // e.g., "google_login_enabled", "email_alerts_enabled", "profit_margin_percent"
+  value             String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model BrandSettings {
+  id          String   @id @default(uuid())
+  siteName    String   @default("BelieVoo")
+  logoUrl     String?
+  faviconUrl  String?
+  primaryColor String  @default("#00f0ff")
+  accentColor  String  @default("#b500ff")
+  updatedAt   DateTime @updatedAt
+}
+
+enum ServiceCategory {
+  VPS
+  DEDICATED
+  WEB_HOSTING
+  CDN
+  PUBLIC_CLOUD
+  PRIVATE_CLOUD
+  IP_ADDON
+  LICENSE
+  DOMAINS
+}
+
+model MarginSetting {
+  id          String   @id @default(uuid())
+  category    ServiceCategory @unique
+  percent     Float    @default(20.0)
+  updatedAt   DateTime @updatedAt
+}
+
+model PlanCatalog {
+  id            String   @id @default(uuid())
+  planCode      String   @unique
+  invoiceName   String
+  description   String?
+  category      ServiceCategory @default(VPS)
+  family        String
+  cpuCores      Int?
+  ramGb         Int?
+  diskGb        Int?
+  diskType      String?
+  bandwidthMbps Int?
+  currency      String   @default("CAD")
+  overridePrice Float?   // Admin custom fixed price override
+  overrideMargin Float?  // Admin custom margin override
+  isActive      Boolean  @default(true)
+  metadata      Json?    // Full OVH catalog blob
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  durations     PlanDuration[]
+}
+
+model PlanDuration {
+  id          String   @id @default(uuid())
+  planCode    String
+  plan        PlanCatalog @relation(fields: [planCode], references: [planCode], onDelete: Cascade)
+  durationLabel String   // "1_month", "3_month", "12_month"
+  interval    Int       // e.g. 1, 3, 12
+  intervalUnit String    // "month" or "year"
+  rawPrice    Float
+  finalPrice  Float
+  currency    String   @default("CAD")
+  @@unique([planCode, durationLabel])
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model Subscription {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ovhResourceId    String?
+  name             String
+  planCode         String?
+  category         ServiceCategory @default(VPS)
+  ipAddress        String?
+  rootPassword     String?
+  sshKeyId         String?
+  osTemplate       String?
+  status           SubscriptionStatus @default(PENDING)
+  billingCycle     BillingCycle @default(MONTHLY)
+  autoRenew        Boolean  @default(true)
+  nextBillDate     DateTime?
+  priceAmount      Float
+  currency         String   @default("CAD")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  additionalIps    AdditionalIp[]
+}
+
+model AdditionalIp {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  ipAddress      String?
+  status         String   @default("PENDING") // PENDING, ACTIVE, REMOVED
+  price          Float    @default(3.99)
+  currency       String   @default("CAD")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount          Float
+  currency        String   @default("CAD")
+  status          OrderStatus @default(PENDING)
+  gateway         String?
+  gatewayOrderId  String?
+  planCode        String?
+  durationLabel   String   @default("1_month")
+  category        ServiceCategory @default(VPS)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  invoice         Invoice?
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Invoice {
+  id          String   @id @default(uuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoicePdfUrl String?
+  amount      Float
+  dueDate     DateTime
+  status      InvoiceStatus @default(UNPAID)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model SystemLog {
+  id          String   @id @default(uuid())
+  type        LogType
+  message     String
+  details     Json?
+  createdAt   DateTime @default(now())
+}
+
+enum LogType {
+  INFO
+  ERROR
+  WARNING
+  PAYMENT_WEBHOOK
+  OVH_API
+  CRON
+}
+
+model CronLog {
+  id          String   @id @default(uuid())
+  jobName     String
+  status      String   // "SUCCESS" or "FAILED"
+  details     String?
+  executedAt  DateTime @default(now())
+}
+
+model Wallet {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance       Float    @default(0)
+  currency      String   @default("CAD")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  transactions  WalletTransaction[]
+}
+
+model WalletTransaction {
+  id            String   @id @default(uuid())
+  walletId      String
+  wallet        Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type          WalletTransactionType
+  amount        Float
+  description   String?
+  status        String   @default("COMPLETED")
+  gateway       String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+}
+
+enum WalletTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  PAYMENT
+  REFUND
+}
+
+model DomainRegistration {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domainName    String
+  tld           String
+  years         Int      @default(1)
+  status        DomainStatus @default(ACTIVE)
+  expiresAt     DateTime
+  autoRenew     Boolean  @default(false)
+  priceAmount   Float
+  currency      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum DomainStatus {
+  ACTIVE
+  EXPIRED
+  PENDING
+  SUSPENDED
+}
+
+model PaymentSession {
+  id            String   @id @default(uuid())
+  userId        String
+  type          String   // "WALLET_DEPOSIT" or "ORDER"
+  amount        Float
+  taxAmount     Float    @default(0)
+  totalAmount   Float
+  gateway       String
+  status        String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  metadata      Json?    // { orderId, planCode, depositAmount, etc }
+  checkoutUrl   String?
+  gatewayRef    String?  // external gateway session/order id
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model DomainTldPricing {
+  id            String   @id @default(uuid())
+  tld           String   @unique // ".com", ".net", etc
+  baseCost      Float    @default(10)
+  marginPercent Float    @default(20)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  userId      String?
+  name        String
+  email       String
+  category    String
+  subject     String
+  message     String
+  status      TicketStatus @default(OPEN)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  replies     SupportReply[]
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model SupportReply {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    String   // "USER" or "ADMIN"
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model TeamMember {
+  id          String   @id @default(uuid())
+  ownerId     String
+  memberId    String
+  permissions String[] // e.g. ["VIEW_SERVERS", "MANAGE_SERVERS", "VIEW_BILLING", "MANAGE_DOMAINS"]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner  User @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  member User @relation("UserTeamMembers", fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, memberId])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model TeamInvitation {
+  id           String           @id @default(uuid())
+  inviterId    String
+  inviteeEmail String
+  inviteeId    String?
+  permissions  String[]
+  status       InvitationStatus @default(PENDING)
+  token        String           @unique
+  expiresAt    DateTime
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  inviter User  @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User? @relation("Invitee", fields: [inviteeId], references: [id], onDelete: SetNull)
+}
