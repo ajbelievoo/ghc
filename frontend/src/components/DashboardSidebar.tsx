@@ -126,7 +126,7 @@ const MENU = [
   },
 ];
 
-const FOOTER = [
+const QUICK = [
   { icon: LayoutDashboard, label: "Dashboard overview", tab: "overview" },
   { icon: FileText, label: "My support tickets", tab: "support" },
   { icon: Map, label: "Roadmap & Changelog", view: "roadmap" },
@@ -140,7 +140,7 @@ const FOOTER = [
 ];
 
 export default function DashboardSidebar({ activeView, setActiveView, tab, setTab, user, onLogout, mobileOpen, onClose }: DashboardSidebarProps) {
-  const [expanded, setExpanded] = useState<string[]>(["bare-metal", "network"]);
+  const [expanded, setExpanded] = useState<string[]>([]);
   const ghc = useGhcSettings();
 
   const toggle = (id: string) => {
@@ -151,7 +151,7 @@ export default function DashboardSidebar({ activeView, setActiveView, tab, setTa
     if (item.view) { setActiveView(item.view); setTab("overview"); }
     else if (item.tab) { setActiveView(null); setTab(item.tab); }
     else if (item.path) { window.open(item.path, item.path.startsWith("http") ? "_blank" : "_self"); }
-    else if (item.action === "ai") { /* AI assistant opens via floating button */ }
+    else if (item.action === "ai") { window.dispatchEvent(new Event("ghc-open-ai")); }
     if (mobileOpen && onClose) onClose();
   };
 
@@ -192,11 +192,27 @@ export default function DashboardSidebar({ activeView, setActiveView, tab, setTa
       </div>
 
       <div className="relative z-10 flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
+        {QUICK.map((f) => {
+          const Icon = f.icon;
+          return (
+            <button key={f.label} onClick={() => handleItem(f)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] transition-all ${isActiveItem(f) ? "bg-[#00b7ff]/15 text-white font-medium" : "text-slate-400 hover:text-white hover:bg-white/5"}`}>
+              <Icon className="w-[18px] h-[18px]" />
+              {f.label}
+            </button>
+          );
+        })}
+
+        <div className="my-2 border-t border-white/10" />
+
         {MENU.map((cat) => {
           const Icon = cat.icon;
-          const isOpen = expanded.includes(cat.id) || cat.defaultOpen;
+          const hasActive = cat.items.some((it) => isActiveItem(it));
+          const isOpen = expanded.includes(cat.id) || hasActive;
           return (
-            <div key={cat.id}>
+            <div key={cat.id}
+              onMouseEnter={() => setExpanded((p) => (p.includes(cat.id) ? p : [...p, cat.id]))}
+              onMouseLeave={() => setExpanded((p) => p.filter((x) => x !== cat.id))}
+            >
               <button onClick={() => toggle(cat.id)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
                   <Icon className="w-[18px] h-[18px] text-[#00f0ff]" />
@@ -225,18 +241,6 @@ export default function DashboardSidebar({ activeView, setActiveView, tab, setTa
             <span className="text-[13.5px] font-semibold">Admin Panel</span>
           </a>
         )}
-      </div>
-
-      <div className="relative z-10 border-t border-white/10 p-3 space-y-0.5 bg-[#0a0f1c]/80 backdrop-blur-sm">
-        {FOOTER.map((f) => {
-          const Icon = f.icon;
-          return (
-            <button key={f.label} onClick={() => handleItem(f)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] transition-all ${isActiveItem(f) ? "bg-[#00b7ff]/15 text-white font-medium" : "text-slate-400 hover:text-white hover:bg-white/5"}`}>
-              <Icon className="w-[18px] h-[18px]" />
-              {f.label}
-            </button>
-          );
-        })}
       </div>
 
       <div className="relative z-10 p-4 border-t border-white/10">

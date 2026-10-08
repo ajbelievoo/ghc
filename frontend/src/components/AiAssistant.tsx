@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MessageSquare, X, Send, Bot, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 
 export default function AiAssistant() {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("ghc-open-ai", handler);
+    return () => window.removeEventListener("ghc-open-ai", handler);
+  }, []);
   const [messages, setMessages] = useState<{ sender: string; text: string }[]>([
     { sender: "bot", text: "Hi! I am your GHC assistant. Ask me about servers, domains, billing, or support." },
   ]);
