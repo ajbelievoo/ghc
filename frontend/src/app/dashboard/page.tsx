@@ -379,7 +379,7 @@ export default function DashboardPage() {
   const fetchGateways = async () => {
     try {
       const gws = await api.server.gateways();
-      const active = (gws || []).map((g: any) => g.name);
+      const active = (gws || []).filter((g: any) => g.isActive).map((g: any) => g.name);
       setActiveGateways(active);
       if (active.length > 0) setGateway(active[0]);
     } catch (e) { console.error(e); }

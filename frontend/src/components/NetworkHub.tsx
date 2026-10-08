@@ -49,7 +49,11 @@ export default function NetworkHub({ servers, user, onManageServer }: NetworkHub
   const [activeGateways, setActiveGateways] = useState<string[]>(["razorpay"]);
 
   useEffect(() => {
-    api.server.gateways().then((g) => setActiveGateways(g.map((x: any) => x.name))).catch(() => {});
+    api.server.gateways().then((g: any[]) => {
+      const active = g.filter((x: any) => x.isActive).map((x: any) => x.name);
+      setActiveGateways(active.length ? active : ["wallet"]);
+      if (active.length) setGateway((cur) => (active.includes(cur) ? cur : active[0]));
+    }).catch(() => {});
   }, []);
 
   const additionalIps = servers.reduce((acc: any[], s) => acc.concat(s.additional_ips || []), []);

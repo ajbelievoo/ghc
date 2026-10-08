@@ -73,6 +73,9 @@ def gateway_ready(cfg: Dict[str, Any]) -> bool:
         return True
     if cfg.get("wallet"):
         return True
+    env = str(cfg.get("env") or cfg.get("mode") or "production").lower()
+    if env in ("sandbox", "test"):
+        return False
     key_id = cfg.get("keyId") or cfg.get("client_id") or cfg.get("merchant_key")
     key_secret = cfg.get("keySecret") or cfg.get("secret_key") or cfg.get("secret") or cfg.get("merchant_salt")
     return not _is_placeholder(key_id) and not _is_placeholder(key_secret)
