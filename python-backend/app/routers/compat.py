@@ -398,43 +398,45 @@ def suggest_domains(keyword: str, currency: Optional[str] = None, db: Session = 
         local_taken.add(d.tld.lower().lstrip("."))
 
     valid_plans = [p for p in plans if (p.plan_code or "").lower() and (p.plan_code or "").lower() != "ovh" and p.durations and (p.durations[0].final_price or 0) > 0]
-    candidate_domains = [f"{base}.{(p.plan_code or '').lower()}" for p in valid_plans[:80]]
-    dns_taken: dict = {}
-    try:
-        from concurrent.futures import ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=24) as ex:
-            flags = list(ex.map(lambda d: _domain_dns_taken(d, 1.2), candidate_domains))
-        dns_taken = dict(zip(candidate_domains, flags))
-    except Exception:
-        dns_taken = {}
 
     results = []
     for plan in valid_plans:
         tld = (plan.plan_code or "").lower()
         domain = f"{base}.{tld}"
         base_currency = (plan.durations[0].currency or plan.currency or "INR").upper()
-        raw_price = plan.durations[0].final_price or 0
-        price = raw_price * rates_map.get(base_currency, 1.0)
-        taken = tld in local_taken or dns_taken.get(domain, False)
-        is_exact = exact_tld is not None and tld == exact_tld
+        price = (plan.durations[0].final_price or 0) * rates_map.get(base_currency, 1.0)
         results.append({
             "domain": domain,
             "tld": "." + tld,
-            "available": not taken,
+            "available": tld not in local_taken,
             "price": round(price, 2),
             "currency": target,
-            "reason": "Domain is already registered" if taken else None,
-            "isExact": is_exact,
+            "reason": "Domain is already registered" if tld in local_taken else None,
+            "isExact": exact_tld is not None and tld == exact_tld,
         })
 
-    # Popular TLDs first, then a few others to keep response fast
+    # Popular TLDs first
     results.sort(key=lambda x: (
         not x["isExact"],
         not x["available"],
         not (x["tld"].lstrip(".").split(".")[-1] in POPULAR),
         x["price"] if x["available"] else 999999.0,
     ))
-    return results[:80]
+    results = results[:80]
+
+    # Real availability: parallel DNS delegation checks on the shown rows only.
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        shown = [r["domain"] for r in results]
+        with ThreadPoolExecutor(max_workers=24) as ex:
+            flags = list(ex.map(lambda d: _domain_dns_taken(d, 1.2), shown))
+        for r, taken in zip(results, flags):
+            if taken:
+                r["available"] = False
+                r["reason"] = "Domain is already registered"
+    except Exception:
+        pass
+    return results
 
 
 @router.post("/server/domains")
