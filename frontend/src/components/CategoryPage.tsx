@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import {
   Check, Loader2, ShoppingCart, ChevronDown, ChevronUp,
-  List, LayoutGrid, RefreshCw, ArrowUpDown, Search,
+  List, LayoutGrid, RefreshCw, ArrowUpDown, Search, X,
 } from "lucide-react";
 import Navbar from "./Navbar";
 import Footer from "@/components/Footer";
@@ -304,7 +304,17 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
   const { currency } = useCurrency();
 
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "card">(isDedicated ? "table" : "card");
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  const [compareCodes, setCompareCodes] = useState<string[]>([]);
+  const [showCompare, setShowCompare] = useState(false);
+  const toggleCompare = (planCode: string) => {
+    setCompareCodes(prev => prev.includes(planCode)
+      ? prev.filter(c => c !== planCode)
+      : prev.length >= 4 ? prev : [...prev, planCode]);
+  };
+  const comparePlans = compareCodes
+    .map(code => plans.find(p => p.planCode === code))
+    .filter((p): p is Plan => !!p);
   const [sortBy, setSortBy] = useState<"price_asc" | "price_desc" | "name">("price_asc");
 
   const [filterRange, setFilterRange] = useState("");
@@ -482,7 +492,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
           <td className="px-3 py-3 text-sm text-[#0f172a]">{getStorageInfo(plan)}</td>
           <td className="px-3 py-3 text-sm text-[#0f172a]">{getBandwidthInfo(plan)}</td>
           <td className="px-3 py-3"><div><p className="text-base font-black text-[#00b7ff]">{money(cheapest?.monthlyPrice, cheapest?.currency)}</p><p className="text-[10px] text-slate-500">ex. taxes/month</p></div></td>
-          <td className="px-3 py-3 text-center"><input type="checkbox" className="h-4 w-4 rounded border-slate-200" onChange={() => {}} /></td>
+          <td className="px-3 py-3 text-center"><input type="checkbox" className="h-4 w-4 rounded border-slate-200 accent-[#00b7ff]" checked={compareCodes.includes(plan.planCode)} onChange={() => toggleCompare(plan.planCode)} /></td>
           <td className="px-3 py-3"><button onClick={() => configurePlan(plan.planCode)} className="rounded bg-[#0f0c29] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#302b63]">Configure</button></td>
         </tr>
         {isExpanded && (
@@ -511,9 +521,22 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
                 </div>
                 <div className="rounded border border-slate-200 bg-white p-4">
                   <p className="text-xs font-bold text-slate-500 uppercase mb-2">Family</p>
-                  <p className="font-semibold text-[#0f172a]">{plan.family || "Dedicated"}</p>
+                  <p className="font-semibold text-[#0f172a]">{plan.family || cat.label}</p>
                 </div>
               </div>
+              {(plan.durations || []).length > 0 && (
+                <div className="mt-4 rounded border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-3">Billing options</p>
+                  <div className="flex flex-wrap gap-3">
+                    {(plan.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0)).map((d: any) => (
+                      <div key={d.durationLabel} className="rounded border border-slate-200 px-4 py-2 text-center">
+                        <p className="text-[10px] font-semibold uppercase text-slate-500">{d.durationLabel}</p>
+                        <p className="text-sm font-black text-[#00b7ff]">{money(d.monthlyPrice, d.currency)}<span className="text-[10px] font-normal text-slate-500">/mo</span></p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="mt-4">
                 <button onClick={() => configurePlan(plan.planCode)} className="inline-flex items-center gap-2 rounded bg-[#ff3d00] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#e63700]">
                   <ShoppingCart className="h-4 w-4" /> Configure this server
@@ -761,6 +784,87 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
 
       </div>
       )}
+
+      {compareCodes.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-6 py-3">
+            <span className="text-sm font-semibold text-[#0f172a]">
+              {compareCodes.length}/4 selected
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {comparePlans.map(p => (
+                <span key={p.planCode} className="inline-flex items-center gap-1 rounded-full bg-[#f8faff] border border-slate-200 px-3 py-1 text-xs font-medium text-[#0f172a]">
+                  {p.invoiceName || p.planCode}
+                  <button onClick={() => toggleCompare(p.planCode)} className="text-slate-400 hover:text-red-500"><X className="h-3 w-3" /></button>
+                </span>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowCompare(true)}
+              disabled={compareCodes.length < 2}
+              className="ml-auto rounded bg-[#ff3d00] px-5 py-2 text-sm font-bold text-white hover:bg-[#e63700] disabled:opacity-40"
+            >
+              Compare {compareCodes.length >= 2 ? `(${compareCodes.length})` : "plans"}
+            </button>
+            <button onClick={() => setCompareCodes([])} className="text-xs text-slate-500 hover:text-[#0f172a]">Clear</button>
+          </div>
+        </div>
+      )}
+
+      {showCompare && comparePlans.length >= 2 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCompare(false)}>
+          <div className="max-h-[90vh] w-full max-w-6xl overflow-auto rounded-lg bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+              <h3 className="text-lg font-black text-[#0f172a]">Compare plans</h3>
+              <button onClick={() => setShowCompare(false)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="w-40 px-6 py-4 text-left text-xs font-bold uppercase text-slate-500"></th>
+                  {comparePlans.map(p => {
+                    const cheapest = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
+                    return (
+                      <th key={p.planCode} className="min-w-[180px] px-4 py-4 text-left">
+                        <p className="font-black text-[#0f172a]">{p.invoiceName || p.planCode}</p>
+                        <p className="mt-1 text-xl font-black text-[#00b7ff]">{money(cheapest?.monthlyPrice, cheapest?.currency)}</p>
+                        <p className="text-[10px] font-normal text-slate-500">ex. taxes/month</p>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {([
+                  ["CPU", (p: Plan) => getCpuInfo(p.invoiceName, p.cpuCores)],
+                  ["RAM", (p: Plan) => getRamInfo(p)],
+                  ["Storage", (p: Plan) => getStorageInfo(p)],
+                  ["Bandwidth", (p: Plan) => getBandwidthInfo(p)],
+                  ["Family", (p: Plan) => p.family || "-"],
+                  ["Plan code", (p: Plan) => p.planCode],
+                  ["Billing periods", (p: Plan) => (p.durations || []).map(d => d.durationLabel).join(", ") || "-"],
+                ] as [string, (p: Plan) => string][]).map(([label, fn], i) => (
+                  <tr key={label} className={i % 2 === 0 ? "bg-[#f8faff]" : "bg-white"}>
+                    <td className="px-6 py-3 font-semibold text-[#0f172a]">{label}</td>
+                    {comparePlans.map(p => <td key={p.planCode} className="px-4 py-3 text-slate-600">{fn(p)}</td>)}
+                  </tr>
+                ))}
+                <tr>
+                  <td className="px-6 py-4"></td>
+                  {comparePlans.map(p => (
+                    <td key={p.planCode} className="px-4 py-4">
+                      <button onClick={() => { setShowCompare(false); configurePlan(p.planCode); }} className="inline-flex items-center gap-2 rounded bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">
+                        <ShoppingCart className="h-3.5 w-3.5" /> Configure
+                      </button>
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );
