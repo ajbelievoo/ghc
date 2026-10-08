@@ -6,6 +6,7 @@ import { Bell, Search, Menu, X, User, LogOut, Wallet, Moon, Sun, Globe, DollarSi
 import { useCurrency, CURRENCIES, getCurrencySymbol } from "@/components/CurrencyProvider";
 import { useI18n } from "@/components/LanguageProvider";
 import { Language } from "@/lib/i18n";
+import { api } from "@/lib/api";
 import ThemeToggle from "@/components/ThemeToggle";
 
 interface DashboardHeaderProps {
@@ -33,7 +34,7 @@ export default function DashboardHeader({ user, notifications, onToggleSidebar, 
   }, []);
 
   const notifList = Array.isArray(notifications) ? notifications : [];
-  const unread = notifList.filter((n) => !n.read).length || 0;
+  const unread = notifList.filter((n) => !(n.is_read ?? n.read)).length || 0;
 
   return (
     <header className="sticky top-0 z-30 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 sm:px-6 py-3">
@@ -118,10 +119,15 @@ export default function DashboardHeader({ user, notifications, onToggleSidebar, 
                       <p className="px-4 py-6 text-center text-sm text-slate-500">No notifications yet.</p>
                     ) : (
                       notifList.slice(0, 8).map((n, i) => (
-                        <div key={i} className={`px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 ${!n.read ? "bg-[#f8fcff]" : ""}`}>
-                          <p className="text-sm text-[#0a0f1c]">{n.title || n.message}</p>
-                          <p className="text-xs text-slate-500">{n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}</p>
-                        </div>
+                        <button key={n.id || i} onClick={async () => {
+                          try { if (n.id && !n.is_read) { await api.auth.markNotificationRead(n.id); n.is_read = true; } } catch {}
+                          if (n.link) window.location.href = n.link;
+                          setNotifOpen(false);
+                        }} className={`w-full text-left px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition ${!n.is_read && !n.read ? "bg-[#f8fcff]" : ""}`}>
+                          <p className="text-sm font-medium text-[#0a0f1c]">{n.title || n.message}</p>
+                          {n.title && n.message && <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>}
+                          <p className="text-[10px] text-slate-400 mt-1">{new Date(n.created_at || n.createdAt || Date.now()).toLocaleString()}</p>
+                        </button>
                       ))
                     )}
                   </div>

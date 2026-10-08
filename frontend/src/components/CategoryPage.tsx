@@ -47,6 +47,32 @@ const subCategoryHero: Record<string, { title: string; subtitle: string; bullets
   "scale": { title: "Scale & GPU Dedicated Servers", subtitle: "High-density servers and GPU-accelerated bare metal for production at scale", bullets: ["Up to 10 Gbps network","GPU options for AI/ML","Enterprise-grade hardware"] },
   "high-grade": { title: "High Grade Dedicated Servers", subtitle: "Mission-critical infrastructure for HCI, SAP, storage and AI workloads", bullets: ["Dual 10 Gbps networking","Massive NVMe capacity","SAP and VMware certified"] },
   "storage": { title: "Storage & Backup Servers", subtitle: "High-capacity storage servers for backups, archives and data-intensive workloads", bullets: ["Up to 12 disk bays","SAS / SATA / NVMe options","Anti-DDoS included"] },
+  // Domain / Hosting sub-pages
+  "wordpress-hosting": { title: "Managed hosting for WordPress", subtitle: "Spend less time managing your WordPress sites — shared hosting optimised for WordPress with one-click install, free SSL and daily backups.", bullets: ["WordPress pre-installed in one click","Free SSL certificate included","Automatic updates and daily backups"] },
+  "video": { title: "Video hosting for your websites", subtitle: "Stream videos without slowing down your websites — host video content on fast, bandwidth-friendly shared hosting.", bullets: ["Unmetered bandwidth for media","Host video libraries alongside your site","CDN-ready with Anti-DDoS protection"] },
+  "email": { title: "Professional email hosting", subtitle: "Professional mailboxes on your own domain — included with every GHC web hosting plan, with webmail and IMAP/SMTP access.", bullets: ["Mailboxes on your own domain","Webmail + IMAP/SMTP/POP3 access","Anti-spam and Anti-DDoS included"] },
+  // Speed up your websites and applications
+  "drupal": { title: "Drupal VPS Hosting", subtitle: "High-performance VPS pre-configured for Drupal. Launch content-rich sites with full root access.", bullets: ["Drupal-ready stack (PHP, MariaDB, Composer)","NVMe SSD storage and unlimited traffic","Anti-DDoS protection included"] },
+  "prestashop": { title: "PrestaShop VPS Hosting", subtitle: "Launch your online store on VPS infrastructure built for PrestaShop speed and reliability.", bullets: ["Optimised PHP and MySQL stack","Scalable resources for traffic spikes","Free SSL and anti-DDoS included"] },
+  "magento": { title: "Magento VPS Hosting", subtitle: "Dedicated resources and NVMe speed for demanding Magento e-commerce workloads.", bullets: ["Optimised for Magento 2","High RAM and NVMe SSD options","Scale up as your catalogue grows"] },
+  // The ideal foundation for your VMs
+  "proxmox": { title: "Proxmox Dedicated Servers", subtitle: "Bare-metal servers ready for Proxmox VE — build your own virtualisation platform.", bullets: ["Proxmox VE installable from templates","Hardware virtualisation (VT-x / AMD-V) enabled","Cluster and HA-ready hardware"] },
+  "kvm": { title: "KVM Dedicated Servers", subtitle: "Kernel-based virtual machine hosts on bare metal with full hardware access.", bullets: ["Full KVM virtualisation support","Root access and custom ISO install","Enterprise-grade AMD EPYC platforms"] },
+  "vmware-esxi": { title: "VMware ESXi Dedicated Servers", subtitle: "Run your VMware stack on dedicated bare-metal hosts built for vSphere.", bullets: ["ESXi-ready hardware","vSphere and vCenter compatible","Enterprise performance and reliability"] },
+  "hyper-v": { title: "Microsoft Hyper-V Servers", subtitle: "Windows Server with the Hyper-V role for your virtualised workloads.", bullets: ["Windows Server templates available","Hyper-V virtualisation support","Full admin access via RDP"] },
+  // Your data, without data loss
+  "clickhouse": { title: "ClickHouse Dedicated Servers", subtitle: "Column-oriented real-time analytics database on high-IOPS bare metal.", bullets: ["NVMe storage for fast data ingestion","High RAM for columnar queries","Ideal for real-time analytics"] },
+  "postgresql": { title: "PostgreSQL Dedicated Servers", subtitle: "Reliable relational database hosting on isolated dedicated hardware.", bullets: ["NVMe storage and large RAM options","Consistent, isolated performance","Perfect for mission-critical databases"] },
+  "cassandra": { title: "Cassandra Dedicated Servers", subtitle: "Distributed NoSQL clusters on bare metal with sustained high throughput.", bullets: ["Multi-node cluster ready","High-capacity disk options","Low-latency networking"] },
+  "hbase": { title: "HBase Dedicated Servers", subtitle: "Big data storage with Apache HBase on dedicated infrastructure.", bullets: ["High-capacity storage options","Hadoop ecosystem ready","Consistent low-latency I/O"] },
+  "influxdb": { title: "InfluxDB Dedicated Servers", subtitle: "Time-series database workloads on fast NVMe bare metal.", bullets: ["High write throughput","NVMe SSD storage","Monitoring and IoT workloads ready"] },
+  // The power for your critical workloads
+  "gromacs": { title: "GROMACS Dedicated Servers", subtitle: "Molecular dynamics simulations on high-frequency bare-metal compute.", bullets: ["High-frequency CPUs","GPU options for acceleration","Built for HPC workloads"] },
+  "namd": { title: "NAMD Dedicated Servers", subtitle: "Parallel molecular dynamics on multi-core bare-metal servers.", bullets: ["High core-count CPUs","Low-latency interconnect","HPC-optimised hardware"] },
+  // Blockchain infrastructure
+  "validator-nodes": { title: "Blockchain Validator Nodes", subtitle: "Secure, always-on dedicated infrastructure for blockchain validators.", bullets: ["99.9% uptime and anti-DDoS","Fast NVMe storage for chain data","Dedicated isolated hardware"] },
+  "rpc-nodes": { title: "Blockchain RPC Nodes", subtitle: "High-performance endpoints for blockchain RPC and indexing workloads.", bullets: ["Low-latency global network","High bandwidth options","NVMe storage for fast sync"] },
+  "archive-nodes": { title: "Blockchain Archive Nodes", subtitle: "Full blockchain history storage on high-capacity dedicated servers.", bullets: ["Massive storage capacity","Reliable long-term archiving","High bandwidth for fast sync"] },
 };
 
 

@@ -127,13 +127,17 @@ const megaMenu: MegaEntry[] = [
     href: "/domain",
     columns: [
       { title: "Web Hosting", items: [
-        { label: "Agencies", href: "/web-hosting?range=Agency", desc: "Designed for web agencies" },
-        { label: "Business", href: "/web-hosting?range=Business", desc: "For professionals" },
-        { label: "Eco", href: "/web-hosting?range=Eco", desc: "Accessible prices" },
+        { label: "Eco — For accessible prices", href: "/web-hosting?range=Eco", desc: "Everything you need to launch your websites at a lower cost" },
+        { label: "Business — For professionals", href: "/web-hosting?range=Business", desc: "Performance and flexibility for business websites" },
+        { label: "Agencies", href: "/web-hosting?range=Agency", desc: "Manage all your websites with a single hosting plan" },
+        { label: "Compare our web hosting plans", href: "/web-hosting", desc: "Choose the solution that best suits your needs" },
+        { label: "Managed hosting for WordPress", href: "/web-hosting/wordpress", desc: "Spend less time managing WordPress" },
+        { label: "Video", href: "/web-hosting/video", desc: "Stream videos without slowing down your websites" },
       ]},
       { title: "Domains and Emails", items: [
-        { label: "Domain name", href: "/domain", desc: "Assert your identity" },
-        { label: "Email hosting", href: "/web-hosting", desc: "Professional mailboxes" },
+        { label: "Domain name", href: "/domain", desc: "Assert and secure your identity" },
+        { label: "Email hosting", href: "/email-hosting", desc: "Professional mailboxes on your domain" },
+        { label: "Guides and documentation", href: "/kb", desc: "Knowledge base and tutorials" },
       ]},
     ],
   },

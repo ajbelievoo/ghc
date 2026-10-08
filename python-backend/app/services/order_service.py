@@ -483,7 +483,10 @@ def _ensure_invoice_and_subscription(db: Session, order: CustomerOrder):
             currency=order.currency,
         )
         db.add(invoice)
-        if not order.subscription:
+        # Service-option orders (upgrade/disk/backup on an existing service)
+        # must not create a new subscription.
+        is_option_order = bool((order.configuration_payload or {}).get("service_option"))
+        if not order.subscription and not is_option_order:
             sub = Subscription(
                 order_id=order.id,
                 user_id=order.user_id,
@@ -498,6 +501,366 @@ def _ensure_invoice_and_subscription(db: Session, order: CustomerOrder):
             )
             db.add(sub)
         db.commit()
+
+
+def _pay_ovh_order(db: Session, ovh: OvhClient, order: CustomerOrder, ovh_order_id: int) -> bool:
+    """Try to pay an OVH order using an available registered payment mean."""
+    try:
+        available = ovh.get(f"/me/order/{ovh_order_id}/availableRegisteredPaymentMean") or []
+        for mean in available:
+            payment_mean = mean.get("paymentMean")
+            payment_mean_id = mean.get("paymentMeanId")
+            try:
+                ovh.pay_order_with_registered_payment_mean(int(ovh_order_id), payment_mean, payment_mean_id)
+                order.ovh_payment_mean = payment_mean
+                _update_order_status(db, order, OrderStatus.OVH_PAID)
+                log_ovh_step(db, order.id, "PAY_ORDER", f"/me/order/{ovh_order_id}/payWithRegisteredPaymentMean", {"paymentMean": payment_mean}, {"paid": True})
+                return True
+            except Exception as e:
+                logger.warning(f"Could not pay OVH order {ovh_order_id} with {payment_mean}: {e}")
+    except Exception as e:
+        logger.warning(f"Could not fetch payment means for OVH order {ovh_order_id}: {e}")
+    return False
+
+
+# ---------- Service-option orders (upgrade / additional disk / automated backup) ----------
+
+SERVICE_OPTION_KINDS = ("upgrade", "additional_disk", "automated_backup")
+DISK_SIZES_GB = (50, 100, 200, 500)
+
+
+def _order_price(order_obj: Dict[str, Any]) -> tuple[Decimal, str]:
+    """Extract (withoutTax value, currencyCode) from an OVH order.Order object."""
+    prices = (order_obj or {}).get("prices") or {}
+    for key in ("withoutTax", "withTax", "originalWithoutTax"):
+        p = prices.get(key) or {}
+        if p.get("value") is not None:
+            return Decimal(str(p["value"])), (p.get("currencyCode") or "EUR")
+    return Decimal("0"), "EUR"
+
+
+def _pick_offer_price(prices: List[Dict[str, Any]]) -> tuple[Decimal, str, Optional[str]]:
+    """Pick the shortest-duration price from a GenericProductPricing list."""
+    best = None
+    for p in prices or []:
+        if p.get("price") is None:
+            continue
+        if best is None or (p.get("interval") or 999) < (best.get("interval") or 999):
+            best = p
+    if not best:
+        return Decimal("0"), "EUR", None
+    price = best.get("price") or {}
+    return Decimal(str(price.get("value") or 0)), (price.get("currencyCode") or "EUR"), best.get("duration")
+
+
+def get_vps_option_catalog(db: Session, ovh: OvhClient, sub: Subscription, currency: Optional[str] = None) -> Dict[str, Any]:
+    """Return purchasable options for a VPS with customer-facing prices (margin applied)."""
+    service_name = sub.service_name or sub.ovh_resource_id
+    if not service_name:
+        raise ValueError("Subscription has no OVH service attached")
+    target = (currency or sub.currency or get_settings().currency or "USD").upper()
+    margin = get_margin_for_category(db, ServiceCategory.VPS)
+    tax_rate = get_settings().tax_rate_percent / 100.0
+
+    def customer_price(base: Decimal, base_currency: str) -> Dict[str, Any]:
+        final = float(apply_margin(base, margin))
+        rate = convert(db, 1.0, base_currency, target)
+        converted = round(final * rate, 2)
+        return {
+            "price": converted,
+            "tax": round(converted * tax_rate, 2),
+            "total": round(converted * (1 + tax_rate), 2),
+            "currency": target,
+        }
+
+    result: Dict[str, Any] = {"upgrades": [], "additionalDisks": [], "automatedBackup": None}
+
+    # --- Model upgrades ---
+    try:
+        offers = ovh.get(f"/order/upgrade/vps/{service_name}") or []
+    except Exception as e:
+        logger.warning(f"Upgrade offers unavailable for {service_name}: {e}")
+        offers = []
+    catalog_plans = {
+        p.plan_code: p
+        for p in db.query(PlanCatalog).filter(
+            PlanCatalog.category == ServiceCategory.VPS, PlanCatalog.is_active == True
+        ).all()
+    }
+    for offer in offers:
+        code = offer.get("planCode")
+        prices = offer.get("prices") or []
+        base, base_cur, duration = _pick_offer_price(prices)
+        if base <= 0:
+            continue
+        plan = catalog_plans.get(code)
+        entry = {
+            "planCode": code,
+            "productName": offer.get("productName") or (plan.invoice_name if plan else code),
+            "duration": duration,
+            **customer_price(base, base_cur),
+        }
+        if plan:
+            meta = plan.catalog_metadata or {}
+            blobs = meta.get("blobs") or {}
+            tech = blobs.get("technical") or {}
+            entry["specs"] = {
+                "vcores": tech.get("cpu") or tech.get("vcores"),
+                "memory": tech.get("memory") or tech.get("ram"),
+                "storage": tech.get("storage"),
+            }
+        result["upgrades"].append(entry)
+
+    # --- Additional disks ---
+    for size in DISK_SIZES_GB:
+        try:
+            durations = ovh.get(
+                f"/order/vps/{service_name}/additionalDisk",
+                additionalDiskSize=str(size),
+            ) or []
+        except Exception as e:
+            logger.debug(f"Disk {size}GB durations unavailable: {e}")
+            durations = []
+        for dur in durations[:1]:  # shortest/first duration only
+            try:
+                preview = ovh.get(
+                    f"/order/vps/{service_name}/additionalDisk/{dur}",
+                    additionalDiskSize=str(size),
+                ) or {}
+                base, base_cur = _order_price(preview)
+                if base <= 0:
+                    continue
+                result["additionalDisks"].append({
+                    "size": size,
+                    "duration": dur,
+                    **customer_price(base, base_cur),
+                })
+            except Exception as e:
+                logger.debug(f"Disk {size}GB {dur} preview failed: {e}")
+
+    # --- Automated backup ---
+    try:
+        durations = ovh.get(f"/order/vps/{service_name}/automatedBackup") or []
+    except Exception as e:
+        logger.debug(f"Backup durations unavailable: {e}")
+        durations = []
+    for dur in durations[:1]:
+        try:
+            preview = ovh.get(f"/order/vps/{service_name}/automatedBackup/{dur}") or {}
+            base, base_cur = _order_price(preview)
+            if base <= 0:
+                continue
+            result["automatedBackup"] = {"duration": dur, **customer_price(base, base_cur)}
+        except Exception as e:
+            logger.debug(f"Backup {dur} preview failed: {e}")
+
+    return result
+
+
+def create_service_option_order(
+    db: Session,
+    ovh: OvhClient,
+    user_id: str,
+    sub: Subscription,
+    kind: str,
+    params: Dict[str, Any],
+    currency: Optional[str] = None,
+) -> CustomerOrder:
+    """Create a pending order for an option on an existing VPS service.
+
+    After payment, execute_service_option_order() applies the change at OVH.
+    """
+    if kind not in SERVICE_OPTION_KINDS:
+        raise ValueError(f"Unsupported option kind: {kind}")
+    service_name = sub.service_name or sub.ovh_resource_id
+    if not service_name:
+        raise ValueError("Subscription has no OVH service attached")
+    if sub.category != ServiceCategory.VPS:
+        raise ValueError("Service options are currently supported for VPS only")
+    if sub.status != SubscriptionStatus.ACTIVE:
+        raise ValueError("Server must be active to purchase options")
+
+    option: Dict[str, Any] = {"kind": kind, "serviceName": service_name, "subscriptionId": sub.id}
+
+    if kind == "upgrade":
+        plan_code = (params.get("planCode") or "").strip()
+        if not plan_code:
+            raise ValueError("planCode is required for an upgrade")
+        offers = ovh.get(f"/order/upgrade/vps/{service_name}") or []
+        offer = next((o for o in offers if o.get("planCode") == plan_code), None)
+        if not offer:
+            raise ValueError("This upgrade is not available for your VPS")
+        base, base_currency, duration = _pick_offer_price(offer.get("prices") or [])
+        if base <= 0:
+            raise ValueError("No pricing available for this upgrade")
+        option.update({"planCode": plan_code, "duration": duration})
+        label = f"VPS upgrade → {offer.get('productName') or plan_code}"
+
+    elif kind == "additional_disk":
+        size = int(params.get("size") or 0)
+        duration = (params.get("duration") or "").strip()
+        if size not in DISK_SIZES_GB:
+            raise ValueError(f"Disk size must be one of {DISK_SIZES_GB} GB")
+        durations = ovh.get(f"/order/vps/{service_name}/additionalDisk", additionalDiskSize=str(size)) or []
+        if not durations:
+            raise ValueError("Additional disks are not available for this VPS")
+        if not duration:
+            duration = durations[0]
+        if duration not in durations:
+            raise ValueError("Invalid duration for additional disk")
+        preview = ovh.get(f"/order/vps/{service_name}/additionalDisk/{duration}", additionalDiskSize=str(size)) or {}
+        base, base_currency = _order_price(preview)
+        if base <= 0:
+            raise ValueError("No pricing available for this disk")
+        option.update({"size": size, "duration": duration})
+        label = f"Additional disk {size} GB"
+
+    elif kind == "automated_backup":
+        durations = ovh.get(f"/order/vps/{service_name}/automatedBackup") or []
+        if not durations:
+            raise ValueError("Automated backup is not available for this VPS")
+        duration = (params.get("duration") or "").strip() or durations[0]
+        if duration not in durations:
+            raise ValueError("Invalid duration for automated backup")
+        preview = ovh.get(f"/order/vps/{service_name}/automatedBackup/{duration}") or {}
+        base, base_currency = _order_price(preview)
+        if base <= 0:
+            raise ValueError("No pricing available for automated backup")
+        option.update({"duration": duration})
+        label = "Automated backup"
+
+    # Apply category margin + convert to customer currency + tax
+    final_price = float(apply_margin(base, get_margin_for_category(db, ServiceCategory.VPS)))
+    target = (currency or sub.currency or get_settings().currency or "USD").upper()
+    rate = convert(db, 1.0, base_currency, target)
+    final_price_conv = round(final_price * rate, 2)
+    base_conv = round(float(base) * rate, 2)
+    commission = round(final_price_conv - base_conv, 2)
+    tax_rate = get_settings().tax_rate_percent / 100.0
+    tax_amount = round(final_price_conv * tax_rate, 2)
+    customer_amount = round(final_price_conv + tax_amount, 2)
+
+    order = CustomerOrder(
+        user_id=user_id,
+        plan_code=None,
+        duration_label=option.get("duration"),
+        category=sub.category,
+        customer_amount=customer_amount,
+        ovh_base_amount=base_conv,
+        commission_amount=commission,
+        tax_amount=tax_amount,
+        tax_rate=tax_rate,
+        currency=target,
+        status=OrderStatus.PENDING,
+        configuration_payload={
+            "service_option": option,
+            "display_name": label,
+        },
+    )
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+    return order
+
+
+def execute_service_option_order(db: Session, ovh: OvhClient, order: CustomerOrder) -> CustomerOrder:
+    """Apply a paid service-option order at OVH (upgrade / additional disk / backup)."""
+    cfg = order.configuration_payload or {}
+    option = cfg.get("service_option") or {}
+    kind = option.get("kind")
+    service_name = option.get("serviceName")
+    if not kind or not service_name:
+        _update_order_status(db, order, OrderStatus.FAILED, "Missing service option details")
+        raise ValueError("Missing service option details")
+
+    try:
+        if kind == "upgrade":
+            plan_code = option.get("planCode")
+            try:
+                result = ovh.post(
+                    f"/order/upgrade/vps/{service_name}/{plan_code}",
+                    quantity=1,
+                    autoPayWithPreferredPaymentMethod=True,
+                )
+            except Exception as e:
+                logger.warning(f"Auto-pay upgrade failed, retrying without autoPay: {e}")
+                result = ovh.post(
+                    f"/order/upgrade/vps/{service_name}/{plan_code}",
+                    quantity=1,
+                    autoPayWithPreferredPaymentMethod=False,
+                )
+            ovh_order = (result or {}).get("order") or {}
+            operation = (result or {}).get("operation") or {}
+            log_ovh_step(db, order.id, "ORDER_UPGRADE", f"/order/upgrade/vps/{service_name}/{plan_code}", {"quantity": 1}, result)
+
+        elif kind == "additional_disk":
+            duration = option.get("duration")
+            size = str(option.get("size"))
+            ovh_order = ovh.post(
+                f"/order/vps/{service_name}/additionalDisk/{duration}",
+                additionalDiskSize=size,
+            ) or {}
+            operation = {}
+            log_ovh_step(db, order.id, "ORDER_DISK", f"/order/vps/{service_name}/additionalDisk/{duration}", {"additionalDiskSize": size}, ovh_order)
+
+        elif kind == "automated_backup":
+            duration = option.get("duration")
+            ovh_order = ovh.post(
+                f"/order/vps/{service_name}/automatedBackup/{duration}",
+            ) or {}
+            operation = {}
+            log_ovh_step(db, order.id, "ORDER_BACKUP", f"/order/vps/{service_name}/automatedBackup/{duration}", {}, ovh_order)
+
+        else:
+            raise ValueError(f"Unsupported option kind: {kind}")
+
+        ovh_order_id = ovh_order.get("orderId")
+        order.ovh_order_id = str(ovh_order_id) if ovh_order_id else None
+        order.ovh_order_url = ovh_order.get("url")
+        _update_order_status(db, order, OrderStatus.OVH_ORDER_PLACED)
+
+        paid = bool(ovh_order_id) and _pay_ovh_order(db, ovh, order, int(ovh_order_id))
+        if not paid and ovh_order_id:
+            _update_order_status(db, order, OrderStatus.OVH_ORDER_PLACED, "Waiting for OVH payment; the order was placed on the provider account")
+            return order
+
+        # Order placed and paid (or upgrade auto-paid) — update the subscription
+        sub = db.query(Subscription).filter(Subscription.id == option.get("subscriptionId")).first()
+        if sub:
+            if kind == "upgrade" and option.get("planCode"):
+                sub.plan_code = option["planCode"]
+            sub.updated_at = func.now()
+            db.commit()
+
+        _update_order_status(db, order, OrderStatus.ACTIVE)
+
+        # Invoice for the completed option purchase
+        if not order.invoice:
+            tax_type, hsn_code, place = gst_fields_for_user(db, order.user_id)
+            invoice = Invoice(
+                order_id=order.id,
+                user_id=order.user_id,
+                amount=order.customer_amount,
+                tax_amount=order.tax_amount,
+                tax_rate=order.tax_rate,
+                tax_type=tax_type,
+                hsn_code=hsn_code,
+                place_of_supply=place,
+                due_date=datetime.utcnow(),
+                status=InvoiceStatus.PAID,
+                currency=order.currency,
+            )
+            db.add(invoice)
+            db.commit()
+
+        return order
+
+    except Exception as e:
+        logger.exception(f"Service-option order {order.id} failed: {e}")
+        _ensure_invoice_and_subscription(db, order)
+        _update_order_status(db, order, OrderStatus.PROVISIONING_FAILED, str(e))
+        log_ovh_step(db, order.id, "OPTION_ORDER_FAILED", "", {}, {}, is_success=False, error_message=str(e))
+        raise
 
 
 def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrder:
@@ -525,6 +888,11 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         OrderStatus.FAILED,
     ):
         raise ValueError(f"Order is in status {order.status.value}, cannot checkout")
+
+    # Service-option orders (VPS upgrade / additional disk / automated backup on an
+    # existing service) follow a dedicated provisioning path — no cart checkout.
+    if (order.configuration_payload or {}).get("service_option"):
+        return execute_service_option_order(db, ovh, order)
 
     plan = db.query(PlanCatalog).filter(PlanCatalog.plan_code == order.plan_code).first()
     if not plan:
@@ -624,23 +992,7 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
 
         # 6. Try to pay OVH order using an available registered payment mean.
         #    If none, leave it unpaid and let the admin/customer pay via ovh_order_url.
-        paid = False
-        try:
-            available = ovh.get(f"/me/order/{ovh_order_id}/availableRegisteredPaymentMean") or []
-            for mean in available:
-                payment_mean = mean.get("paymentMean")
-                payment_mean_id = mean.get("paymentMeanId")
-                try:
-                    ovh.pay_order_with_registered_payment_mean(int(ovh_order_id), payment_mean, payment_mean_id)
-                    order.ovh_payment_mean = payment_mean
-                    _update_order_status(db, order, OrderStatus.OVH_PAID)
-                    log_ovh_step(db, order.id, "PAY_ORDER", f"/me/order/{ovh_order_id}/payWithRegisteredPaymentMean", {"paymentMean": payment_mean}, {"paid": True})
-                    paid = True
-                    break
-                except Exception as e:
-                    logger.warning(f"Could not pay OVH order {ovh_order_id} with {payment_mean}: {e}")
-        except Exception as e:
-            logger.warning(f"Could not fetch payment means for OVH order {ovh_order_id}: {e}")
+        paid = _pay_ovh_order(db, ovh, order, int(ovh_order_id))
 
         if not paid:
             _update_order_status(db, order, OrderStatus.OVH_ORDER_PLACED, "Waiting for OVH payment; no registered payment method available")

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
@@ -11,7 +11,7 @@ import HpcCatalog from "@/components/HpcCatalog";
 import RoadmapHub from "@/components/RoadmapHub";
 import OrderHub from "@/components/OrderHub";
 import DomainHub from "@/components/DomainHub";
-import { Server, Globe, HardDrive, Cloud, Shield, Network, FileText, Cpu, Activity, ArrowLeft, Download, Search, Filter, MoreHorizontal, Plus, CheckCircle, XCircle, X, Loader2 } from "lucide-react";
+import { Server, Globe, HardDrive, Cloud, Shield, Network, FileText, Cpu, Activity, ArrowLeft, Download, Search, Filter, MoreHorizontal, Plus, Check, CheckCircle, XCircle, X, Loader2 } from "lucide-react";
 
 interface ProductHubProps {
   view: string;
@@ -43,6 +43,11 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
   const [orderModal, setOrderModal] = useState<string | null>(null);
   const [orderNotes, setOrderNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [services, setServices] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (view === "services") api.cloud.services().then((s) => setServices(Array.isArray(s) ? s : [])).catch(() => {});
+  }, [view]);
 
   const filteredServers = servers.filter((s) => {
     const q = search.toLowerCase();
@@ -256,18 +261,23 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
       {view === "storage" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
-            { title: "HA-NAS", desc: "Managed storage based on OpenZFS file system. Centralised storage spaces to store or back up your data.", cta: "Order a HA-NAS" },
-            { title: "Enterprise File Storage", desc: "High-performance file storage for enterprise workloads.", cta: "Order Enterprise File Storage" },
-            { title: "Cloud Disk Array", desc: "Next-generation scalable storage powered by CEPH.", cta: "Order Cloud Disk Array" },
-            { title: "Backup Agent", desc: "Automatic daily remote backups with centralised monitoring.", cta: "Back up a Bare Metal server", tag: "New" },
-            { title: "Backup Licenses", desc: "Veeam Backup & Replication licences for enterprise workloads.", cta: "Configure my offer", tag: "New" },
-          ].map((item) => (
+            { id: "hanas", title: "HA-NAS", desc: "Managed storage based on OpenZFS file system. Centralised storage spaces to store or back up your data.", cta: "Order a HA-NAS", features: ["OpenZFS snapshots & replication", "NFS / CIFS protocols", "1.2 TB – 13.2 TB capacity", "99.99% availability SLA"] },
+            { id: "efs", title: "Enterprise File Storage", desc: "High-performance file storage for enterprise workloads.", cta: "Order Enterprise File Storage", features: ["Up to 64 IOPS/GB guaranteed", "Volume size 10 GB – 58 TB", "Managed NFS with snapshots", "Designed for critical applications"] },
+            { id: "cda", title: "Cloud Disk Array", desc: "Next-generation scalable storage powered by CEPH.", cta: "Order Cloud Disk Array", features: ["CEPH cluster dedicated to you", "Block, file & object access", "Horizontal scalability", "REST API management"] },
+            { id: "agent", title: "Backup Agent", desc: "Automatic daily remote backups with centralised monitoring.", cta: "Back up a Bare Metal server", tag: "New", features: ["Automatic daily backup", "500 GB per server included", "Centralised monitoring", "One-click restore"] },
+            { id: "licenses", title: "Backup Licenses", desc: "Veeam Backup & Replication licences for enterprise workloads.", cta: "Configure my offer", tag: "New", features: ["Veeam Backup & Replication", "Per-workload licensing", "Managed by GHC", "Instant activation"] },
+          ].filter((item) => !launch || item.id === launch).map((item) => (
             <div key={item.title} className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6 flex flex-col">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold text-[#0f172a]">{item.title}</h3>
                 {item.tag && <span className="rounded-full px-2 py-0.5 text-[10px] font-medium bg-[#00b7ff]/10 text-[#00b7ff]">New</span>}
               </div>
-              <p className="text-sm text-slate-500 mb-6 flex-1">{item.desc}</p>
+              <p className="text-sm text-slate-500 mb-4">{item.desc}</p>
+              <ul className="mb-6 flex-1 space-y-1.5">
+                {item.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-slate-600"><Check className="w-3.5 h-3.5 text-[#00b7ff] shrink-0 mt-0.5" />{f}</li>
+                ))}
+              </ul>
               <div className="flex gap-3">
                 <button onClick={() => requestQuote(item.title)} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-semibold hover:bg-[#009fe0] transition-all">{item.cta}</button>
               </div>
@@ -360,7 +370,48 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
         />
       )}
 
-      {(view !== "vps" && view !== "dedicated" && view !== "web-hosting" && view !== "bare-metal" && view !== "public-cloud" && view !== "network" && view !== "storage" && view !== "licenses" && view !== "private-cloud" && view !== "roadmap" && view !== "domain-search" && view !== "order" && !view.startsWith("order-")) && (
+      {view === "services" && (
+        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-[#0f172a]">All my services</h3>
+              <p className="text-xs text-slate-500">Every active resource across products — servers, cloud instances, domains.</p>
+            </div>
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter..." className="w-full rounded-lg bg-slate-100 border border-slate-200 pl-9 pr-3 py-2 text-sm outline-none" />
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead><tr className="border-b border-slate-200 bg-slate-100/50">
+                <th className="px-5 py-3 text-xs font-semibold text-slate-500">Service</th>
+                <th className="px-5 py-3 text-xs font-semibold text-slate-500">Type</th>
+                <th className="px-5 py-3 text-xs font-semibold text-slate-500">Status</th>
+                <th className="px-5 py-3 text-xs font-semibold text-slate-500">Billing</th>
+                <th className="px-5 py-3 text-xs font-semibold text-slate-500">Next bill / expiry</th>
+              </tr></thead>
+              <tbody>
+                {services.filter((s) => !search || s.name?.toLowerCase().includes(search.toLowerCase())).map((s) => (
+                  <tr key={`${s.kind}-${s.id}`} className="border-b border-slate-100 hover:bg-[#00b7ff]/5">
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-medium text-[#0f172a]">{s.name}</p>
+                      {s.detail && <p className="text-[11px] text-slate-400">{s.detail}</p>}
+                    </td>
+                    <td className="px-5 py-4"><span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{s.kind === "cloud-instance" ? "Cloud instance" : s.kind === "domain" ? "Domain" : s.category}</span></td>
+                    <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${/ACTIVE|DELIVERED|OK/i.test(s.status) ? "bg-emerald-100 text-emerald-700" : /PEND|BUILD/i.test(s.status) ? "bg-amber-100 text-amber-700" : /SUSPEND|EXPIR/i.test(s.status) ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"}`}>{s.status}</span></td>
+                    <td className="px-5 py-4 text-sm text-slate-600">{s.price != null ? `${s.currency === "INR" ? "₹" : s.currency} ${s.price}${s.kind === "cloud-instance" ? "/hr" : "/mo"}` : "—"}</td>
+                    <td className="px-5 py-4 text-xs text-slate-500">{s.renewal ? new Date(s.renewal).toLocaleDateString() : s.kind === "cloud-instance" ? "hourly" : "—"}</td>
+                  </tr>
+                ))}
+                {services.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-slate-500">No services yet — order your first service to see it here.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {(view !== "services" && view !== "vps" && view !== "dedicated" && view !== "web-hosting" && view !== "bare-metal" && view !== "public-cloud" && view !== "network" && view !== "storage" && view !== "licenses" && view !== "private-cloud" && view !== "roadmap" && view !== "domain-search" && view !== "order" && !view.startsWith("order-")) && (
         <div className="text-center p-12">
           <h3 className="text-lg font-semibold text-[#0f172a]">Coming soon</h3>
           <p className="text-sm text-slate-500 mt-2">This section is being configured.</p>

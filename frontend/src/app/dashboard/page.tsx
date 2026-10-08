@@ -805,9 +805,11 @@ export default function DashboardPage() {
         )}
 
         {/* PRODUCT HUB VIEW */}
-        {activeView && (
+        {activeView && (() => {
+          const [hubView, hubSub] = activeView.split("|");
+          return (
           <ProductHub
-            view={activeView}
+            view={hubView}
             servers={servers}
             myDomains={myDomains}
             invoices={invoices}
@@ -817,9 +819,10 @@ export default function DashboardPage() {
             onTab={(t) => { setActiveView(null); setTab(t as Tab); }}
             onSelectView={(v) => { setActiveView(v); }}
             setSelectedServer={(id) => { setActiveView(null); if (id) { setTab("servers"); setSelectedServer(id); }}}
-            launch={launchParam}
+            launch={hubSub || launchParam}
           />
-        )}
+          );
+        })()}
 
         {/* OVERVIEW TAB */}
         {!activeView && tab === "overview" && (

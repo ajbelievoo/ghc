@@ -24,6 +24,9 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
     target: "",
     ttl: 3600,
   });
+  const [nsList, setNsList] = useState<string[]>([]);
+  const [nsInput, setNsInput] = useState("");
+  const [dnssec, setDnssec] = useState<any>(null);
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -39,6 +42,12 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
 
   useEffect(() => {
     fetchRecords();
+    api.server.domainNameservers(domain).then((r) => {
+      const cur = Array.isArray(r.current) ? r.current : [];
+      setNsList(cur);
+      setNsInput(cur.join("\n"));
+    }).catch(() => {});
+    api.server.domainDnssec(domain).then((d) => setDnssec(d)).catch(() => {});
   }, [domain]);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -251,8 +260,48 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
           )}
         </div>
 
+        <div className="mt-6 rounded-xl bg-slate-100 border border-slate-200 p-4">
+          <h4 className="text-sm font-medium text-[#0f172a] mb-1">Nameservers</h4>
+          <p className="text-xs text-slate-500 mb-3">One hostname per line — e.g. dns1.example.com</p>
+          <textarea
+            value={nsInput}
+            onChange={(e) => setNsInput(e.target.value)}
+            rows={3}
+            className="w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm font-mono text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+          />
+          <button
+            onClick={async () => {
+              const list = nsInput.split("\n").map((s) => s.trim()).filter(Boolean);
+              if (!list.length) return;
+              setSaving(true);
+              try {
+                await api.server.setDomainNameservers(domain, list);
+                setNsList(list);
+                showToast("Nameservers updated — propagation may take up to 24h", "success");
+              } catch (e: any) { showToast(e.message || "Update failed", "error"); }
+              finally { setSaving(false); }
+            }}
+            disabled={saving}
+            className="mt-3 rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2 text-sm font-medium text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all disabled:opacity-50 flex items-center gap-2"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Update nameservers
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-xl bg-slate-100 border border-slate-200 p-4 flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-medium text-[#0f172a]">DNSSEC</h4>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {dnssec ? `Status: ${dnssec.status || "inactive"}` : "DNSSEC protects your zone from DNS spoofing."}
+            </p>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-[11px] font-bold ${dnssec?.status === "enabled" || dnssec?.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+            {dnssec?.status || "off"}
+          </span>
+        </div>
+
         <p className="text-[10px] text-slate-500 mt-4">
-          Use @ for the root domain. Changes are applied to the zone immediately.
+          Use @ for the root domain. DNS changes are applied to the zone immediately; nameserver changes propagate in up to 24h.
         </p>
       </div>
     </div>

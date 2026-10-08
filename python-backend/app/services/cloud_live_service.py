@@ -87,7 +87,8 @@ def _collect(catalog: Dict[str, Any], margin: Decimal) -> Dict[str, Dict[str, An
         specs = _specs(blobs)
         cur = items.get(base)
         if not cur:
-            cur = {"code": base, "name": name, "hour": None, "month": None, "specs": {}}
+            safe_base = re.sub(r"(?i)ovhcloud", "cloud", base).replace("ovh", "cloud")
+            cur = {"code": safe_base, "name": name, "hour": None, "month": None, "specs": {}}
             items[base] = cur
         if hour is not None and (cur["hour"] is None or hour < cur["hour"]):
             cur["hour"] = hour

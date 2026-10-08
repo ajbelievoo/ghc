@@ -45,7 +45,7 @@ const BENEFITS = [
 const SPECS = [
   { icon: Zap, title: "On-demand resources", desc: "Deploy new hosts and datastores on demand from the control panel, and scale your infrastructure as your needs grow." },
   { icon: ShieldCheck, title: "Trusted cloud hosting", desc: "Build a trusted cloud with certified and isolated infrastructure. Our private cloud is GDPR compliant and hosted in our datacentres." },
-  { icon: RefreshCcw, title: "Multi-cloud environments", desc: "Deploy your services across multiple OVHcloud solutions and your infrastructure, thanks to our multi-cloud approach and interoperability." },
+  { icon: RefreshCcw, title: "Multi-cloud environments", desc: "Deploy your services across multiple cloud solutions and your infrastructure, thanks to our multi-cloud approach and interoperability." },
   { icon: Database, title: "Disaster Recovery Plan", desc: "Include a DRP in your hosted private cloud. Our solutions include Veeam, Zerto and vSphere Replication options to ensure business continuity." },
 ];
 
@@ -155,7 +155,7 @@ export default function PrivateCloudClient({ initialPlans }: { initialPlans?: Pl
     <div className="min-h-screen bg-white text-[#0f172a]">
       <Navbar />
 
-      {/* OVH-style sub navigation */}
+      {/* product sub navigation */}
       <div className="border-b border-slate-200 bg-[#0f0c29]">
         <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-6 py-2">
           <Link href="/private-cloud" className="whitespace-nowrap border-b-2 border-[#00b7ff] px-3 py-2 text-xs font-bold text-white">Hosted Private Cloud</Link>
@@ -243,7 +243,7 @@ export default function PrivateCloudClient({ initialPlans }: { initialPlans?: Pl
             <div>
               <h2 className="text-2xl font-black">Dedicated host catalog</h2>
               <p className="mt-1 text-sm text-slate-500">
-                {hosts.length} OVH-backed dedicated hosts · monthly prices {loading && <span className="text-[#00b7ff]">(refreshing…)</span>}
+                {hosts.length} dedicated host plans · monthly prices {loading && <span className="text-[#00b7ff]">(refreshing…)</span>}
               </p>
             </div>
             <p className="text-xs text-slate-400">Prices exclude GST · billed monthly in {currency}</p>

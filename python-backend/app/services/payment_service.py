@@ -157,7 +157,8 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                     send_order_payment_email(db, order, order.user)
             except Exception:
                 logger.exception("Order payment email failed")
-            create_notification(db, order.user, "Payment received", f"Payment for {order.display_name or 'order'} confirmed.", "success", "/dashboard")
+            order_label = (order.configuration_payload or {}).get("display_name") or order.plan_code or "order"
+            create_notification(db, order.user, "Payment received", f"Payment for {order_label} confirmed.", "success", "/dashboard")
             try:
                 ovh = get_ovh_client_from_db(db)
                 execute_checkout(db, ovh, tx.order_id)

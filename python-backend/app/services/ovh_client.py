@@ -211,6 +211,95 @@ class OvhClient:
     def terminate_service(self, service_name: str) -> Dict[str, Any]:
         return self.post(f"/service/{service_name}/terminate")
 
+    # ---------- Public Cloud (project-scoped) ----------
+
+    def list_cloud_projects(self) -> List[str]:
+        return self.get("/cloud/project")
+
+    def get_cloud_project(self, service_name: str) -> Dict[str, Any]:
+        return self.get(f"/cloud/project/{service_name}")
+
+    def create_cloud_project(self, description: str = "") -> Dict[str, Any]:
+        return self.post("/cloud/createProject", description=description)
+
+    def cloud_regions(self, service_name: str) -> List[str]:
+        return self.get(f"/cloud/project/{service_name}/region")
+
+    def cloud_flavors(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/flavor")
+
+    def cloud_images(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/image")
+
+    def cloud_sshkeys(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/sshkey")
+
+    def cloud_create_sshkey(self, service_name: str, name: str, public_key: str, region: Optional[str] = None) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"name": name, "publicKey": public_key}
+        if region:
+            payload["region"] = region
+        return self.post(f"/cloud/project/{service_name}/sshkey", **payload)
+
+    def cloud_delete_sshkey(self, service_name: str, key_id: str) -> Any:
+        return self.delete(f"/cloud/project/{service_name}/sshkey/{key_id}")
+
+    def cloud_instances(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/instance")
+
+    def cloud_get_instance(self, service_name: str, instance_id: str) -> Dict[str, Any]:
+        return self.get(f"/cloud/project/{service_name}/instance/{instance_id}")
+
+    def cloud_create_instance(self, service_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/instance", **payload)
+
+    def cloud_instance_action(self, service_name: str, instance_id: str, action: str, **kwargs) -> Any:
+        return self.post(f"/cloud/project/{service_name}/instance/{instance_id}/{action}", **kwargs)
+
+    def cloud_delete_instance(self, service_name: str, instance_id: str) -> Any:
+        return self.delete(f"/cloud/project/{service_name}/instance/{instance_id}")
+
+    def cloud_volumes(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/volume")
+
+    def cloud_create_volume(self, service_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/volume", **payload)
+
+    def cloud_volume_action(self, service_name: str, volume_id: str, action: str, **kwargs) -> Any:
+        return self.post(f"/cloud/project/{service_name}/volume/{volume_id}/{action}", **kwargs)
+
+    def cloud_delete_volume(self, service_name: str, volume_id: str) -> Any:
+        return self.delete(f"/cloud/project/{service_name}/volume/{volume_id}")
+
+    def cloud_volume_snapshot(self, service_name: str, volume_id: str, name: Optional[str] = None) -> Any:
+        return self.post(f"/cloud/project/{service_name}/volume/{volume_id}/snapshot", name=name)
+
+    def cloud_storage_containers(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/storage")
+
+    def cloud_create_storage(self, service_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/storage", **payload)
+
+    def cloud_delete_storage(self, service_name: str, container_id: str) -> Any:
+        return self.delete(f"/cloud/project/{service_name}/storage/{container_id}")
+
+    def cloud_floating_ips(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/ip/floating")
+
+    def cloud_create_floating_ip(self, service_name: str, region: str, description: str = "") -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/ip/floating", region=region, description=description)
+
+    def cloud_private_networks(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/network/private")
+
+    def cloud_create_private_network(self, service_name: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/network/private", **payload)
+
+    def cloud_quotas(self, service_name: str) -> Dict[str, Any]:
+        return self.get(f"/cloud/project/{service_name}/quota")
+
+    def cloud_usage(self, service_name: str) -> Dict[str, Any]:
+        return self.get(f"/cloud/project/{service_name}/usage/current")
+
 
 # ---------- Helpers ----------
 

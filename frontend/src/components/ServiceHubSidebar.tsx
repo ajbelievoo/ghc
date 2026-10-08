@@ -127,7 +127,7 @@ const FOOTER = [
   { icon: FileText, label: "My support tickets", tab: "support" },
   { icon: Map, label: "Roadmap & Changelog", view: "roadmap" },
   { icon: Activity, label: "Network status", tab: "status" },
-  { icon: MessageSquare, label: "Live Chat", tab: "support" },
+  { icon: MessageSquare, label: "Live Chat", tab: "ai" },
   { icon: Mail, label: "Create a ticket", tab: "support" },
   { icon: LifeBuoy, label: "Help Centre", tab: "kb" },
   { icon: Wallet, label: "Wallet", tab: "wallet" },

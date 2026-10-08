@@ -670,3 +670,144 @@ class WhiteLabelTenant(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     owner = relationship("User")
+
+
+class CloudProjectStatus(str, PyEnum):
+    PENDING = "PENDING"       # upstream order placed / awaiting activation
+    ACTIVE = "ACTIVE"         # upstream project ready
+    ERROR = "ERROR"
+
+
+class CloudProject(Base):
+    __tablename__ = "cloud_projects"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    upstream_project_id = Column(String(64), nullable=True, index=True)  # OVH serviceName
+    upstream_order_id = Column(String(64), nullable=True)
+    name = Column(String(255), default="GHC Cloud Project", nullable=False)
+    status = Column(String(20), default="PENDING", nullable=False)
+    description = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+
+
+class CloudInstanceStatus(str, PyEnum):
+    BUILDING = "BUILDING"
+    ACTIVE = "ACTIVE"
+    STOPPED = "STOPPED"
+    SUSPENDED = "SUSPENDED"     # suspended for insufficient wallet balance
+    ERROR = "ERROR"
+    DELETED = "DELETED"
+    PENDING = "PENDING"         # recorded, awaiting upstream project activation
+
+
+class CloudInstance(Base):
+    __tablename__ = "cloud_instances"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("cloud_projects.id", ondelete="SET NULL"), nullable=True)
+    upstream_instance_id = Column(String(64), nullable=True, index=True)
+    name = Column(String(255), nullable=False)
+    flavor_code = Column(String(100), nullable=False)
+    flavor_name = Column(String(255), nullable=True)
+    image = Column(String(255), nullable=True)
+    region = Column(String(50), nullable=False)
+    deploy_mode = Column(String(10), default="1az", nullable=False)
+    hourly_price = Column(Float, default=0.0, nullable=False)   # GHC price (margin applied)
+    monthly_price = Column(Float, default=0.0, nullable=False)
+    currency = Column(String(10), default="INR", nullable=False)
+    status = Column(String(20), default="PENDING", nullable=False)
+    public_ip = Column(String(64), nullable=True)
+    private_ip = Column(String(64), nullable=True)
+    config = Column(JSON, default=dict, nullable=True)
+    upstream_status = Column(String(50), nullable=True)
+    last_status_sync = Column(DateTime, nullable=True)
+    last_billed_at = Column(DateTime, nullable=True)
+    billing_started_at = Column(DateTime, nullable=True)
+    launched_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    terminated_at = Column(DateTime, nullable=True)
+
+    user = relationship("User")
+    project = relationship("CloudProject")
+
+
+class CloudSshKey(Base):
+    __tablename__ = "cloud_ssh_keys"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    upstream_key_id = Column(String(64), nullable=True)
+    name = Column(String(255), nullable=False)
+    public_key = Column(Text, nullable=False)
+    fingerprint = Column(String(128), nullable=True)
+    region = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+
+
+class CloudVolume(Base):
+    __tablename__ = "cloud_volumes"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("cloud_projects.id", ondelete="SET NULL"), nullable=True)
+    upstream_volume_id = Column(String(64), nullable=True, index=True)
+    name = Column(String(255), nullable=False)
+    size_gb = Column(Integer, nullable=False)
+    volume_type = Column(String(50), default="classic", nullable=False)
+    region = Column(String(50), nullable=False)
+    hourly_price = Column(Float, default=0.0, nullable=False)
+    currency = Column(String(10), default="INR", nullable=False)
+    status = Column(String(30), default="creating", nullable=False)
+    attached_instance_id = Column(String(64), nullable=True)
+    last_billed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+    project = relationship("CloudProject")
+
+
+class CloudStorageContainer(Base):
+    __tablename__ = "cloud_storage_containers"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("cloud_projects.id", ondelete="SET NULL"), nullable=True)
+    upstream_container_id = Column(String(255), nullable=True)
+    name = Column(String(255), nullable=False)
+    region = Column(String(50), nullable=False)
+    container_type = Column(String(50), default="standard", nullable=False)
+    monthly_price = Column(Float, default=0.0, nullable=False)
+    currency = Column(String(10), default="INR", nullable=False)
+    stored_bytes = Column(Float, default=0.0, nullable=False)
+    object_count = Column(Integer, default=0, nullable=False)
+    status = Column(String(30), default="creating", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+    project = relationship("CloudProject")
+
+
+class CloudFloatingIp(Base):
+    __tablename__ = "cloud_floating_ips"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("cloud_projects.id", ondelete="SET NULL"), nullable=True)
+    upstream_ip_id = Column(String(64), nullable=True)
+    ip = Column(String(64), nullable=True)
+    region = Column(String(50), nullable=False)
+    hourly_price = Column(Float, default=0.0, nullable=False)
+    currency = Column(String(10), default="INR", nullable=False)
+    status = Column(String(30), default="creating", nullable=False)
+    attached_instance_id = Column(String(64), nullable=True)
+    last_billed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+    project = relationship("CloudProject")

@@ -688,3 +688,211 @@ def delete_reverse_dns(ovh: OvhClient, ip_address: str) -> Dict[str, Any]:
         except Exception as e:
             last_error = e
     raise ValueError(f"Failed to delete reverse DNS: {last_error}")
+
+
+# ---------- VPS management (OVH /vps API) ----------
+
+
+def _require_vps_service_name(sub: Subscription) -> str:
+    resource_id = _get_real_resource_id(sub)
+    if not resource_id:
+        raise ValueError("No OVH resource attached to subscription")
+    if sub.category != ServiceCategory.VPS:
+        raise ValueError("This feature is only available for VPS services")
+    return resource_id
+
+
+def _safe_ovh_get(ovh: OvhClient, path: str, default=None, **kwargs):
+    try:
+        return ovh.get(path, **kwargs)
+    except Exception as e:
+        logger.debug(f"OVH GET {path} failed: {e}")
+        return default
+
+
+def get_vps_overview(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    """Full VPS overview for the OVH-style dashboard home tab."""
+    service_name = _require_vps_service_name(sub)
+    info = ovh.get(f"/vps/{service_name}")
+    model = info.get("model") or {}
+
+    ips = []
+    for ip_addr in _safe_ovh_get(ovh, f"/vps/{service_name}/ips", []) or []:
+        ip_detail = _safe_ovh_get(ovh, f"/vps/{service_name}/ips/{ip_addr}", {}) or {}
+        ips.append({
+            "ipAddress": ip_addr,
+            "gateway": ip_detail.get("gateway"),
+            "geolocation": ip_detail.get("geolocation"),
+            "reverse": ip_detail.get("reverse"),
+            "type": ip_detail.get("type"),
+            "version": ip_detail.get("version"),
+        })
+
+    options = _safe_ovh_get(ovh, f"/vps/{service_name}/option", []) or []
+    option_states = {}
+    for opt in options:
+        detail = _safe_ovh_get(ovh, f"/vps/{service_name}/option/{opt}", {}) or {}
+        option_states[opt] = detail.get("state")
+
+    current_image = _safe_ovh_get(ovh, f"/vps/{service_name}/images/current", {}) or {}
+    distribution = _safe_ovh_get(ovh, f"/vps/{service_name}/distribution", {}) or {}
+
+    return {
+        "serviceName": service_name,
+        "displayName": info.get("displayName"),
+        "state": info.get("state"),
+        "zone": info.get("zone"),
+        "cluster": info.get("cluster"),
+        "netbootMode": info.get("netbootMode"),
+        "keymap": info.get("keymap"),
+        "offerType": info.get("offerType"),
+        "memoryLimit": info.get("memoryLimit"),
+        "vcore": info.get("vcore"),
+        "monitoringIpBlocks": info.get("monitoringIpBlocks") or [],
+        "slaMonitoring": info.get("slaMonitoring"),
+        "model": {
+            "name": model.get("name"),
+            "offer": model.get("offer"),
+            "version": model.get("version"),
+            "vcore": model.get("vcore"),
+            "memory": model.get("memory"),
+            "disk": model.get("disk"),
+            "maximumAdditionnalIp": model.get("maximumAdditionnalIp"),
+            "availableOptions": model.get("availableOptions") or [],
+            "datacenter": model.get("datacenter") or [],
+        },
+        "ips": ips,
+        "options": option_states,
+        "image": current_image,
+        "distribution": distribution,
+        "serviceInfo": _service_info(ovh, sub.category, service_name),
+    }
+
+
+def get_vps_disks(ovh: OvhClient, sub: Subscription) -> List[Dict[str, Any]]:
+    """List additional data disks attached to the VPS."""
+    service_name = _require_vps_service_name(sub)
+    disk_ids = _safe_ovh_get(ovh, f"/vps/{service_name}/disks", []) or []
+    disks = []
+    for did in disk_ids:
+        d = _safe_ovh_get(ovh, f"/vps/{service_name}/disks/{did}") or {}
+        d.pop("serviceName", None)
+        disks.append(d)
+    return disks
+
+
+def get_vps_backup(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    """Automated backup state, restore points and snapshot for a VPS."""
+    service_name = _require_vps_service_name(sub)
+    auto = _safe_ovh_get(ovh, f"/vps/{service_name}/automatedBackup", {}) or {}
+    restore_points = _safe_ovh_get(ovh, f"/vps/{service_name}/automatedBackup/restorePoints", []) or []
+    snapshot = _safe_ovh_get(ovh, f"/vps/{service_name}/snapshot")
+    return {
+        "automatedBackup": auto or None,
+        "restorePoints": restore_points,
+        "snapshot": snapshot,
+    }
+
+
+def create_vps_snapshot(ovh: OvhClient, sub: Subscription, description: Optional[str] = None) -> Dict[str, Any]:
+    service_name = _require_vps_service_name(sub)
+    payload = {"description": description or f"Snapshot {datetime.utcnow().isoformat()}"}
+    return ovh.post(f"/vps/{service_name}/createSnapshot", **payload)
+
+
+def delete_vps_snapshot(ovh: OvhClient, sub: Subscription) -> Any:
+    service_name = _require_vps_service_name(sub)
+    return ovh.delete(f"/vps/{service_name}/snapshot")
+
+
+def get_vps_secondary_dns(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    service_name = _require_vps_service_name(sub)
+    domains = _safe_ovh_get(ovh, f"/vps/{service_name}/secondaryDnsDomains", []) or []
+    name_server = _safe_ovh_get(ovh, f"/vps/{service_name}/secondaryDnsNameServerAvailable")
+    return {"domains": domains, "nameServer": name_server}
+
+
+def add_vps_secondary_dns(ovh: OvhClient, sub: Subscription, domain: str) -> Any:
+    service_name = _require_vps_service_name(sub)
+    domain = (domain or "").strip().lower()
+    if not domain or "." not in domain:
+        raise ValueError("A valid domain name is required")
+    return ovh.post(f"/vps/{service_name}/secondaryDnsDomains", domain=domain)
+
+
+def delete_vps_secondary_dns(ovh: OvhClient, sub: Subscription, domain: str) -> Any:
+    service_name = _require_vps_service_name(sub)
+    return ovh.delete(f"/vps/{service_name}/secondaryDnsDomains/{domain}")
+
+
+def get_vps_images(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    """Available reinstall images and distribution templates."""
+    service_name = _require_vps_service_name(sub)
+    images = _safe_ovh_get(ovh, f"/vps/{service_name}/images/available", []) or []
+    templates = _safe_ovh_get(ovh, f"/vps/{service_name}/templates", []) or []
+    current = _safe_ovh_get(ovh, f"/vps/{service_name}/images/current", {}) or {}
+    return {"images": images, "templates": templates, "current": current}
+
+
+def get_vps_tasks(ovh: OvhClient, sub: Subscription, limit: int = 20) -> List[Dict[str, Any]]:
+    service_name = _require_vps_service_name(sub)
+    task_ids = _safe_ovh_get(ovh, f"/vps/{service_name}/tasks", []) or []
+    tasks = []
+    for tid in task_ids[:limit]:
+        t = _safe_ovh_get(ovh, f"/vps/{service_name}/tasks/{tid}") or {}
+        if t:
+            tasks.append(t)
+    return tasks
+
+
+def rename_vps(ovh: OvhClient, sub: Subscription, display_name: str) -> Any:
+    service_name = _require_vps_service_name(sub)
+    display_name = (display_name or "").strip()
+    if not display_name:
+        raise ValueError("Display name is required")
+    return ovh.put(f"/vps/{service_name}", displayName=display_name)
+
+
+def set_vps_netboot(ovh: OvhClient, sub: Subscription, mode: str) -> Any:
+    """Set VPS boot mode: local | rescue."""
+    service_name = _require_vps_service_name(sub)
+    if mode not in ("local", "rescue"):
+        raise ValueError("Boot mode must be 'local' or 'rescue'")
+    return ovh.put(f"/vps/{service_name}", netbootMode=mode)
+
+
+def reset_vps_password(ovh: OvhClient, sub: Subscription) -> Any:
+    service_name = _require_vps_service_name(sub)
+    return ovh.post(f"/vps/{service_name}/setPassword")
+
+
+def change_vps_ip_geolocation(ovh: OvhClient, sub: Subscription, ip_address: str, country: str) -> Any:
+    service_name = _require_vps_service_name(sub)
+    return ovh.put(f"/vps/{service_name}/ips/{ip_address}", country=country)
+
+
+def get_vps_ip_countries(ovh: OvhClient, sub: Subscription) -> List[str]:
+    service_name = _require_vps_service_name(sub)
+    return _safe_ovh_get(ovh, f"/vps/{service_name}/ipCountryAvailable", []) or []
+
+
+def get_vps_upgrade_offers(ovh: OvhClient, sub: Subscription) -> List[Dict[str, Any]]:
+    """Available model upgrades for this VPS from /order/upgrade/vps."""
+    service_name = _require_vps_service_name(sub)
+    return _safe_ovh_get(ovh, f"/order/upgrade/vps/{service_name}", []) or []
+
+
+def get_vps_service_options(ovh: OvhClient, sub: Subscription) -> List[Dict[str, Any]]:
+    """Purchasable service options (additional disk, automated backup, snapshot…)."""
+    service_name = _require_vps_service_name(sub)
+    return _safe_ovh_get(ovh, f"/order/cartServiceOption/vps/{service_name}", []) or []
+
+
+def get_vps_disk_durations(ovh: OvhClient, sub: Subscription, size: int) -> List[str]:
+    service_name = _require_vps_service_name(sub)
+    return _safe_ovh_get(ovh, f"/order/vps/{service_name}/additionalDisk", additionalDiskSize=str(size)) or []
+
+
+def get_vps_backup_durations(ovh: OvhClient, sub: Subscription) -> List[str]:
+    service_name = _require_vps_service_name(sub)
+    return _safe_ovh_get(ovh, f"/order/vps/{service_name}/automatedBackup") or []

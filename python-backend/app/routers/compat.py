@@ -47,21 +47,43 @@ from app.services.domain_service import (
     refresh_dns_zone,
     update_dns_record,
 )
-from app.services.order_service import create_customer_order, execute_checkout, pay_order_with_wallet, _resolve_plan_code
+from app.services.order_service import (
+    create_customer_order,
+    create_service_option_order,
+    execute_checkout,
+    get_vps_option_catalog,
+    pay_order_with_wallet,
+    _resolve_plan_code,
+)
 from app.services.ovh_client import get_ovh_client_from_db
 from app.services.subscription_service import (
+    add_vps_secondary_dns,
+    change_vps_ip_geolocation,
+    create_vps_snapshot,
     delete_reverse_dns,
+    delete_vps_secondary_dns,
+    delete_vps_snapshot,
     get_console_url,
     get_server_bandwidth,
     get_server_details,
     get_service_metrics,
     get_subscription,
     get_user_subscriptions,
+    get_vps_backup,
+    get_vps_disks,
+    get_vps_images,
+    get_vps_ip_countries,
+    get_vps_overview,
+    get_vps_secondary_dns,
+    get_vps_tasks,
     lifecycle_action,
     perform_power_action,
     reinstall_os,
+    rename_vps,
+    reset_vps_password,
     set_normal_boot,
     set_rescue_mode,
+    set_vps_netboot,
     update_reverse_dns,
 )
 
@@ -608,6 +630,74 @@ def remove_domain_record(record_id: int, domain: str, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/server/domains/{domain}/nameservers")
+def get_domain_nameservers(domain: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        ids = ovh.get(f"/domain/zone/{domain}/nameServers") or []
+        detail = ovh.get(f"/domain/{domain}/nameServer") or []
+        servers = []
+        for ns_id in (detail if isinstance(detail, list) else []):
+            try:
+                servers.append(ovh.get(f"/domain/{domain}/nameServer/{ns_id}"))
+            except Exception:
+                pass
+        return {"domain": domain, "current": ids, "servers": servers}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/server/domains/{domain}/nameservers")
+def set_domain_nameservers(domain: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    servers = body.get("nameServers") or []
+    if not servers or not all(isinstance(s, str) and "." in s for s in servers):
+        raise HTTPException(status_code=400, detail="nameServers must be a list of hostnames")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        payload = {"nameServers": [{"host": s.strip().lower()} for s in servers]}
+        return ovh.post(f"/domain/{domain}/nameServers/update", **payload)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/server/domains/{domain}/dnssec")
+def get_domain_dnssec(domain: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        return ovh.get(f"/domain/{domain}/dnssec")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/server/domains/{domain}/dnssec")
+def set_domain_dnssec(domain: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        return ovh.post(f"/domain/{domain}/dnssec", **{"dsData": body.get("dsData")})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/user/activity")
 def user_activity(limit: int = 10, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Recent user activity across orders, invoices, tickets, and domains."""
@@ -924,6 +1014,18 @@ def server_rescue(server_id: str, body: dict, db: Session = Depends(get_db), use
         raise HTTPException(status_code=404, detail="Server not found")
     try:
         ovh = get_ovh_client_from_db(db)
+        # VPS supports rescue via netbootMode (local | rescue)
+        if sub.category == ServiceCategory.VPS:
+            mode = "local" if body.get("enabled") is False else "rescue"
+            result = set_vps_netboot(ovh, sub, mode)
+            out = {"success": True, "netbootMode": mode, "task": result}
+            if body.get("reboot"):
+                try:
+                    perform_power_action(db, ovh, sub, "reboot")
+                    out["reboot"] = True
+                except Exception as e:
+                    out["rebootError"] = str(e)
+            return out
         if body.get("enabled") is False:
             return set_normal_boot(db, ovh, sub)
         return set_rescue_mode(db, ovh, sub, reboot=bool(body.get("reboot")))
@@ -1101,7 +1203,19 @@ def payments_checkout(body: dict, db: Session = Depends(get_db), user: User = De
     domain_reg = None
     additional_ip = None
     domain_renewal = None
-    if tx_type == "ORDER" and body.get("planCode"):
+    if tx_type == "ORDER" and body.get("orderId"):
+        # Pay an existing pending order (e.g. a VPS service-option order)
+        order = db.query(CustomerOrder).filter(
+            CustomerOrder.id == body.get("orderId"),
+            CustomerOrder.user_id == user.id,
+        ).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+        if order.status != OrderStatus.PENDING:
+            raise HTTPException(status_code=400, detail=f"Order is already {order.status.value}")
+        order_id = order.id
+        amount = float(order.customer_amount)
+    elif tx_type == "ORDER" and body.get("planCode"):
         order = create_customer_order(
             db,
             user_id=user.id,
@@ -1214,6 +1328,14 @@ def payments_checkout(body: dict, db: Session = Depends(get_db), user: User = De
         if additional_ip and additional_ip.status == "PENDING":
             additional_ip.status = "ACTIVE"
             db.commit()
+        if order and order.status == OrderStatus.PENDING:
+            order.status = OrderStatus.PAYMENT_RECEIVED
+            db.commit()
+            try:
+                ovh = get_ovh_client_from_db(db)
+                execute_checkout(db, ovh, order.id)
+            except Exception as e:
+                return {"id": tx.id, "amount": tx.amount, "currency": tx.currency, "gateway": tx.gateway, "status": tx.status.value, "paid": True, "message": f"Paid — provisioning pending: {e}"}
         return {"id": tx.id, "amount": tx.amount, "currency": tx.currency, "gateway": tx.gateway, "status": tx.status.value, "paid": True}
     try:
         checkout = create_gateway_checkout(db, tx, user)
@@ -1878,6 +2000,204 @@ def get_additional_ip_price(server_id: str, currency: Optional[str] = None, db: 
         "totalAmount": total,
         "currency": target,
     }
+
+
+# ---------- VPS management (OVH-style service dashboard) ----------
+
+def _vps_sub_and_client(db: Session, user: User, server_id: str):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    if sub.category != ServiceCategory.VPS:
+        raise HTTPException(status_code=400, detail="This section is available for VPS services only")
+    return sub, get_ovh_client_from_db(db)
+
+
+@router.get("/server/{server_id}/vps/overview")
+def vps_overview(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return get_vps_overview(ovh, sub)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/vps/disks")
+def vps_disks(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return get_vps_disks(ovh, sub)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/vps/backups")
+def vps_backups(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return get_vps_backup(ovh, sub)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/vps/snapshot")
+def vps_snapshot(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    action = (body.get("action") or "create").lower()
+    try:
+        if action == "create":
+            return {"success": True, "task": create_vps_snapshot(ovh, sub, body.get("description"))}
+        if action == "delete":
+            return {"success": True, "task": delete_vps_snapshot(ovh, sub)}
+        raise HTTPException(status_code=400, detail="action must be 'create' or 'delete'")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/vps/backup/restore")
+def vps_backup_restore(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    restore_point = body.get("restorePointId")
+    if not restore_point:
+        raise HTTPException(status_code=400, detail="restorePointId is required")
+    try:
+        service_name = sub.service_name or sub.ovh_resource_id
+        task = ovh.post(f"/vps/{service_name}/automatedBackup/restore", restorePointId=restore_point, type="full")
+        return {"success": True, "task": task}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/vps/secondary-dns")
+def vps_secondary_dns_list(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return get_vps_secondary_dns(ovh, sub)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/vps/secondary-dns")
+def vps_secondary_dns_update(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    domain = (body.get("domain") or "").strip()
+    action = (body.get("action") or "add").lower()
+    try:
+        if action == "add":
+            return {"success": True, "task": add_vps_secondary_dns(ovh, sub, domain)}
+        if action == "delete":
+            return {"success": True, "task": delete_vps_secondary_dns(ovh, sub, domain)}
+        raise HTTPException(status_code=400, detail="action must be 'add' or 'delete'")
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/vps/images")
+def vps_images(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return get_vps_images(ovh, sub)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/vps/tasks")
+def vps_tasks(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return get_vps_tasks(ovh, sub)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.put("/server/{server_id}/vps")
+def vps_update(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        if body.get("displayName"):
+            result = rename_vps(ovh, sub, body["displayName"])
+            sub.display_name = body["displayName"].strip()
+            db.commit()
+            return {"success": True, "task": result}
+        if body.get("netbootMode"):
+            return {"success": True, "task": set_vps_netboot(ovh, sub, body["netbootMode"])}
+        raise HTTPException(status_code=400, detail="Nothing to update — send displayName or netbootMode")
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/vps/password")
+def vps_password_reset(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return {"success": True, "task": reset_vps_password(ovh, sub)}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/vps/options")
+def vps_option_catalog(server_id: str, currency: Optional[str] = None, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return get_vps_option_catalog(db, ovh, sub, currency)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/vps/options/order")
+def vps_option_order(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    kind = (body.get("kind") or "").strip()
+    try:
+        order = create_service_option_order(
+            db, ovh, user.id, sub, kind,
+            {
+                "planCode": body.get("planCode"),
+                "size": body.get("size"),
+                "duration": body.get("duration"),
+            },
+            currency=body.get("currency"),
+        )
+        return {
+            "success": True,
+            "order": {
+                "id": order.id,
+                "kind": kind,
+                "label": (order.configuration_payload or {}).get("display_name"),
+                "amount": order.customer_amount,
+                "taxAmount": order.tax_amount,
+                "currency": order.currency,
+                "status": order.status.value,
+            },
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
 
 
 @router.get("/server/{server_id}/ping")

@@ -8,6 +8,7 @@ import { getCloudCatalog, FALLBACK_CATALOG } from "@/lib/cloudLive";
 import {
   ChevronDown, Search, Plus, Cpu, HardDrive, Network, Container, Database,
   Brain, Atom, Layers, FolderOpen, Loader2, Wallet, CreditCard, Server, Check,
+  RefreshCw, Play, Power, Trash2, KeyRound, Globe2,
 } from "lucide-react";
 
 const MARGIN = 1.2;
@@ -24,6 +25,7 @@ const buildTree = (cd: Record<string, Leaf[]>): TreeNode[] => [
       { label: "Instances", leaf: "instances" },
       { label: "Instance Backup", leaf: "svc:backup" },
       { label: "Workflow Management", leaf: "svc:block" },
+      { label: "SSH Keys", leaf: "svc:sshkeys" },
     ],
   },
   {
@@ -162,6 +164,15 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
   const [postScript, setPostScript] = useState(false);
   const [script, setScript] = useState("");
   const [numInstances, setNumInstances] = useState(1);
+  const [instances, setInstances] = useState<any[]>([]);
+  const [project, setProject] = useState<any>(null);
+  const [sshKeys, setSshKeys] = useState<any[]>([]);
+  const [volumes, setVolumes] = useState<any[]>([]);
+  const [floatingIps, setFloatingIps] = useState<any[]>([]);
+  const [containers, setContainers] = useState<any[]>([]);
+  const [volForm, setVolForm] = useState({ name: "", size_gb: 50, region: "GRA" });
+  const [cForm, setCForm] = useState({ name: "", region: "GRA" });
+  const [fipRegion, setFipRegion] = useState("GRA");
 
   const cur = (wallet?.currency || currency || "INR").toUpperCase();
   const sym = getCurrencySymbol(cur);
@@ -172,12 +183,37 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
     const dec = p >= 100 ? 0 : p >= 1 ? 2 : p >= 0.01 ? 4 : 6;
     return `${sym}${p.toLocaleString("en-IN", { maximumFractionDigits: dec })}`;
   };
+  // For values already margin-applied by the backend (instance/volume prices)
+  const fmtNoMargin = (v?: number | null) => {
+    if (typeof v !== "number") return "—";
+    const p = v * rate;
+    const dec = p >= 100 ? 0 : p >= 1 ? 2 : p >= 0.01 ? 4 : 6;
+    return `${sym}${p.toLocaleString("en-IN", { maximumFractionDigits: dec })}`;
+  };
 
   useEffect(() => {
     let on = true;
     getCloudCatalog().then((d) => { if (on) setCatData(d); });
+    api.cloud.project().then((p) => { if (on) setProject(p); }).catch(() => {});
+    api.cloud.instances().then((l) => { if (on) setInstances(Array.isArray(l) ? l : []); }).catch(() => {});
     return () => { on = false; };
   }, []);
+
+  // Poll instance status every 15s while the panel is open
+  useEffect(() => {
+    const t = setInterval(() => {
+      api.cloud.instances().then((l) => setInstances(Array.isArray(l) ? l : [])).catch(() => {});
+    }, 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Load per-section resources lazily
+  useEffect(() => {
+    if (active === "svc:block") api.cloud.volumes().then((v) => setVolumes(Array.isArray(v) ? v : [])).catch(() => {});
+    if (active === "svc:floatingip") api.cloud.floatingIps().then((v) => setFloatingIps(Array.isArray(v) ? v : [])).catch(() => {});
+    if (active === "svc:object") api.cloud.containers().then((v) => setContainers(Array.isArray(v) ? v : [])).catch(() => {});
+    if (active === "svc:sshkeys") api.cloud.sshKeys().then((v) => setSshKeys(Array.isArray(v) ? v : [])).catch(() => {});
+  }, [active]);
 
   const tree = useMemo(() => buildTree(catData), [catData]);
   const leafLookup = useMemo(() => {
@@ -252,30 +288,45 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
     }
     setLaunching(true);
     try {
-      const res = await api.payments.createCheckoutSession({
-        type: "ORDER", amount: 0, gateway: "wallet", planCode: "project",
-        durationLabel: "monthly", category: "PUBLIC_CLOUD", currency: cur,
-        configuration: {
-          instance_name: name || model.code, region, deploy_mode: deployMode,
-          flavor: model.code, count: numInstances, storage_gb: storage,
-          image: imageVersion, ssh_key_name: sshValidated ? sshKeyName : undefined,
-          backup: backup ? `rotation-${rotation}` : "off", remote_backup: remoteBackup,
-          vlan_id: vlanId, cidr, dhcp, gateway: gatewayOn ? "s" : "none",
-          public_ip: publicIp, flexible, post_script: postScript ? script : undefined,
-          billing: "hourly",
-        } as any,
+      await api.cloud.createInstance({
+        instance_name: name || model.code, region, deploy_mode: deployMode,
+        flavor: model.code, count: numInstances, storage_gb: storage,
+        image: imageVersion, ssh_key_name: sshValidated ? sshKeyName : undefined,
+        public_ip: publicIp,
+        network: { vlan_id: vlanId, cidr, dhcp, gateway: gatewayOn ? "s" : "none" },
+        post_script: postScript ? script : undefined, flexible,
       });
-      if (res.paid || res.checkoutUrl === undefined) {
-        showToast("Instance launch request received — provisioning your project", "success");
-        setProjectState("pending");
-        setWizard(false);
-      } else if (res.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
-      }
+      showToast("Instance launched — provisioning started", "success");
+      setWizard(false);
+      setActive("instances");
+      refreshInstances();
     } catch (e: any) {
-      showToast(e.message || "Could not launch — project activation is being verified", "error");
-      setProjectState("pending");
+      const msg = e.message || "Launch failed";
+      if (/activation|pending|409/i.test(msg)) {
+        showToast("Cloud project activation in progress — retry in a few minutes", "error");
+        setProjectState("pending");
+      } else if (/balance|402/i.test(msg)) {
+        showToast(msg, "error");
+        onTab?.("wallet");
+      } else {
+        showToast(msg, "error");
+      }
     } finally { setLaunching(false); }
+  };
+
+  const refreshInstances = async () => {
+    try {
+      const list = await api.cloud.instances();
+      setInstances(Array.isArray(list) ? list : []);
+    } catch { /* keep list */ }
+  };
+
+  const instAction = async (id: string, action: string) => {
+    try {
+      await api.cloud.instanceAction(id, action);
+      showToast(`Instance ${action} requested`, "success");
+      refreshInstances();
+    } catch (e: any) { showToast(e.message || `Could not ${action}`, "error"); }
   };
 
   const enableService = async (sec: Leaf, item?: PriceItem) => {
@@ -331,18 +382,72 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h2 className="text-xl font-bold text-[#0f172a]">Instances</h2>
-                <p className="text-sm text-slate-500">Instances are billed per hour while running.</p>
+                <p className="text-sm text-slate-500">Instances are billed per hour while running{project?.status === "ACTIVE" ? "" : " — project activating"}.</p>
               </div>
               <button onClick={() => setWizard(true)} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2.5 text-sm font-bold hover:bg-[#009fe0] transition flex items-center gap-2"><Plus className="w-4 h-4" /> Create an instance</button>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-10 text-center">
-              <Server className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="font-semibold text-[#0f172a]">No instances yet</p>
-              <p className="text-sm text-slate-500 mt-1">Launch your first instance — you only pay for the hours it runs.</p>
-            </div>
-            {projectState === "pending" && (
-              <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
-                Your project activation is being verified. Instances will be provisioned automatically once the project is active.
+            {project?.status !== "ACTIVE" && (
+              <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                Your cloud project is being activated upstream. New instances will provision automatically once active.
+              </div>
+            )}
+            {instances.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-10 text-center">
+                <Server className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="font-semibold text-[#0f172a]">No instances yet</p>
+                <p className="text-sm text-slate-500 mt-1">Launch your first instance — you only pay for the hours it runs.</p>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="border-b border-slate-200 bg-slate-50/60">
+                    <tr>
+                      <th className={th}>Name</th><th className={th}>Model</th><th className={th}>Region</th>
+                      <th className={th}>Public IP</th><th className={th}>Status</th><th className={th}>Price</th>
+                      <th className={`${th} text-right`}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {instances.map((i) => (
+                      <tr key={i.id} className="hover:bg-slate-50/60">
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-semibold text-[#0f172a]">{i.name}</p>
+                          <p className="text-[11px] text-slate-400">{i.image || "—"}</p>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono">{i.flavor}</td>
+                        <td className="px-4 py-3 text-sm">{i.region}</td>
+                        <td className="px-4 py-3 text-sm font-mono">{i.public_ip || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                            i.status === "ACTIVE" ? "bg-emerald-100 text-emerald-700" :
+                            i.status === "BUILDING" || i.status === "PENDING" ? "bg-amber-100 text-amber-700" :
+                            i.status === "SUSPENDED" ? "bg-orange-100 text-orange-700" :
+                            i.status === "STOPPED" ? "bg-slate-200 text-slate-600" : "bg-red-100 text-red-700"}`}>
+                            {(i.status === "BUILDING" || i.status === "PENDING") && <Loader2 className="w-3 h-3 animate-spin" />}
+                            {i.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold">{fmtNoMargin(i.hourly)}/hr</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            {i.status === "ACTIVE" && (
+                              <>
+                                <button title="Reboot" onClick={() => instAction(i.id, "reboot")} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#00b7ff]"><RefreshCw className="w-4 h-4" /></button>
+                                <button title="Stop" onClick={() => instAction(i.id, "stop")} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-amber-600"><Power className="w-4 h-4" /></button>
+                                <button title="Reinstall" onClick={() => { if (confirm(`Reinstall ${i.name}? All data on the system disk is wiped.`)) instAction(i.id, "reinstall"); }} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-violet-600"><HardDrive className="w-4 h-4" /></button>
+                              </>
+                            )}
+                            {(i.status === "STOPPED" || i.status === "SUSPENDED") && (
+                              <button title="Start" onClick={() => instAction(i.id, "start")} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-emerald-600"><Play className="w-4 h-4" /></button>
+                            )}
+                            <button title="Delete" onClick={() => { if (confirm(`Delete instance ${i.name}? Billing stops immediately.`)) instAction(i.id, "delete"); }} className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -638,10 +743,148 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
           </div>
         )}
 
+        {active === "svc:sshkeys" && (
+          <div>
+            <h2 className="text-xl font-bold text-[#0f172a]">SSH Keys</h2>
+            <p className="text-sm text-slate-500 mt-1 mb-5">Public keys injected into new instances at launch.</p>
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5 mb-5">
+              <p className="text-sm font-bold text-[#0f172a] mb-3">Add a key</p>
+              <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                <input value={sshKeyName} onChange={(e) => setSshKeyName(e.target.value)} placeholder="Key name (e.g. my-laptop)" className={inputCls} />
+                <select value={region || "GRA"} onChange={(e) => setRegion(e.target.value)} className={inputCls}>
+                  {["GRA","RBX","SBG","DE","UK","WAW","BHS","SGP","SYD"].map((r) => <option key={r}>{r}</option>)}
+                </select>
+              </div>
+              <textarea value={sshKey} onChange={(e) => setSshKey(e.target.value)} rows={3} placeholder="ssh-ed25519 AAAA... or ssh-rsa AAAA..." className={`${inputCls} font-mono text-xs mb-3`} />
+              <button onClick={async () => {
+                try {
+                  await api.cloud.createSshKey({ name: sshKeyName, public_key: sshKey, region });
+                  showToast("SSH key added", "success");
+                  setSshKey(""); setSshKeyName("");
+                  api.cloud.sshKeys().then((v) => setSshKeys(Array.isArray(v) ? v : []));
+                } catch (e: any) { showToast(e.message, "error"); }
+              }} disabled={!sshKeyName || !sshKey} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-bold hover:bg-[#009fe0] disabled:opacity-40 flex items-center gap-2"><KeyRound className="w-4 h-4" /> Add key</button>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Name</th><th className={th}>Fingerprint</th><th className={th}>Region</th><th className={th}></th></tr></thead>
+                <tbody>
+                  {sshKeys.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">No keys yet — add one above</td></tr>}
+                  {sshKeys.map((k) => (
+                    <tr key={k.id} className="border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm font-semibold">{k.name}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-slate-500">{k.fingerprint}</td>
+                      <td className="px-4 py-3 text-sm">{k.region || "all"}</td>
+                      <td className="px-4 py-3 text-right"><button onClick={async () => { await api.cloud.deleteSshKey(k.id); setSshKeys((p) => p.filter((x) => x.id !== k.id)); }} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {sec && (
           <div>
             <h2 className="text-xl font-bold text-[#0f172a]">{sec.title}</h2>
             <p className="text-sm text-slate-500 mt-1 mb-5 max-w-2xl">{sec.desc}</p>
+
+            {/* --- Managed resources --- */}
+            {active === "svc:block" && (
+              <div className="mb-6">
+                <div className="rounded-2xl border border-slate-200 bg-white/60 p-5 mb-4">
+                  <p className="text-sm font-bold mb-3">Create a volume</p>
+                  <div className="grid sm:grid-cols-4 gap-3">
+                    <input value={volForm.name} onChange={(e) => setVolForm({ ...volForm, name: e.target.value })} placeholder="Volume name" className={inputCls} />
+                    <input type="number" value={volForm.size_gb} onChange={(e) => setVolForm({ ...volForm, size_gb: +e.target.value })} placeholder="Size GB" className={inputCls} />
+                    <select value={volForm.region} onChange={(e) => setVolForm({ ...volForm, region: e.target.value })} className={inputCls}>
+                      {["GRA","RBX","SBG","DE","UK","WAW","BHS","SGP","SYD"].map((r) => <option key={r}>{r}</option>)}
+                    </select>
+                    <button onClick={async () => {
+                      try {
+                        await api.cloud.createVolume({ ...volForm, hourly_price: (sec.items?.[0]?.hour || 0) * volForm.size_gb });
+                        showToast("Volume creation started", "success");
+                        api.cloud.volumes().then((v) => setVolumes(Array.isArray(v) ? v : []));
+                      } catch (e: any) { showToast(e.message, "error"); }
+                    }} disabled={!volForm.name} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-bold hover:bg-[#009fe0] disabled:opacity-40">Create</button>
+                  </div>
+                </div>
+                {volumes.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden mb-4">
+                    <table className="w-full text-left"><thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Your volumes</th><th className={th}>Size</th><th className={th}>Region</th><th className={th}>Status</th><th className={th}>Attached to</th><th className={`${th} text-right`}>Actions</th></tr></thead>
+                    <tbody>{volumes.map((v) => <tr key={v.id} className="border-b border-slate-100"><td className="px-4 py-3 text-sm font-semibold">{v.name}</td><td className="px-4 py-3 text-sm">{v.size_gb} GB</td><td className="px-4 py-3 text-sm">{v.region}</td><td className="px-4 py-3 text-sm">{v.status}</td><td className="px-4 py-3 text-xs font-mono text-slate-500">{v.attached_to || "—"}</td>
+                    <td className="px-4 py-3"><div className="flex items-center justify-end gap-1">
+                      {!v.attached_to && instances.filter((i) => i.status === "ACTIVE").length > 0 && (
+                        <button onClick={async () => {
+                          const active = instances.filter((i) => i.status === "ACTIVE" && i.upstream_instance_id);
+                          const target = active[0];
+                          if (!target) return showToast("No running instance to attach to", "error");
+                          try { await api.cloud.volumeAction(v.id, { action: "attach", instance_id: target.upstream_instance_id }); showToast("Attach requested", "success"); api.cloud.volumes().then((x) => setVolumes(Array.isArray(x) ? x : [])); } catch (e: any) { showToast(e.message, "error"); }
+                        }} className="rounded px-2 py-1 text-[11px] font-bold text-[#00b7ff] hover:bg-[#e8f6ff]">Attach</button>
+                      )}
+                      {v.attached_to && <button onClick={async () => { try { await api.cloud.volumeAction(v.id, { action: "detach" }); showToast("Detach requested", "success"); api.cloud.volumes().then((x) => setVolumes(Array.isArray(x) ? x : [])); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded px-2 py-1 text-[11px] font-bold text-amber-600 hover:bg-amber-50">Detach</button>}
+                      <button onClick={async () => { if (!confirm(`Delete volume ${v.name}? Data is lost.`)) return; try { await api.cloud.deleteVolume(v.id); setVolumes((p) => p.filter((x) => x.id !== v.id)); showToast("Volume deleted", "success"); } catch (e: any) { showToast(e.message, "error"); } }} className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div></td></tr>)}</tbody></table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {active === "svc:floatingip" && (
+              <div className="mb-6">
+                <div className="rounded-2xl border border-slate-200 bg-white/60 p-5 mb-4">
+                  <p className="text-sm font-bold mb-3">Reserve a Floating IP</p>
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <select value={fipRegion} onChange={(e) => setFipRegion(e.target.value)} className={inputCls}>
+                      {["GRA","RBX","SBG","DE","UK","WAW","BHS","SGP","SYD"].map((r) => <option key={r}>{r}</option>)}
+                    </select>
+                    <p className="self-center text-xs text-slate-500">{fmt(sec.items?.find((i) => i.code === "floatingip.floatingip")?.hour)}/hr while reserved</p>
+                    <button onClick={async () => {
+                      try {
+                        await api.cloud.createFloatingIp({ region: fipRegion, hourly_price: sec.items?.find((i) => i.code === "floatingip.floatingip")?.hour || 0 });
+                        showToast("Floating IP requested", "success");
+                        api.cloud.floatingIps().then((v) => setFloatingIps(Array.isArray(v) ? v : []));
+                      } catch (e: any) { showToast(e.message, "error"); }
+                    }} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-bold hover:bg-[#009fe0] flex items-center justify-center gap-2"><Globe2 className="w-4 h-4" /> Reserve</button>
+                  </div>
+                </div>
+                {floatingIps.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden mb-4">
+                    <table className="w-full text-left"><thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Your IPs</th><th className={th}>Region</th><th className={th}>Status</th><th className={th}>Attached to</th><th className={`${th} text-right`}></th></tr></thead>
+                    <tbody>{floatingIps.map((f) => <tr key={f.id} className="border-b border-slate-100"><td className="px-4 py-3 text-sm font-mono font-semibold">{f.ip || "assigning…"}</td><td className="px-4 py-3 text-sm">{f.region}</td><td className="px-4 py-3 text-sm">{f.status}</td><td className="px-4 py-3 text-xs font-mono text-slate-500">{f.attached_to || "—"}</td><td className="px-4 py-3 text-right"><button onClick={async () => { if (!confirm(`Release floating IP ${f.ip || f.id}?`)) return; try { await api.cloud.deleteFloatingIp(f.id); setFloatingIps((p) => p.filter((x) => x.id !== f.id)); showToast("IP released", "success"); } catch (e: any) { showToast(e.message, "error"); } }} className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>)}</tbody></table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {active === "svc:object" && (
+              <div className="mb-6">
+                <div className="rounded-2xl border border-slate-200 bg-white/60 p-5 mb-4">
+                  <p className="text-sm font-bold mb-3">Create a container</p>
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <input value={cForm.name} onChange={(e) => setCForm({ ...cForm, name: e.target.value })} placeholder="Container name" className={inputCls} />
+                    <select value={cForm.region} onChange={(e) => setCForm({ ...cForm, region: e.target.value })} className={inputCls}>
+                      {["GRA","RBX","SBG","DE","UK","WAW","BHS","SGP","SYD"].map((r) => <option key={r}>{r}</option>)}
+                    </select>
+                    <button onClick={async () => {
+                      try {
+                        await api.cloud.createContainer({ name: cForm.name, region: cForm.region, container_type: "standard" });
+                        showToast("Container creation started", "success");
+                        api.cloud.containers().then((v) => setContainers(Array.isArray(v) ? v : []));
+                      } catch (e: any) { showToast(e.message, "error"); }
+                    }} disabled={!cForm.name} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-bold hover:bg-[#009fe0] disabled:opacity-40">Create</button>
+                  </div>
+                </div>
+                {containers.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden mb-4">
+                    <table className="w-full text-left"><thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Your containers</th><th className={th}>Region</th><th className={th}>Used</th><th className={th}>Status</th></tr></thead>
+                    <tbody>{containers.map((c) => <tr key={c.id} className="border-b border-slate-100"><td className="px-4 py-3 text-sm font-semibold">{c.name}</td><td className="px-4 py-3 text-sm">{c.region}</td><td className="px-4 py-3 text-sm">{(c.stored_bytes / 1e9).toFixed(2)} GB · {c.objects} objects</td><td className="px-4 py-3 text-sm">{c.status}</td><td className="px-4 py-3 text-right"><button onClick={async () => { if (!confirm(`Delete container ${c.name} and all its objects?`)) return; try { await api.cloud.deleteContainer(c.id); setContainers((p) => p.filter((x) => x.id !== c.id)); showToast("Container deleted", "success"); } catch (e: any) { showToast(e.message, "error"); } }} className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>)}</tbody></table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Available plans</p>
             <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
               <table className="w-full text-left">
                 <thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Name</th><th className={th}>Price / hour</th><th className={th}>~Price / month</th><th className={th}></th></tr></thead>

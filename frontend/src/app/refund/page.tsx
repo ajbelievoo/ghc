@@ -14,7 +14,7 @@ export default function RefundPage() {
         <h1 className="text-3xl font-black text-[#0f172a] md:text-4xl">Refund & Cancellation Policy</h1>
         <p className="mt-2 text-sm text-slate-500">Last updated: {new Date().toLocaleDateString()}</p>
         <div className="mt-8 space-y-6 text-sm leading-relaxed text-slate-700">
-          <p>Believoo Pvt Ltd wants you to be satisfied with GHC services. This policy explains when refunds and cancellations are available. GHC services are provisioned on upstream provider infrastructure (OVHcloud); our refund terms therefore follow the upstream provider's terms so that we can continue offering services at low margin-based prices.</p>
+          <p>Believoo Pvt Ltd wants you to be satisfied with GHC services. This policy explains when refunds and cancellations are available. GHC services are provisioned on upstream datacenter infrastructure; our refund terms therefore follow the upstream terms so that we can continue offering services at low margin-based prices.</p>
           <h2 className="text-lg font-bold text-[#0f172a]">1. Refund Eligibility</h2>
           <p>Refunds are issued only in these cases:</p>
           <ul className="ml-5 list-disc space-y-1">
@@ -23,7 +23,7 @@ export default function RefundPage() {
             <li><strong>Pre-provisioning cancellation:</strong> if you cancel before the service is provisioned at the upstream provider, a full refund applies.</li>
           </ul>
           <h2 className="text-lg font-bold text-[#0f172a]">2. Non-Refundable Services</h2>
-          <p>Once provisioned or activated, the following are strictly non-refundable because the upstream provider does not refund them to us: VPS, dedicated servers, cloud instances, web hosting plans, domain registrations/transfers/renewals, SSL certificates, licenses, add-on IPs, and setup fees. Upstream provider (OVHcloud) terms apply to service delivery, suspension, and termination.</p>
+          <p>Once provisioned or activated, the following are strictly non-refundable because the upstream provider does not refund them to us: VPS, dedicated servers, cloud instances, web hosting plans, domain registrations/transfers/renewals, SSL certificates, licenses, add-on IPs, and setup fees. Upstream provider terms apply to service delivery, suspension, and termination.</p>
           <h2 className="text-lg font-bold text-[#0f172a]">3. Cancellation</h2>
           <p>You may cancel recurring services from the client dashboard. Cancellations take effect at the end of the current billing cycle. No partial-period credits are given for mid-cycle cancellations unless required by law. Turning off auto-renewal before the renewal date avoids further charges.</p>
           <h2 className="text-lg font-bold text-[#0f172a]">4. Overpayments and Duplicate Payments</h2>

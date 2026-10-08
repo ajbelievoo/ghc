@@ -29,7 +29,7 @@ from app.models.models import (
     SubscriptionStatus,
     SystemLog,
 )
-from app.routers import admin, auth, auto_scaling, catalog, compat, health, marketplace, orders, subscriptions, support, team, wallet, webhooks
+from app.routers import admin, auth, auto_scaling, catalog, cloud, compat, health, marketplace, orders, subscriptions, support, team, wallet, webhooks
 from app.services.auto_scaling_service import evaluate_rules
 from app.services.marketplace_service import marketplace_worker
 from app.services.email_service import send_domain_renewal_reminder_email, send_renewal_reminder_email, send_suspension_email
@@ -324,6 +324,25 @@ async def auto_scaling_loop():
         await asyncio.sleep(300)  # every 5 minutes
 
 
+async def cloud_billing_loop():
+    """Hourly wallet deduction for running cloud instances — every 10 min."""
+    from app.services.cloud_service import billing_tick
+    await asyncio.sleep(45)
+    while True:
+        db = None
+        try:
+            db = SessionLocal()
+            stats = await asyncio.to_thread(billing_tick, db)
+            if stats.get("billed") or stats.get("suspended"):
+                logger.info(f"Cloud billing tick: {stats}")
+        except Exception as e:
+            logger.error(f"Cloud billing failed: {e}")
+        finally:
+            if db:
+                db.close()
+        await asyncio.sleep(600)  # every 10 minutes
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Database schema management:
@@ -363,11 +382,13 @@ async def lifespan(app: FastAPI):
     ping_task = asyncio.create_task(ping_monitor_loop())
     auto_scaling_task = asyncio.create_task(auto_scaling_loop())
     marketplace_task = asyncio.create_task(marketplace_worker())
+    cloud_billing_task = asyncio.create_task(cloud_billing_loop())
     yield
     task.cancel()
     ping_task.cancel()
     auto_scaling_task.cancel()
     marketplace_task.cancel()
+    cloud_billing_task.cancel()
 
 
 app = FastAPI(
@@ -445,6 +466,7 @@ app.include_router(team.router)
 app.include_router(compat.router)
 app.include_router(auto_scaling.router)
 app.include_router(marketplace.router)
+app.include_router(cloud.router)
 
 
 @app.get("/health")

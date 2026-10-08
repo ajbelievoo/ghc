@@ -165,6 +165,12 @@ export const api = {
       request(`/server/domains/records/${recordId}`, { method: "PUT", body: JSON.stringify(body) }),
     deleteDomainRecord: (recordId: number, domain: string) =>
       request(`/server/domains/records/${recordId}?domain=${encodeURIComponent(domain)}`, { method: "DELETE" }),
+    domainNameservers: (domain: string) => request(`/server/domains/${encodeURIComponent(domain)}/nameservers`),
+    setDomainNameservers: (domain: string, nameServers: string[]) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/nameservers`, { method: "PUT", body: JSON.stringify({ nameServers }) }),
+    domainDnssec: (domain: string) => request(`/server/domains/${encodeURIComponent(domain)}/dnssec`),
+    setDomainDnssec: (domain: string, dsData: object) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/dnssec`, { method: "POST", body: JSON.stringify({ dsData }) }),
     details: (id: string) => request(`/server/${id}`),
     power: (id: string, action: string) =>
       request(`/server/${id}/power`, { method: "POST", body: JSON.stringify({ action }) }),
@@ -185,6 +191,24 @@ export const api = {
     additionalIpPrice: (id: string) => request(`/server/${id}/additional-ips/price?currency=${selectedCurrency()}`),
     purchaseAdditionalIp: (id: string, body: { gateway?: string; currency?: string }) =>
       request(`/server/${id}/additional-ips`, { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
+    vpsOverview: (id: string) => request(`/server/${id}/vps/overview`),
+    vpsDisks: (id: string) => request(`/server/${id}/vps/disks`),
+    vpsBackups: (id: string) => request(`/server/${id}/vps/backups`),
+    vpsSnapshot: (id: string, body: { action: "create" | "delete"; description?: string }) =>
+      request(`/server/${id}/vps/snapshot`, { method: "POST", body: JSON.stringify(body) }),
+    vpsBackupRestore: (id: string, restorePointId: string) =>
+      request(`/server/${id}/vps/backup/restore`, { method: "POST", body: JSON.stringify({ restorePointId }) }),
+    vpsSecondaryDns: (id: string) => request(`/server/${id}/vps/secondary-dns`),
+    vpsSecondaryDnsAction: (id: string, body: { action: "add" | "delete"; domain: string }) =>
+      request(`/server/${id}/vps/secondary-dns`, { method: "POST", body: JSON.stringify(body) }),
+    vpsImages: (id: string) => request(`/server/${id}/vps/images`),
+    vpsTasks: (id: string) => request(`/server/${id}/vps/tasks`),
+    vpsUpdate: (id: string, body: { displayName?: string; netbootMode?: "local" | "rescue" }) =>
+      request(`/server/${id}/vps`, { method: "PUT", body: JSON.stringify(body) }),
+    vpsPasswordReset: (id: string) => request(`/server/${id}/vps/password`, { method: "POST" }),
+    vpsOptions: (id: string) => request(`/server/${id}/vps/options?currency=${selectedCurrency()}`),
+    vpsOrderOption: (id: string, body: { kind: "upgrade" | "additional_disk" | "automated_backup"; planCode?: string; size?: number; duration?: string; currency?: string }) =>
+      request(`/server/${id}/vps/options/order`, { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
   },
   billing: {
     createOrder: (body: { planCode: string; durationLabel: string; gateway: string; category: string; currency?: string }) =>
@@ -217,8 +241,35 @@ export const api = {
   ai: {
     ask: (message: string) => request("/ai/assistant", { method: "POST", body: JSON.stringify({ message }) }),
   },
+  cloud: {
+    project: () => request("/cloud/project"),
+    activateProject: () => request("/cloud/project/activate", { method: "POST" }),
+    instances: () => request("/cloud/instances"),
+    createInstance: (body: object) => request("/cloud/instances", { method: "POST", body: JSON.stringify(body) }),
+    instanceAction: (id: string, action: string, image?: string) =>
+      request(`/cloud/instances/${id}/action`, { method: "POST", body: JSON.stringify({ action, image }) }),
+    sshKeys: () => request("/cloud/ssh-keys"),
+    createSshKey: (body: { name: string; public_key: string; region?: string }) =>
+      request("/cloud/ssh-keys", { method: "POST", body: JSON.stringify(body) }),
+    deleteSshKey: (id: string) => request(`/cloud/ssh-keys/${id}`, { method: "DELETE" }),
+    volumes: () => request("/cloud/volumes"),
+    createVolume: (body: object) => request("/cloud/volumes", { method: "POST", body: JSON.stringify(body) }),
+    volumeAction: (id: string, body: object) => request(`/cloud/volumes/${id}/action`, { method: "POST", body: JSON.stringify(body) }),
+    deleteVolume: (id: string) => request(`/cloud/volumes/${id}`, { method: "DELETE" }),
+    floatingIps: () => request("/cloud/floating-ips"),
+    createFloatingIp: (body: object) => request("/cloud/floating-ips", { method: "POST", body: JSON.stringify(body) }),
+    deleteFloatingIp: (id: string) => request(`/cloud/floating-ips/${id}`, { method: "DELETE" }),
+    networks: () => request("/cloud/networks"),
+    createNetwork: (body: object) => request("/cloud/networks", { method: "POST", body: JSON.stringify(body) }),
+    containers: () => request("/cloud/containers"),
+    createContainer: (body: object) => request("/cloud/containers", { method: "POST", body: JSON.stringify(body) }),
+    deleteContainer: (id: string) => request(`/cloud/containers/${id}`, { method: "DELETE" }),
+    quota: () => request("/cloud/quota"),
+    usage: () => request("/cloud/usage"),
+    services: () => request("/cloud/services"),
+  },
   payments: {
-    createCheckoutSession: (body: { type: string; amount: number; gateway: string; planCode?: string; durationLabel?: string; category?: string; configuration?: object; domainName?: string; tld?: string; years?: number; subscriptionId?: string; price?: number; domainId?: string; ipId?: string; currency?: string }) =>
+    createCheckoutSession: (body: { type: string; amount?: number; gateway: string; orderId?: string; planCode?: string; durationLabel?: string; category?: string; configuration?: object; domainName?: string; tld?: string; years?: number; subscriptionId?: string; price?: number; domainId?: string; ipId?: string; currency?: string }) =>
       request("/payments/checkout", { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
     getSession: (sessionId: string) => request(`/payments/session/${sessionId}`),
     fulfillSession: (sessionId: string) => request(`/payments/session/${sessionId}/fulfill`, { method: "POST" }),
