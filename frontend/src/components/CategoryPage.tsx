@@ -713,7 +713,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
         ) : filteredPlans.length === 0 ? (
           <div className="rounded border border-slate-200 bg-[#f8faff] p-10 text-center">
             <p className="font-bold text-[#0f172a]">No plans match your filters</p>
-            <button onClick={clearFilters} className="mt-4 rounded bg-[#0f0c29] px-5 py-2 text-sm font-bold text-[#0f172a]">Clear all filters</button>
+            <button onClick={clearFilters} className="mt-4 rounded bg-[#0f0c29] px-5 py-2 text-sm font-bold text-white">Clear all filters</button>
             {plans.length === 0 && (
               <>
                 <p className="mt-2 text-sm text-slate-500">No plans in database. Sync product catalog first.</p>

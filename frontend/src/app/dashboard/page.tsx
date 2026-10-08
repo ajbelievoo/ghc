@@ -747,8 +747,8 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0f1c] flex">
-        <aside className="w-72 border-r border-white/10 bg-[#0a0f1c] hidden lg:flex" />
-        <main className="flex-1 bg-[#f4f6fb] p-6 space-y-6">
+        <aside className="ghc-dash-sidebar w-72 border-r border-white/10 bg-[#0a0f1c] hidden lg:flex" />
+        <main className="ghc-dash-main flex-1 bg-[#f4f6fb] p-6 space-y-6">
           <div className="h-16 rounded-2xl bg-slate-200 animate-pulse" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1,2,3,4].map((i) => <div key={i} className="h-32 rounded-2xl bg-slate-200 animate-pulse" />)}
@@ -783,7 +783,7 @@ export default function DashboardPage() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-[#f4f6fb] pb-20 lg:pb-0">
+      <main className="ghc-dash-main flex-1 overflow-auto bg-[#f4f6fb] pb-20 lg:pb-0">
         <DashboardHeader
           user={user}
           notifications={notifList}

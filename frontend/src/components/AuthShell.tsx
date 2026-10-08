@@ -48,7 +48,7 @@ export default function AuthShell({
 
           <Link href="/" className="relative z-10">
             {ghc.logo_url ? (
-              <img src={ghc.logo_url} alt={ghc.name} className="w-52 max-w-[85%] h-auto" style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,.25))" }} />
+              <img src="/images/ghc-logo.png" alt={ghc.name} className="w-52 max-w-[85%] h-auto" style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,.25))" }} />
             ) : (
               <h2 className="text-3xl font-black tracking-tight" style={{ textShadow: "0 4px 12px rgba(0,0,0,.25)" }}>{ghc.name}</h2>
             )}

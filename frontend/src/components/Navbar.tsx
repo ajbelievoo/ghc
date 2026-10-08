@@ -202,13 +202,15 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex shrink-0 items-center gap-3">
           {ghc.logo_url ? (
-            <img src={ghc.logo_url} alt={ghc.name} className="h-9 w-auto" />
+            <img src={ghc.logo_url} alt={ghc.name} className="h-10 w-auto" style={{ filter: "drop-shadow(0 2px 8px rgba(0,120,200,.25))" }} />
           ) : (
-            <div className={`flex h-9 w-9 items-center justify-center rounded ${logoBg}`}>
-              <Server className="h-5 w-5" />
-            </div>
+            <>
+              <div className={`flex h-9 w-9 items-center justify-center rounded ${logoBg}`}>
+                <Server className="h-5 w-5" />
+              </div>
+              <span className={`text-lg font-bold ${dark ? "text-white" : ""}`}>{ghc.name}</span>
+            </>
           )}
-          <span className={`text-lg font-bold ${dark ? "text-white" : ""}`}>{ghc.name}</span>
         </Link>
 
         <form

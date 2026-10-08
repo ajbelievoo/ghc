@@ -14,13 +14,15 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2">
               {ghc.logo_url ? (
-                <img src={ghc.logo_url} alt={ghc.name} className="h-8 w-auto" />
+                <img src={ghc.logo_url} alt={ghc.name} className="h-10 w-auto" />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded bg-[#00b7ff]/10 border border-[#00b7ff]/30">
-                  <Server className="h-4 w-4 text-[#00b7ff]" />
-                </div>
+                <>
+                  <div className="flex h-8 w-8 items-center justify-center rounded bg-[#00b7ff]/10 border border-[#00b7ff]/30">
+                    <Server className="h-4 w-4 text-[#00b7ff]" />
+                  </div>
+                  <span className="font-bold text-white">{ghc.name}</span>
+                </>
               )}
-              <span className="font-bold text-white">{ghc.name}</span>
             </div>
             <p className="mt-3 text-sm text-slate-300">{ghc.tagline} — automated cloud billing & provisioning by Believoo Private Limited.</p>
           </div>
