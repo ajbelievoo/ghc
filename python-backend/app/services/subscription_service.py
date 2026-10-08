@@ -896,3 +896,45 @@ def get_vps_disk_durations(ovh: OvhClient, sub: Subscription, size: int) -> List
 def get_vps_backup_durations(ovh: OvhClient, sub: Subscription) -> List[str]:
     service_name = _require_vps_service_name(sub)
     return _safe_ovh_get(ovh, f"/order/vps/{service_name}/automatedBackup") or []
+
+
+def set_service_auto_renew(db: Session, ovh: OvhClient, sub: Subscription, enabled: bool) -> Dict[str, Any]:
+    """Toggle automatic renewal at the provider and locally."""
+    resource_id = _get_real_resource_id(sub)
+    if not resource_id:
+        raise ValueError("No OVH resource attached to subscription")
+    family = "vps" if sub.category == ServiceCategory.VPS else "dedicated/server"
+    renew = {"automatic": enabled}
+    if enabled:
+        renew.update({"deleteAtExpiration": False, "forced": False})
+    else:
+        renew.update({"deleteAtExpiration": True})
+    try:
+        ovh.put(f"/{family}/{resource_id}/serviceInfos", renew=renew)
+    except Exception as e:
+        logger.warning(f"serviceInfos update failed for {resource_id}: {e}")
+        raise ValueError(f"Provider rejected the renewal change: {e}")
+    sub.auto_renew = enabled
+    sub.updated_at = func.now()
+    db.commit()
+    return {"success": True, "autoRenew": enabled}
+
+
+def request_service_termination(db: Session, ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    """Request service termination — provider ends the service at its expiry date."""
+    resource_id = _get_real_resource_id(sub)
+    if not resource_id:
+        raise ValueError("No OVH resource attached to subscription")
+    result = None
+    if sub.category == ServiceCategory.VPS:
+        result = ovh.post(f"/vps/{resource_id}/terminate")
+    elif sub.category == ServiceCategory.DEDICATED:
+        result = ovh.post(f"/dedicated/server/{resource_id}/terminate")
+    else:
+        raise ValueError(f"Termination not supported for {sub.category.value} services")
+    sub.auto_renew = False
+    sub.status = SubscriptionStatus.CANCELLED
+    sub.updated_at = func.now()
+    db.commit()
+    _log_action(db, sub, "terminate_requested", True)
+    return {"success": True, "task": result, "message": "Termination requested — the service will end at its expiry date"}
