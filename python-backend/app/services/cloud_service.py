@@ -49,7 +49,10 @@ def sync_project(db: Session, user: User, ovh: Optional[OvhClient] = None) -> Cl
         try:
             info = ovh.get_cloud_project(upstream_id)
             proj.name = info.get("description") or proj.name
-            if info.get("status") and info["status"] != "ok":
+            plan = info.get("planCode") or ""
+            if plan == "project.discovery":
+                proj.status = "DISCOVERY"   # sandbox — cannot run instances
+            elif info.get("status") and info["status"] != "ok":
                 proj.status = "PENDING"
         except Exception:
             pass
@@ -93,17 +96,19 @@ def lookup_flavor_price(db: Session, flavor_code: str) -> Dict[str, Any]:
 
 # ---------- instances ----------
 
-def _find_flavor_id(ovh: OvhClient, project_id: str, region: str, flavor_code: str) -> Optional[str]:
+def _find_flavor(ovh: OvhClient, project_id: str, region: str, flavor_code: str) -> Optional[Dict[str, Any]]:
+    """Find a flavor entry. Region may be a parent code (GRA) — resolve to a
+    concrete upstream region (GRA11/GRA7/GRA9) where the flavor is available."""
     try:
-        for f in ovh.cloud_flavors(project_id) or []:
-            if f.get("region") == region and f.get("name", "").lower() == flavor_code.lower():
-                return f.get("id")
-        for f in ovh.cloud_flavors(project_id) or []:
-            if f.get("name", "").lower() == flavor_code.lower():
-                return f.get("id")
+        flavors = [f for f in (ovh.cloud_flavors(project_id) or []) if f.get("name", "").lower() == flavor_code.lower() and f.get("available", True)]
     except Exception as e:
         logger.warning("flavor lookup failed: %s", e)
-    return None
+        return None
+    exact = [f for f in flavors if f.get("region") == region]
+    if exact:
+        return exact[0]
+    prefixed = [f for f in flavors if str(f.get("region", "")).startswith(region)]
+    return prefixed[0] if prefixed else (flavors[0] if flavors else None)
 
 
 def _find_image_id(ovh: OvhClient, project_id: str, region: str, image_name: Optional[str]) -> Optional[str]:
@@ -146,9 +151,11 @@ def launch_instance(db: Session, user: User, cfg: Dict[str, Any]) -> CloudInstan
     proj = ensure_active_project(db, user, ovh)
     project_id = proj.upstream_project_id
 
-    flavor_id = _find_flavor_id(ovh, project_id, region, flavor_code)
-    if not flavor_id:
+    flav = _find_flavor(ovh, project_id, region, flavor_code)
+    if not flav:
         raise CloudError(f"Flavor {flavor_code} is not available in region {region}", code="flavor_unavailable")
+    flavor_id = flav["id"]
+    region = flav.get("region") or region  # resolved concrete region
     image_id = _find_image_id(ovh, project_id, region, cfg.get("image"))
 
     ssh_key_id = None

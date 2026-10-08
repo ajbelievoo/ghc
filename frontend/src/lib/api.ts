@@ -79,6 +79,7 @@ export const api = {
       request(`/admin/users/${userId}`, { method: "POST", body: JSON.stringify(body) }),
     // Credentials
     getCredentials: () => request("/admin/credentials"),
+    testProvider: () => request("/admin/cloud/balance"),
     updateCredentials: (body: object) =>
       request("/admin/credentials", { method: "POST", body: JSON.stringify(body) }),
     // Brand
@@ -267,6 +268,19 @@ export const api = {
     quota: () => request("/cloud/quota"),
     usage: () => request("/cloud/usage"),
     services: () => request("/cloud/services"),
+    kubes: () => request("/cloud/kubes"),
+    createKube: (body: object) => request("/cloud/kubes", { method: "POST", body: JSON.stringify(body) }),
+    kubeconfig: (id: string) => request(`/cloud/kubes/${id}/kubeconfig`),
+    deleteKube: (id: string) => request(`/cloud/kubes/${id}`, { method: "DELETE" }),
+    registries: () => request("/cloud/registries"),
+    createRegistry: (body: object) => request("/cloud/registries", { method: "POST", body: JSON.stringify(body) }),
+    deleteRegistry: (id: string) => request(`/cloud/registries/${id}`, { method: "DELETE" }),
+  },
+  orders: {
+    list: () => request("/orders/"),
+    get: (id: string) => request(`/orders/${id}`),
+    payWallet: (id: string) => request(`/orders/${id}/pay-wallet`, { method: "POST" }),
+    provision: (id: string) => request(`/orders/${id}/provision`, { method: "POST" }),
   },
   payments: {
     createCheckoutSession: (body: { type: string; amount?: number; gateway: string; orderId?: string; planCode?: string; durationLabel?: string; category?: string; configuration?: object; domainName?: string; tld?: string; years?: number; subscriptionId?: string; price?: number; domainId?: string; ipId?: string; currency?: string }) =>

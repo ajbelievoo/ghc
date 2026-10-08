@@ -173,6 +173,10 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
   const [volForm, setVolForm] = useState({ name: "", size_gb: 50, region: "GRA" });
   const [cForm, setCForm] = useState({ name: "", region: "GRA" });
   const [fipRegion, setFipRegion] = useState("GRA");
+  const [kubes, setKubes] = useState<any[]>([]);
+  const [registries, setRegistries] = useState<any[]>([]);
+  const [kubeForm, setKubeForm] = useState({ name: "", region: "GRA11" });
+  const [regForm, setRegForm] = useState({ name: "", region: "GRA" });
 
   const cur = (wallet?.currency || currency || "INR").toUpperCase();
   const sym = getCurrencySymbol(cur);
@@ -213,6 +217,8 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
     if (active === "svc:floatingip") api.cloud.floatingIps().then((v) => setFloatingIps(Array.isArray(v) ? v : [])).catch(() => {});
     if (active === "svc:object") api.cloud.containers().then((v) => setContainers(Array.isArray(v) ? v : [])).catch(() => {});
     if (active === "svc:sshkeys") api.cloud.sshKeys().then((v) => setSshKeys(Array.isArray(v) ? v : [])).catch(() => {});
+    if (active === "svc:k8s") api.cloud.kubes().then((v) => setKubes(Array.isArray(v) ? v : [])).catch(() => {});
+    if (active === "svc:registry") api.cloud.registries().then((v) => setRegistries(Array.isArray(v) ? v : [])).catch(() => {});
   }, [active]);
 
   const tree = useMemo(() => buildTree(catData), [catData]);
@@ -386,12 +392,17 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
               </div>
               <button onClick={() => setWizard(true)} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2.5 text-sm font-bold hover:bg-[#009fe0] transition flex items-center gap-2"><Plus className="w-4 h-4" /> Create an instance</button>
             </div>
-            {project?.status !== "ACTIVE" && (
+            {project?.status === "DISCOVERY" ? (
+              <div className="mb-4 rounded-xl border border-blue-300 bg-blue-50 p-4 text-sm text-blue-800 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                Your cloud project is live in preview mode. Full instance provisioning unlocks once upstream account validation completes.
+              </div>
+            ) : project?.status !== "ACTIVE" ? (
               <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                 Your cloud project is being activated upstream. New instances will provision automatically once active.
               </div>
-            )}
+            ) : null}
             {instances.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-10 text-center">
                 <Server className="w-10 h-10 text-slate-300 mx-auto mb-3" />
@@ -879,6 +890,68 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
                   <div className="rounded-2xl border border-slate-200 overflow-hidden mb-4">
                     <table className="w-full text-left"><thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Your containers</th><th className={th}>Region</th><th className={th}>Used</th><th className={th}>Status</th></tr></thead>
                     <tbody>{containers.map((c) => <tr key={c.id} className="border-b border-slate-100"><td className="px-4 py-3 text-sm font-semibold">{c.name}</td><td className="px-4 py-3 text-sm">{c.region}</td><td className="px-4 py-3 text-sm">{(c.stored_bytes / 1e9).toFixed(2)} GB · {c.objects} objects</td><td className="px-4 py-3 text-sm">{c.status}</td><td className="px-4 py-3 text-right"><button onClick={async () => { if (!confirm(`Delete container ${c.name} and all its objects?`)) return; try { await api.cloud.deleteContainer(c.id); setContainers((p) => p.filter((x) => x.id !== c.id)); showToast("Container deleted", "success"); } catch (e: any) { showToast(e.message, "error"); } }} className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>)}</tbody></table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {active === "svc:k8s" && (
+              <div className="mb-6">
+                <div className="rounded-2xl border border-slate-200 bg-white/60 p-5 mb-4">
+                  <p className="text-sm font-bold mb-3">Create a Kubernetes cluster</p>
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <input value={kubeForm.name} onChange={(e) => setKubeForm({ ...kubeForm, name: e.target.value })} placeholder="Cluster name" className={inputCls} />
+                    <select value={kubeForm.region} onChange={(e) => setKubeForm({ ...kubeForm, region: e.target.value })} className={inputCls}>
+                      {["GRA11","GRA7","GRA9","RBX-A","SBG5","BHS5","DE1","UK1","WAW1"].map((r) => <option key={r}>{r}</option>)}
+                    </select>
+                    <button onClick={async () => {
+                      try {
+                        await api.cloud.createKube(kubeForm);
+                        showToast("Cluster creation started", "success");
+                        api.cloud.kubes().then((v) => setKubes(Array.isArray(v) ? v : []));
+                      } catch (e: any) { showToast(e.message, "error"); }
+                    }} disabled={!kubeForm.name} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-bold hover:bg-[#009fe0] disabled:opacity-40">Create cluster</button>
+                  </div>
+                </div>
+                {kubes.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden mb-4">
+                    <table className="w-full text-left"><thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Your clusters</th><th className={th}>Region</th><th className={th}>Version</th><th className={th}>Status</th><th className={`${th} text-right`}>Actions</th></tr></thead>
+                    <tbody>{kubes.map((k) => <tr key={k.id} className="border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm font-semibold">{k.name}</td><td className="px-4 py-3 text-sm">{k.region}</td><td className="px-4 py-3 text-sm">{k.version || "—"}</td><td className="px-4 py-3 text-sm">{k.status}</td>
+                      <td className="px-4 py-3"><div className="flex justify-end gap-1">
+                        <button onClick={async () => { try { const kc = await api.cloud.kubeconfig(k.id); const blob = new Blob([kc.content || JSON.stringify(kc)], { type: "text/yaml" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${k.name}-kubeconfig.yaml`; a.click(); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded px-2 py-1 text-[11px] font-bold text-[#00b7ff] hover:bg-[#e8f6ff]">kubeconfig</button>
+                        <button onClick={async () => { if (!confirm(`Delete cluster ${k.name}?`)) return; try { await api.cloud.deleteKube(k.id); setKubes((p) => p.filter((x) => x.id !== k.id)); } catch (e: any) { showToast(e.message, "error"); } }} className="p-1 rounded text-slate-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div></td></tr>)}</tbody></table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {active === "svc:registry" && (
+              <div className="mb-6">
+                <div className="rounded-2xl border border-slate-200 bg-white/60 p-5 mb-4">
+                  <p className="text-sm font-bold mb-3">Create a private registry</p>
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    <input value={regForm.name} onChange={(e) => setRegForm({ ...regForm, name: e.target.value })} placeholder="Registry name" className={inputCls} />
+                    <select value={regForm.region} onChange={(e) => setRegForm({ ...regForm, region: e.target.value })} className={inputCls}>
+                      {["GRA","RBX","SBG","DE","UK","WAW","BHS"].map((r) => <option key={r}>{r}</option>)}
+                    </select>
+                    <button onClick={async () => {
+                      try {
+                        await api.cloud.createRegistry(regForm);
+                        showToast("Registry creation started", "success");
+                        api.cloud.registries().then((v) => setRegistries(Array.isArray(v) ? v : []));
+                      } catch (e: any) { showToast(e.message, "error"); }
+                    }} disabled={!regForm.name} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-bold hover:bg-[#009fe0] disabled:opacity-40">Create registry</button>
+                  </div>
+                </div>
+                {registries.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 overflow-hidden mb-4">
+                    <table className="w-full text-left"><thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Your registries</th><th className={th}>Region</th><th className={th}>URL</th><th className={th}>Status</th><th className={`${th} text-right`}></th></tr></thead>
+                    <tbody>{registries.map((r) => <tr key={r.id} className="border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm font-semibold">{r.name}</td><td className="px-4 py-3 text-sm">{r.region}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-slate-500">{r.url || "—"}</td><td className="px-4 py-3 text-sm">{r.status}</td>
+                      <td className="px-4 py-3 text-right"><button onClick={async () => { if (!confirm(`Delete registry ${r.name}?`)) return; try { await api.cloud.deleteRegistry(r.id); setRegistries((p) => p.filter((x) => x.id !== r.id)); } catch (e: any) { showToast(e.message, "error"); } }} className="p-1 rounded text-slate-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button></td></tr>)}</tbody></table>
                   </div>
                 )}
               </div>

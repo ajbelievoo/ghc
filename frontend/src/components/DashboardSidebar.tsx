@@ -136,9 +136,14 @@ const MENU = [
     icon: Globe,
     label: "Web Cloud",
     items: [
-      { label: "My Domains", tab: "domains" },
+      { label: "Domain names", tab: "domains" },
+      { label: "Ongoing operations", tab: "domains" },
+      { label: "DNS zones", tab: "domains" },
       { label: "Domain search", view: "domain-search" },
-      { label: "Email hosting", view: "web-hosting" },
+      { label: "Hosting plans", view: "web-hosting" },
+      { label: "Websites", view: "web-hosting" },
+      { label: "Web Cloud databases", view: "web-hosting" },
+      { label: "MX Plan (Email)", view: "web-hosting" },
     ],
   },
 ];

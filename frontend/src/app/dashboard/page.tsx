@@ -53,6 +53,11 @@ import {
   Plus,
   MessageSquare,
   Wallet,
+  Download,
+  Filter,
+  SlidersHorizontal,
+  MoreVertical,
+  ChevronDown,
 } from "lucide-react";
 
 type Tab = "overview" | "servers" | "domains" | "invoices" | "wallet" | "support" | "security" | "profile";
@@ -86,6 +91,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [servers, setServers] = useState<ServerInstance[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [ordersList, setOrdersList] = useState<any[]>([]);
   const [selectedServer, setSelectedServer] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<any>(null);
   const [metricsHistory, setMetricsHistory] = useState<any[]>([]);
@@ -125,6 +131,10 @@ export default function DashboardPage() {
   const [selectedDomainTld, setSelectedDomainTld] = useState<any>(null);
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
   const [domainPaymentMessage, setDomainPaymentMessage] = useState<{amount: number, currency: string, instructions: string, txId: string} | null>(null);
+  const [domainMenuId, setDomainMenuId] = useState<string | null>(null);
+  const [domainColsOpen, setDomainColsOpen] = useState(false);
+  const [domainCols, setDomainCols] = useState({ technical: true, renewal: true, operations: true, registrant: true });
+  const [domainTableQuery, setDomainTableQuery] = useState("");
   const [tickets, setTickets] = useState<any[]>([]);
   const [ticketsTotal, setTicketsTotal] = useState(0);
   const [ticketsPage, setTicketsPage] = useState(1);
@@ -356,9 +366,10 @@ export default function DashboardPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [srvList, invList, act, anns, status, ref] = await Promise.all([
+      const [srvList, invList, ordList, act, anns, status, ref] = await Promise.all([
         api.server.list(),
         api.billing.invoices(),
+        api.orders.list().catch(() => []),
         api.auth.activity().catch(() => []),
         api.public.announcements().catch(() => []),
         api.public.status().catch(() => null),
@@ -366,6 +377,7 @@ export default function DashboardPage() {
       ]);
       setServers(srvList || []);
       setInvoices(invList || []);
+      setOrdersList(ordList || []);
       setActivity(act || []);
       setAnnouncements(anns || []);
       setServiceStatus(status);
@@ -745,7 +757,24 @@ export default function DashboardPage() {
   const safeInvoices = Array.isArray(invoices) ? invoices : [];
   const safeTickets = Array.isArray(tickets) ? tickets : [];
   const filteredServers = useMemo(() => safeServers.filter((s) => (s.name || s.displayName || s.planCode || "").toLowerCase().includes(q) || (s.ipAddress || "").toLowerCase().includes(q) || (s.category || "").toLowerCase().includes(q)), [safeServers, q]);
-  const filteredDomains = useMemo(() => safeDomains.filter((d) => (d.domainName || "").toLowerCase().includes(q) || (d.tld || "").toLowerCase().includes(q) || (d.status || "").toLowerCase().includes(q)), [safeDomains, q]);
+  const filteredDomains = useMemo(() => {
+    const tq = domainTableQuery.toLowerCase();
+    return safeDomains.filter((d) =>
+      ((!q && !tq) || (d.domainName || "").toLowerCase().includes(q) || (d.tld || "").toLowerCase().includes(q) || (d.status || "").toLowerCase().includes(q))
+      && (!tq || (d.domain || "").toLowerCase().includes(tq) || (d.status || "").toLowerCase().includes(tq) || (d.registrantContact || "").toLowerCase().includes(tq))
+    );
+  }, [safeDomains, q, domainTableQuery]);
+
+  const exportDomainsCsv = () => {
+    const rows = [["Domain name", "Status", "Technical status", "Renewal frequency", "Ongoing operations", "Expiry", "Registrant contact", "Auto-renew"]];
+    filteredDomains.forEach((d: any) => rows.push([d.domain, d.status, d.technicalStatus || "", d.renewalFrequency || "", String(d.ongoingOperations || 0), d.expiresAt ? new Date(d.expiresAt).toISOString().slice(0, 10) : "", d.registrantContact || "", d.autoRenew ? "yes" : "no"]));
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `ghc-domains-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
   const filteredInvoices = useMemo(() => safeInvoices.filter((i) => (i.id || "").toLowerCase().includes(q) || (i.status || "").toLowerCase().includes(q) || (i.description || "").toLowerCase().includes(q)), [safeInvoices, q]);
   const filteredTickets = useMemo(() => safeTickets.filter((t) => (t.subject || "").toLowerCase().includes(q) || (t.category || "").toLowerCase().includes(q) || (t.status || "").toLowerCase().includes(q)), [safeTickets, q]);
 
@@ -1415,6 +1444,38 @@ export default function DashboardPage() {
         {!activeView && tab === "invoices" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-[#0f172a]">Billing & Invoices</h2>
+
+            {ordersList.length > 0 && (
+              <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200"><h3 className="text-sm font-bold text-[#0f172a]">Order history</h3></div>
+                <table className="w-full text-left">
+                  <thead><tr className="border-b border-slate-200 bg-slate-100/50">
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Order</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Plan</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Amount</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Status</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Date</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500"></th>
+                  </tr></thead>
+                  <tbody>
+                    {ordersList.slice(0, 10).map((o) => (
+                      <tr key={o.id} className="border-b border-slate-100 hover:bg-slate-50/60">
+                        <td className="px-6 py-3 text-xs font-mono text-slate-500">#{o.id.slice(0, 8).toUpperCase()}</td>
+                        <td className="px-6 py-3 text-sm font-medium text-[#0f172a]">{o.displayName || o.planCode || o.category}</td>
+                        <td className="px-6 py-3 text-sm">{getCurrencySymbol(o.currency || currency)}{Number(o.totalAmount || o.amount || 0).toFixed(2)}</td>
+                        <td className="px-6 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${o.status === "COMPLETED" || o.status === "DELIVERED" ? "bg-emerald-100 text-emerald-700" : o.status === "PENDING" ? "bg-amber-100 text-amber-700" : o.status === "FAILED" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}>{o.status}</span></td>
+                        <td className="px-6 py-3 text-xs text-slate-500">{o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "—"}</td>
+                        <td className="px-6 py-3 text-right">
+                          {(o.status === "PENDING" || o.status === "PENDING_PAYMENT") && (
+                            <button onClick={async () => { try { await api.orders.payWallet(o.id); showToast("Payment applied", "success"); fetchData(); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20">Pay with wallet</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
               <table className="w-full text-left">
                 <thead>
@@ -1543,7 +1604,7 @@ export default function DashboardPage() {
               <h2 className="text-2xl font-bold text-[#0f172a]">My Domains</h2>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">
+            <div id="ghc-domain-register" className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6 scroll-mt-24">
               <h3 className="text-sm font-semibold text-[#0f172a] mb-4 flex items-center gap-2">
                 <Globe className="w-4 h-4 text-[#00b7ff]" /> Register a new domain
               </h3>
@@ -1622,54 +1683,89 @@ export default function DashboardPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">
-              <h3 className="text-sm font-semibold text-[#0f172a] mb-4">Registered Domains</h3>
+              {/* OVH-style toolbar */}
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <button onClick={() => document.getElementById("ghc-domain-register")?.scrollIntoView({ behavior: "smooth" })} className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-semibold text-white hover:bg-[#00b7ff]/85 transition-all">Order</button>
+                <button onClick={exportDomainsCsv} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-[#0f172a] hover:border-[#00b7ff]/50 transition-all flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Export in CSV <ChevronDown className="w-3 h-3 text-slate-400" /></button>
+                <button disabled title="No domains awaiting restore/renewal" className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-400 cursor-not-allowed">Restore/Renew ({safeDomains.filter((d: any) => d.status === "EXPIRED").length})</button>
+                <div className="ml-auto flex items-center gap-2">
+                  <input value={domainTableQuery} onChange={(e) => setDomainTableQuery(e.target.value)} placeholder="Search" className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-xs text-[#0f172a] w-40 focus:border-[#00b7ff]/50 outline-none" />
+                  <button className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-[#0f172a] hover:border-[#00b7ff]/50 transition-all flex items-center gap-1.5"><Filter className="w-3.5 h-3.5 text-slate-400" /> Filter</button>
+                  <div className="relative">
+                    <button onClick={() => setDomainColsOpen(!domainColsOpen)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-[#0f172a] hover:border-[#00b7ff]/50 transition-all flex items-center gap-1.5"><SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" /> Columns ({4 + Object.values(domainCols).filter(Boolean).length})</button>
+                    {domainColsOpen && (
+                      <div className="absolute right-0 top-full mt-1 z-30 w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                        {([["technical", "Technical status"], ["renewal", "Renewal frequency"], ["operations", "Ongoing operations"], ["registrant", "Registrant contact"]] as const).map(([k, label]) => (
+                          <label key={k} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-[#0f172a] hover:bg-slate-50 cursor-pointer">
+                            <input type="checkbox" checked={domainCols[k]} onChange={() => setDomainCols({ ...domainCols, [k]: !domainCols[k] })} className="accent-[#00b7ff]" /> {label}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {filteredDomains.length === 0 ? (
-                <p className="text-xs text-slate-500">{searchQuery ? "No matching domains." : "No domains registered yet."}</p>
+                <p className="text-xs text-slate-500 py-6 text-center">{searchQuery || domainTableQuery ? "No matching domains." : "No domains registered yet — use the Order button above to register one."}</p>
               ) : (
-                <div className="space-y-2">
-                  {filteredDomains.map((d: any) => (
-                    <div key={d.id} className="flex items-center justify-between rounded-lg bg-slate-100 border border-slate-200 px-4 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-[#0f172a]">{d.domain}</p>
-                        <p className="text-[10px] text-slate-500">
-                          {d.years} year{d.years > 1 ? "s" : ""} · Expires {d.expiresAt ? new Date(d.expiresAt).toLocaleDateString() : "N/A"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => handleToggleAutoRenew(d.id)}
-                          disabled={d.status !== 'ACTIVE'}
-                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all disabled:opacity-50 ${d.autoRenew ? 'bg-[#00ff88]/10 text-[#00ff88] border-[#00ff88]/30' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
-                        >
-                          Auto-renew {d.autoRenew ? "ON" : "OFF"}
-                        </button>
-                        {d.status === 'ACTIVE' && (
-                          <button
-                            onClick={() => handleRenewDomain(d)}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-[#00b7ff]/30 bg-[#00b7ff]/10 text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all"
-                          >
-                            Renew
-                          </button>
-                        )}
-                        {d.status === 'ACTIVE' && (
-                          <button
-                            onClick={() => setManagingDomain(d.domain)}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-[#00b7ff]/30 bg-[#00b7ff]/10 text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all"
-                          >
-                            Manage DNS
-                          </button>
-                        )}
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-[#00b7ff]">
-                            {getCurrencySymbol(d.currency)}{d.totalAmount?.toFixed(2)} {d.currency}
-                          </p>
-                          <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${d.status === 'ACTIVE' ? 'bg-[#00ff88]/10 text-[#00ff88]' : d.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-700' : 'bg-red-500/10 text-red-600'}`}>
-                            {d.status}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto -mx-6 px-6">
+                  <table className="w-full min-w-[760px] text-left">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <th className="py-3 pr-3 w-8"><input type="checkbox" className="accent-[#00b7ff]" onChange={(e) => {/* visual only */}} /></th>
+                        <th className="py-3 pr-4">Domain name</th>
+                        <th className="py-3 pr-4">Status</th>
+                        {domainCols.technical && <th className="py-3 pr-4">Technical status</th>}
+                        {domainCols.renewal && <th className="py-3 pr-4">Renewal frequency</th>}
+                        {domainCols.operations && <th className="py-3 pr-4">Ongoing operations</th>}
+                        <th className="py-3 pr-4">Expiry</th>
+                        {domainCols.registrant && <th className="py-3 pr-4">Registrant contact</th>}
+                        <th className="py-3 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDomains.map((d: any) => (
+                        <tr key={d.id} className="border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3.5 pr-3"><input type="checkbox" className="accent-[#00b7ff]" /></td>
+                          <td className="py-3.5 pr-4">
+                            <button onClick={() => d.status === "ACTIVE" && setManagingDomain(d.domain)} className="text-sm font-medium text-[#0f172a] hover:text-[#00b7ff] transition-colors flex items-center gap-1.5">
+                              {d.domain} {d.status === "ACTIVE" && <ChevronDown className="w-3 h-3 -rotate-90 text-slate-400" />}
+                            </button>
+                          </td>
+                          <td className="py-3.5 pr-4">
+                            <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold ${d.status === "ACTIVE" ? "bg-green-100 text-green-700" : d.status === "PENDING" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-600"}`}>{d.status === "ACTIVE" ? "Registered" : d.status === "PENDING" ? "Pending" : d.status}</span>
+                          </td>
+                          {domainCols.technical && (
+                            <td className="py-3.5 pr-4">
+                              <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold ${(d.technicalStatus || "") === "Active" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>{d.technicalStatus || "—"}</span>
+                            </td>
+                          )}
+                          {domainCols.renewal && (
+                            <td className="py-3.5 pr-4 text-xs text-slate-600">
+                              {d.renewalFrequency || "Every year"}
+                              <span className={`ml-1.5 inline-block rounded px-1.5 py-0.5 text-[9px] font-bold ${d.autoRenew ? "bg-[#00ff88]/15 text-green-700" : "bg-slate-100 text-slate-400"}`}>{d.autoRenew ? "AUTO" : "MANUAL"}</span>
+                            </td>
+                          )}
+                          {domainCols.operations && <td className="py-3.5 pr-4 text-xs text-slate-500">{(d.ongoingOperations || 0) === 0 ? "—" : `${d.ongoingOperations} in progress`}</td>}
+                          <td className="py-3.5 pr-4 text-xs text-slate-600">{d.expiresAt ? new Date(d.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}</td>
+                          {domainCols.registrant && <td className="py-3.5 pr-4 text-xs text-slate-600 font-medium">{d.registrantContact || "—"}</td>}
+                          <td className="py-3.5 relative">
+                            <button onClick={() => setDomainMenuId(domainMenuId === d.id ? null : d.id)} className="rounded p-1 hover:bg-slate-100 text-slate-400"><MoreVertical className="w-4 h-4" /></button>
+                            {domainMenuId === d.id && (
+                              <div className="absolute right-0 top-full mt-1 z-30 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl" onMouseLeave={() => setDomainMenuId(null)}>
+                                {d.status === "ACTIVE" && <button onClick={() => { setManagingDomain(d.domain); setDomainMenuId(null); }} className="w-full text-left rounded-lg px-3 py-2 text-xs font-medium text-[#0f172a] hover:bg-slate-50">Manage DNS</button>}
+                                {d.status === "ACTIVE" && <button onClick={() => { handleRenewDomain(d); setDomainMenuId(null); }} className="w-full text-left rounded-lg px-3 py-2 text-xs font-medium text-[#0f172a] hover:bg-slate-50">Renew now</button>}
+                                <button onClick={() => { handleToggleAutoRenew(d.id); setDomainMenuId(null); }} disabled={d.status !== "ACTIVE"} className="w-full text-left rounded-lg px-3 py-2 text-xs font-medium text-[#0f172a] hover:bg-slate-50 disabled:opacity-40">Auto-renew: {d.autoRenew ? "ON → OFF" : "OFF → ON"}</button>
+                                <button onClick={() => { setTab("support"); setDomainMenuId(null); }} className="w-full text-left rounded-lg px-3 py-2 text-xs font-medium text-[#0f172a] hover:bg-slate-50">Contact support</button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="text-right text-[11px] text-slate-400 pt-3">{filteredDomains.length} of {safeDomains.length} results</p>
                 </div>
               )}
             </div>

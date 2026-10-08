@@ -528,14 +528,23 @@ def list_my_domains(db: Session = Depends(get_db), user: User = Depends(get_curr
         .order_by(DomainRegistration.created_at.desc())
         .all()
     )
-    return [
-        {
+    tech_map = {"ACTIVE": "Active", "PENDING": "Provisioning", "SUSPENDED": "Suspended", "EXPIRED": "Expired", "CANCELLED": "Deleted"}
+    registrant = (user.name or "").strip() or user.email.split("@")[0]
+    registrant = " ".join(w.capitalize() for w in registrant.replace(".", " ").replace("_", " ").split()).upper()
+    out = []
+    for reg in regs:
+        status = reg.status.value if hasattr(reg.status, "value") else reg.status
+        out.append({
             "id": reg.id,
             "domainName": reg.domain_name,
             "tld": reg.tld,
             "domain": f"{reg.domain_name}{reg.tld}" if reg.tld.startswith(".") else f"{reg.domain_name}.{reg.tld}",
             "years": reg.years,
-            "status": reg.status.value if hasattr(reg.status, "value") else reg.status,
+            "status": status,
+            "technicalStatus": tech_map.get(status, "Active" if status == "ACTIVE" else status.title()),
+            "renewalFrequency": "Every year" if (reg.years or 1) <= 1 else f"Every {reg.years} years",
+            "ongoingOperations": 1 if status == "PENDING" else 0,
+            "registrantContact": registrant,
             "priceAmount": reg.price_amount,
             "taxAmount": reg.tax_amount,
             "totalAmount": round(float(reg.price_amount or 0) + float(reg.tax_amount or 0), 2),
@@ -544,9 +553,8 @@ def list_my_domains(db: Session = Depends(get_db), user: User = Depends(get_curr
             "createdAt": reg.created_at.isoformat() if reg.created_at else None,
             "paymentTransactionId": reg.payment_transaction_id,
             "autoRenew": bool(reg.auto_renew),
-        }
-        for reg in regs
-    ]
+        })
+    return out
 
 
 @router.post("/server/domains/{domain_id}/auto-renew")

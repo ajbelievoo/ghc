@@ -49,7 +49,8 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = useState("");
   const [logFilter, setLogFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
-  const [provider, setProvider] = useState({ provider_app_key: "", provider_app_secret: "", provider_consumer_key: "" });
+  const [provider, setProvider] = useState({ provider_app_key: "", provider_app_secret: "", provider_consumer_key: "", provider_endpoint: "", provider_subsidiary: "" });
+  const [providerTest, setProviderTest] = useState<{ loading: boolean; result: string | null }>({ loading: false, result: null });
   const [googleCreds, setGoogleCreds] = useState({ google_client_id: "", google_client_secret: "" });
   const [smtp, setSmtp] = useState({ smtp_host: "", smtp_port: "", smtp_user: "", smtp_pass: "" });
   const [gwInputs, setGwInputs] = useState<Record<string, any>>({});
@@ -108,7 +109,7 @@ export default function AdminPage() {
       if (t === "settings") { const cfg = await api.admin.settings(); setSettings(cfg.settings || []); setGateways(cfg.gateways || []); }
       if (t === "logs") { const params: any = {}; if (logFilter !== "ALL") params.type = logFilter; const lg = await api.admin.logs(params); setLogs(lg || []); }
       if (t === "users") { const u = await api.admin.getUsers({ search: userSearch || undefined, page: usersPage, limit: 20 }); setUsers(u.users || []); setUsersTotal(u.total || 0); }
-      if (t === "credentials") { const c = await api.admin.getCredentials(); setProvider({ provider_app_key: c.credentials.provider_app_key || "", provider_app_secret: c.credentials.provider_app_secret || "", provider_consumer_key: c.credentials.provider_consumer_key || "" }); setGoogleCreds({ google_client_id: c.credentials.google_client_id || "", google_client_secret: c.credentials.google_client_secret || "" }); setSmtp({ smtp_host: c.credentials.smtp_host || "", smtp_port: c.credentials.smtp_port || "", smtp_user: c.credentials.smtp_user || "", smtp_pass: c.credentials.smtp_pass || "" }); const gws: Record<string, any> = {}; (c.gateways || []).forEach((g: any) => { gws[g.name] = { ...(g.config || {}), isActive: g.isActive }; }); setGwInputs(gws); }
+      if (t === "credentials") { const c = await api.admin.getCredentials(); setProvider({ provider_app_key: c.credentials.provider_app_key || "", provider_app_secret: c.credentials.provider_app_secret || "", provider_consumer_key: c.credentials.provider_consumer_key || "", provider_endpoint: c.credentials.provider_endpoint || "", provider_subsidiary: c.credentials.provider_subsidiary || "" }); setGoogleCreds({ google_client_id: c.credentials.google_client_id || "", google_client_secret: c.credentials.google_client_secret || "" }); setSmtp({ smtp_host: c.credentials.smtp_host || "", smtp_port: c.credentials.smtp_port || "", smtp_user: c.credentials.smtp_user || "", smtp_pass: c.credentials.smtp_pass || "" }); const gws: Record<string, any> = {}; (c.gateways || []).forEach((g: any) => { gws[g.name] = { ...(g.config || {}), isActive: g.isActive }; }); setGwInputs(gws); }
       if (t === "brand") { const b = await api.admin.getBrand(); setBrand(b); }
       if (t === "margins") { const m = await api.admin.getMargins(); const map: Record<string, number> = {}; m.forEach((x: any) => map[x.category] = x.percent); setMargins(map); }
       if (t === "catalog") { setCatalogLoading(true); const params: any = { search: catalogSearch || undefined }; if (catalogCategory !== "ALL") params.category = catalogCategory; const p = await api.admin.getCatalog(params); setCatalogPlans(p || []); setCatalogLoading(false); }
@@ -330,10 +331,43 @@ export default function AdminPage() {
             <h2 className="text-2xl font-bold text-[#0f172a]">Credentials &amp; API Keys</h2>
             <form onSubmit={handleSaveCredentials} className="space-y-6">
               {panel("Provider API Credentials", <Server className="w-5 h-5 text-[#00b7ff]" />,
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {secretInput("Application Key", provider.provider_app_key, (v) => setProvider((p: any) => ({ ...p, provider_app_key: v })), "provider_app_key")}
-                  {secretInput("Application Secret", provider.provider_app_secret, (v) => setProvider((p: any) => ({ ...p, provider_app_secret: v })), "provider_app_secret")}
-                  {secretInput("Consumer Key", provider.provider_consumer_key, (v) => setProvider((p: any) => ({ ...p, provider_consumer_key: v })), "provider_consumer_key")}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {secretInput("Application Key", provider.provider_app_key, (v) => setProvider((p: any) => ({ ...p, provider_app_key: v })), "provider_app_key")}
+                    {secretInput("Application Secret", provider.provider_app_secret, (v) => setProvider((p: any) => ({ ...p, provider_app_secret: v })), "provider_app_secret")}
+                    {secretInput("Consumer Key", provider.provider_consumer_key, (v) => setProvider((p: any) => ({ ...p, provider_consumer_key: v })), "provider_consumer_key")}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Endpoint</label>
+                      <select value={provider.provider_endpoint} onChange={(e) => setProvider((p: any) => ({ ...p, provider_endpoint: e.target.value }))} className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none">
+                        <option value="">Select endpoint</option>
+                        <option value="ovh-eu">ovh-eu (Europe / World)</option>
+                        <option value="ovh-ca">ovh-ca (Canada)</option>
+                        <option value="ovh-us">ovh-us (US)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Subsidiary</label>
+                      <input type="text" value={provider.provider_subsidiary} onChange={(e) => setProvider((p: any) => ({ ...p, provider_subsidiary: e.target.value }))} placeholder="IN / CA / US / EU..." className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none" />
+                    </div>
+                    <div className="flex items-end">
+                      <button type="button" disabled={providerTest.loading} onClick={async () => {
+                        setProviderTest({ loading: true, result: null });
+                        try {
+                          const r = await api.admin.testProvider();
+                          setProviderTest({ loading: false, result: `Connected — balance ${r.balance} ${r.currency}` });
+                        } catch (e: any) {
+                          setProviderTest({ loading: false, result: `Failed: ${e.message || "connection error"}` });
+                        }
+                      }} className="rounded-lg bg-[#0f0c29] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#1e3a8a] disabled:opacity-50">
+                        {providerTest.loading ? "Testing..." : "Test connection"}
+                      </button>
+                    </div>
+                  </div>
+                  {providerTest.result && (
+                    <p className={`text-xs font-semibold ${providerTest.result.startsWith("Connected") ? "text-emerald-600" : "text-red-500"}`}>{providerTest.result}</p>
+                  )}
                 </div>
               )}
               {panel("Google OAuth", <Globe className="w-5 h-5 text-[#00b7ff]" />,

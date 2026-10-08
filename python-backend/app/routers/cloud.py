@@ -45,23 +45,30 @@ def get_project(db: Session = Depends(get_db), user: User = Depends(get_current_
 
 @router.post("/project/activate")
 def activate_project(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Create the free cloud project order upstream (or re-sync if already placed)."""
+    """Order the real (non-discovery) cloud project upstream, or re-sync if already placed."""
     try:
         ovh = get_ovh_client_from_db(db)
-        try:
-            res = ovh.create_cloud_project("GHC Cloud Project")
-        except Exception:
-            res = None
         proj = db.query(CloudProject).filter(CloudProject.user_id == user.id).first()
         if not proj:
             proj = CloudProject(user_id=user.id)
             db.add(proj)
-        if res and res.get("orderId"):
-            proj.upstream_order_id = str(res["orderId"])
-            proj.status = "PENDING"
             db.commit()
-            return {"status": "ordered", "order_id": res["orderId"], "url": res.get("url")}
+        ordered = None
+        try:
+            cart = ovh.create_cart("GHC cloud project", subsidiary="IN")
+            ovh.assign_cart(cart["cartId"])
+            ovh.add_item_to_cart(cart["cartId"], "cloud", {"planCode": "project", "duration": "P1M", "pricingMode": "default", "quantity": 1})
+            co = ovh.post_cart_checkout(cart["cartId"], auto_pay_with_preferred_payment_mean=True)
+            ordered = co
+        except Exception as e:
+            logger_msg = str(e)
+        if ordered and ordered.get("orderId"):
+            proj.upstream_order_id = str(ordered["orderId"])
+            db.commit()
+            return {"status": "ordered", "order_id": ordered["orderId"], "url": ordered.get("url")}
         proj = sync_project(db, user, ovh)
+        if proj.status == "DISCOVERY":
+            return {"status": "discovery", "message": "Upstream account validation is pending — the full project will activate automatically once approved."}
         return {"status": proj.status.lower(), "upstream_id": proj.upstream_project_id}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -379,6 +386,114 @@ def delete_container(container_id: str, db: Session = Depends(get_db), user: Use
     db.delete(c)
     db.commit()
     return {"ok": True}
+
+
+# ---------- managed kubernetes ----------
+
+class KubeCreate(BaseModel):
+    name: str
+    region: str
+    version: Optional[str] = None
+    private_network_id: Optional[str] = None
+
+
+@router.get("/kubes")
+def list_kubes(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        return get_ovh_client_from_db(db).cloud_kubes(proj.upstream_project_id)
+    except CloudError as e:
+        raise _err(e)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.post("/kubes")
+def make_kube(payload: KubeCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        return get_ovh_client_from_db(db).cloud_create_kube(
+            proj.upstream_project_id, payload.name, payload.region.upper(),
+            payload.version, payload.private_network_id)
+    except CloudError as e:
+        raise _err(e)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/kubes/{kube_id}/kubeconfig")
+def get_kubeconfig(kube_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        return get_ovh_client_from_db(db).cloud_kube_kubeconfig(proj.upstream_project_id, kube_id)
+    except CloudError as e:
+        raise _err(e)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.delete("/kubes/{kube_id}")
+def delete_kube(kube_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        get_ovh_client_from_db(db).cloud_delete_kube(proj.upstream_project_id, kube_id)
+        return {"ok": True}
+    except CloudError as e:
+        raise _err(e)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ---------- private registry ----------
+
+@router.get("/registries")
+def list_registries(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        return get_ovh_client_from_db(db).cloud_registries(proj.upstream_project_id)
+    except CloudError as e:
+        raise _err(e)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+class RegistryCreate(BaseModel):
+    name: str
+    region: str
+    plan_id: Optional[str] = None
+
+
+@router.post("/registries")
+def make_registry(payload: RegistryCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        ovh = get_ovh_client_from_db(db)
+        plan_id = payload.plan_id
+        if not plan_id:
+            plans = ovh.cloud_registry_plans(proj.upstream_project_id) or []
+            small = sorted(plans, key=lambda p: (p.get("registryLimits") or {}).get("imageStorage", 0))
+            plan_id = (small[0] if small else {}).get("id")
+        if not plan_id:
+            raise HTTPException(400, "no registry plan available")
+        return ovh.cloud_create_registry(proj.upstream_project_id, payload.name, plan_id, payload.region.upper())
+    except CloudError as e:
+        raise _err(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.delete("/registries/{registry_id}")
+def delete_registry(registry_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        get_ovh_client_from_db(db).cloud_delete_registry(proj.upstream_project_id, registry_id)
+        return {"ok": True}
+    except CloudError as e:
+        raise _err(e)
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 # ---------- quota & usage ----------

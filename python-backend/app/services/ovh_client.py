@@ -300,6 +300,47 @@ class OvhClient:
     def cloud_usage(self, service_name: str) -> Dict[str, Any]:
         return self.get(f"/cloud/project/{service_name}/usage/current")
 
+    # Managed Kubernetes
+
+    def cloud_kubes(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/kube")
+
+    def cloud_create_kube(self, service_name: str, name: str, region: str, version: Optional[str] = None, private_network_id: Optional[str] = None) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {"name": name, "region": region}
+        if version:
+            payload["version"] = version
+        if private_network_id:
+            payload["privateNetworkId"] = private_network_id
+        return self.post(f"/cloud/project/{service_name}/kube", **payload)
+
+    def cloud_delete_kube(self, service_name: str, kube_id: str) -> Any:
+        return self.delete(f"/cloud/project/{service_name}/kube/{kube_id}")
+
+    def cloud_kube_kubeconfig(self, service_name: str, kube_id: str) -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/kube/{kube_id}/kubeconfig")
+
+    # Managed Private Registry
+
+    def cloud_registries(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/containerRegistry")
+
+    def cloud_registry_plans(self, service_name: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/containerRegistry/plan")
+
+    def cloud_create_registry(self, service_name: str, name: str, plan_id: str, region: str) -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/containerRegistry", name=name, planID=plan_id, region=region)
+
+    def cloud_delete_registry(self, service_name: str, registry_id: str) -> Any:
+        return self.delete(f"/cloud/project/{service_name}/containerRegistry/{registry_id}")
+
+    # Managed Databases
+
+    def cloud_databases(self, service_name: str, engine: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/database/{engine}")
+
+    def cloud_database_capabilities(self, service_name: str, engine: str) -> Dict[str, Any]:
+        return self.get(f"/cloud/project/{service_name}/capabilities/database/{engine}")
+
 
 # ---------- Helpers ----------
 
