@@ -18,6 +18,7 @@ export type GhcSettings = {
   hero_subtitle: string;
   announce_text: string;
   announce_url: string;
+  whatsapp_number: string;
 };
 
 const DEFAULTS: GhcSettings = {
@@ -37,6 +38,7 @@ const DEFAULTS: GhcSettings = {
     "Deploy virtual servers, bare metal and web hosting with instant provisioning, transparent pricing and 24/7 support.",
   announce_text: "",
   announce_url: "",
+  whatsapp_number: "",
 };
 
 let cache: GhcSettings | null = null;

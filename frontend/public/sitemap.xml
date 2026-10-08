@@ -36,4 +36,20 @@
   <url><loc>https://ghc.believoo.com/cookies/</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://ghc.believoo.com/domain-dispute/</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
   <url><loc>https://ghc.believoo.com/abuse/</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://ghc.believoo.com/compare/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/create-ghc-account/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/order-a-vps/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/connect-vps-ssh/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/reinstall-vps-os/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/resize-vps/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/order-dedicated-server/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/ipmi-remote-management/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/register-domain/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/manage-dns-records/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/add-wallet-funds/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/invoices-and-renewals/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/ddos-protection/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/open-support-ticket/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/ghc-sla/</loc></url>
+  <url><loc>https://ghc.believoo.com/kb/currencies-and-gst/</loc></url>
 </urlset>

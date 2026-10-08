@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, FileText, BookOpen, CreditCard, Server, Globe, HelpCircle, Shield } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { kbArticles } from "@/lib/kb-articles";
 
 const categories = [
   { key: "getting-started", label: "Getting Started", icon: BookOpen },
@@ -16,23 +17,7 @@ const categories = [
   { key: "general", label: "General", icon: HelpCircle },
 ];
 
-const articles = [
-  { title: "How to create a GHC account", category: "getting-started", summary: "Step-by-step guide to sign up, verify email and log in." },
-  { title: "How to order a VPS", category: "getting-started", summary: "Choose a plan, select OS, pick duration and complete payment." },
-  { title: "How to connect to your VPS via SSH", category: "vps", summary: "Use root credentials from the dashboard to connect securely." },
-  { title: "How to reinstall the OS on a VPS", category: "vps", summary: "Rebuild from available templates without losing data on secondary disks." },
-  { title: "How to resize a VPS", category: "vps", summary: "Upgrade RAM, CPU and storage from your client dashboard." },
-  { title: "How to order a dedicated server", category: "dedicated", summary: "Pick a range, configure hardware and confirm provisioning time." },
-  { title: "Dedicated server remote management (IPMI)", category: "dedicated", summary: "Access IPMI/KVM for out-of-band server management." },
-  { title: "How to register a domain name", category: "domains", summary: "Search for a domain, choose TLD and complete registration." },
-  { title: "How to manage DNS records", category: "domains", summary: "Add A, CNAME, MX and TXT records from the domain control panel." },
-  { title: "How to add funds to your wallet", category: "billing", summary: "Use UPI, cards or net banking to add prepaid balance." },
-  { title: "How invoices and renewals work", category: "billing", summary: "Understand billing cycles, due dates and auto-renewal." },
-  { title: "How DDoS protection works", category: "security", summary: "Automatic mitigation included with every GHC plan." },
-  { title: "How to open a support ticket", category: "general", summary: "Contact support through the client dashboard or email." },
-  { title: "GHC Service Level Agreement (SLA)", category: "general", summary: "Uptime commitment and service credit policy." },
-  { title: "Currencies and tax (GST)", category: "billing", summary: "Choose your preferred currency and understand how tax is applied at checkout." },
-];
+const articles = kbArticles;
 
 export default function KnowledgeBasePage() {
   const [query, setQuery] = useState("");
@@ -110,8 +95,8 @@ export default function KnowledgeBasePage() {
                   const cat = categories.find((c) => c.key === a.category);
                   return (
                     <Link
-                      key={a.title}
-                      href="/support"
+                      key={a.slug}
+                      href={`/kb/${a.slug}`}
                       className="group flex h-full flex-col rounded-xl border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-1 hover:border-[#00b7ff] hover:shadow-lg"
                     >
                       <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#00b7ff]">
