@@ -14,14 +14,24 @@ const megaMenu = [
   {
     label: "Public Cloud",
     href: "/public-cloud",
+    wide: true,
     columns: [
-      { title: "Compute", items: [
-        { label: "Compute Instances", href: "/vps", desc: "Scalable cloud VMs" },
-        { label: "GPU Instances", href: "/dedicated-servers/scale", desc: "AI/ML workloads" },
+      { title: "Compute & Containers", items: [
+        { label: "Compute", href: "/public-cloud?s=vm", desc: "VM, GPU, and Metal instances" },
+        { label: "Containers", href: "/public-cloud?s=k8s", desc: "Managed Kubernetes, registry, and Rancher" },
+        { label: "Storage", href: "/public-cloud?s=object", desc: "Object, Block, and File storage" },
+        { label: "Network", href: "/public-cloud?s=loadbalancer", desc: "Load Balancer, Floating IPs, Gateway, vRack" },
       ]},
-      { title: "Storage", items: [
-        { label: "Object Storage", href: "/dedicated-servers/storage", desc: "High-capacity storage" },
-        { label: "Block Storage", href: "/dedicated-servers/storage", desc: "High-performance disks" },
+      { title: "Data & Analytics", items: [
+        { label: "Databases", href: "/public-cloud?s=db-mysql", desc: "MySQL, PostgreSQL, MongoDB, Redis, Kafka" },
+        { label: "Analytics", href: "/public-cloud?s=analytics", desc: "Data ingestion, processing, and visualisation" },
+        { label: "Data Platform", href: "/public-cloud?s=dp", desc: "Managed data pipelines" },
+      ]},
+      { title: "AI, Quantum & Ops", items: [
+        { label: "AI & Machine Learning", href: "/public-cloud?s=ai-notebooks", desc: "Notebooks, Training, Deploy, Endpoints" },
+        { label: "Quantum", href: "/public-cloud?s=q-notebooks", desc: "Quantum Notebooks and QPUs" },
+        { label: "Security & identity", href: "/security", desc: "Access control and protection" },
+        { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
       ]},
     ],
   },
@@ -252,8 +262,8 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                 {item.label} <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {openMega === idx && (
-                <div className={`absolute left-0 top-full w-[640px] rounded-b-lg ${megaBg}`}>
-                  <div className="grid grid-cols-2 gap-6 p-6">
+                <div className={`absolute left-0 top-full ${(item as any).wide ? "w-[880px]" : "w-[640px]"} rounded-b-lg ${megaBg}`}>
+                  <div className={`grid ${(item as any).wide ? "grid-cols-3" : "grid-cols-2"} gap-6 p-6`}>
                     {item.columns.map((col) => (
                       <div key={col.title}>
                         <p className={`mb-3 text-xs font-bold uppercase tracking-wide ${megaColTitle}`}>{col.title}</p>
