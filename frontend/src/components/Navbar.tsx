@@ -54,9 +54,16 @@ const megaMenu: MegaEntry[] = [
     href: "/private-cloud",
     columns: [
       { title: "Hosted Private Cloud", items: [
-        { label: "VMware on GHC", href: "/private-cloud", desc: "Managed VMware" },
-        { label: "Nutanix on GHC", href: "/dedicated-servers/high-grade", desc: "Hyperconverged hosts" },
-        { label: "Dedicated Hypervisor", href: "/private-cloud", desc: "Dedicated cloud infra" },
+        { label: "VMware on GHC", href: "/private-cloud?s=vmware", desc: "vSphere, vSAN and NSX on dedicated hosts" },
+        { label: "Nutanix on GHC", href: "/private-cloud?s=nutanix", desc: "HCI private cloud on dedicated hosts" },
+        { label: "SAP HANA on GHC", href: "/private-cloud?s=sap-hana", desc: "SAP HANA certified infrastructure" },
+        { label: "Dedicated host catalog", href: "/private-cloud#catalog", desc: "370+ hosts across all ranges" },
+      ]},
+      { title: "Private Cloud Foundations", items: [
+        { label: "Network", href: "/network", desc: "Secure and high-performance connectivity" },
+        { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Backups and business continuity" },
+        { label: "Security & Identity", href: "/security", desc: "IAM, secrets, logs and metrics" },
+        { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
       ]},
     ],
   },
@@ -273,7 +280,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
 
   return (
     <nav className={`sticky top-0 z-50 ${navBg}`}>
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex shrink-0 items-center gap-3">
           {ghc.logo_url ? (
             <img src={ghc.logo_url} alt={ghc.name} className="h-10 w-auto" style={{ filter: "drop-shadow(0 2px 8px rgba(0,120,200,.25))" }} />
@@ -304,10 +311,14 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
         </form>
 
         <div className="hidden items-center gap-0 md:flex">
-          {megaMenu.map((item, idx) => (
+          {megaMenu.map((item, idx) => {
+            const cols = item.cols || 2;
+            const widthCls = cols >= 4 ? "w-[1120px]" : cols === 3 ? "w-[880px]" : "w-[640px]";
+            const gridCls = cols >= 4 ? "grid-cols-4" : cols === 3 ? "grid-cols-3" : "grid-cols-2";
+            return (
             <div
               key={item.label}
-              className="relative"
+              className="static"
               onMouseEnter={() => setOpenMega(idx)}
               onMouseLeave={() => setOpenMega(null)}
             >
@@ -315,29 +326,37 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                 {item.label} <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {openMega === idx && (
-                <div className={`absolute left-0 top-full ${(item as any).wide ? "w-[880px]" : "w-[640px]"} rounded-b-lg ${megaBg}`}>
-                  <div className={`grid ${(item as any).wide ? "grid-cols-3" : "grid-cols-2"} gap-6 p-6`}>
-                    {item.columns.map((col) => (
-                      <div key={col.title}>
-                        <p className={`mb-3 text-xs font-bold uppercase tracking-wide ${megaColTitle}`}>{col.title}</p>
-                        <div className="space-y-3">
-                          {col.items.map((sub) => (
-                            <Link key={sub.label} href={sub.href} className="group block">
-                              <p className={`text-sm font-semibold ${megaItemTitle}`}>{sub.label}</p>
-                              <p className={`text-xs ${megaItemDesc}`}>{sub.desc}</p>
-                            </Link>
-                          ))}
-                        </div>
+                <div className={`absolute left-1/2 top-full -translate-x-1/2 ${widthCls} max-w-[calc(100vw-1rem)] rounded-b-lg ${megaBg}`}>
+                  <div className={`grid ${gridCls} gap-6 p-6`}>
+                    {item.columns.map((col, ci) => (
+                      <div key={col.title || `col-${ci}`} className="space-y-6">
+                        {colGroups(col).map((grp) => (
+                          <div key={grp.title}>
+                            <p className={`mb-3 text-xs font-bold uppercase tracking-wide ${megaColTitle}`}>{grp.title}</p>
+                            <div className="space-y-3">
+                              {grp.items.map((sub) => (
+                                <Link key={sub.label} href={sub.href} className="group block">
+                                  <p className={`text-sm font-semibold ${megaItemTitle}`}>{sub.label}</p>
+                                  {sub.desc && <p className={`text-xs ${megaItemDesc}`}>{sub.desc}</p>}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ))}
                   </div>
-                  <div className={`${megaFooterBg} px-6 py-3`}>
+                  <div className={`${megaFooterBg} flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3`}>
                     <Link href={item.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>View all {item.label} solutions</Link>
+                    {(item.footerLinks || []).map((l) => (
+                      <Link key={l.label} href={l.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>{l.label}</Link>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-2">
@@ -425,8 +444,8 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
           <div className="flex flex-col gap-3 text-sm font-medium">
             {megaMenu.map((item) => (
               <div key={item.label} className="space-y-2">
-                <p className={`font-bold ${mobileText}`}>{item.label}</p>
-                {item.columns.flatMap((c) => c.items).map((sub) => (
+                <Link href={item.href} className={`block font-bold ${mobileText}`}>{item.label}</Link>
+                {item.columns.flatMap((c) => colGroups(c).flatMap((g) => g.items)).map((sub) => (
                   <Link key={sub.label} href={sub.href} className={`block pl-3 text-sm ${mobileSubText}`}>{sub.label}</Link>
                 ))}
               </div>

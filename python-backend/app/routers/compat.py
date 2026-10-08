@@ -212,7 +212,9 @@ def _plan_region_os(p: PlanCatalog):
 
 
 def _plan_features(p: PlanCatalog) -> dict:
-    feats = _plan_metadata(p).get("blobs", {}).get("commercial", {}).get("features") or []
+    blobs = _plan_metadata(p).get("blobs") or {}
+    commercial = blobs.get("commercial") if isinstance(blobs, dict) else {}
+    feats = (commercial or {}).get("features") or []
     return {f["name"]: f["value"] for f in feats if isinstance(f, dict) and f.get("name")}
 
 
