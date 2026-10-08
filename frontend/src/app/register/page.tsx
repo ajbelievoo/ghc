@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import AuthShell from "@/components/AuthShell";
+import { CaptchaField, useCaptcha } from "@/components/CaptchaField";
 import { Eye, EyeOff, Mail, Lock, User, Loader2, CheckCircle } from "lucide-react";
 
 export default function RegisterPage() {
@@ -17,6 +18,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
+  const { captcha, setCaptcha, image: captchaImage, refresh: refreshCaptcha } = useCaptcha();
 
   useEffect(() => {
     api.auth.getConfig()
@@ -83,7 +85,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      const res = await api.auth.register({ name: name.trim(), email: email.trim(), password });
+      const res = await api.auth.register({ name: name.trim(), email: email.trim(), password, captchaId: captcha.captchaId, captchaAnswer: captcha.captchaAnswer });
       if (res.token) {
         localStorage.setItem("token", res.token);
         localStorage.setItem("user", JSON.stringify(res.user));
@@ -99,6 +101,7 @@ export default function RegisterPage() {
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || "Registration failed");
+      refreshCaptcha();
     } finally {
       setLoading(false);
     }
@@ -223,6 +226,11 @@ export default function RegisterPage() {
           {confirmPassword && confirmPassword !== password && (
             <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
           )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[#0f172a] mb-1.5">Human check</label>
+          <CaptchaField captcha={captcha} image={captchaImage} onChange={setCaptcha} onRefresh={refreshCaptcha} />
         </div>
 
         <button

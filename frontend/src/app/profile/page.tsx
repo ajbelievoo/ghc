@@ -18,6 +18,12 @@ export default function ProfilePage() {
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
+  const [gstin, setGstin] = useState("");
+  const [billingAddress, setBillingAddress] = useState("");
+  const [billingCity, setBillingCity] = useState("");
+  const [billingState, setBillingState] = useState("");
+  const [billingPincode, setBillingPincode] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,6 +37,12 @@ export default function ProfilePage() {
         setUser(data.user);
         setName(data.user.name || "");
         setPhone(data.user.phone || "");
+        setCountry(data.user.country || "IN");
+        setGstin(data.user.gstin || "");
+        setBillingAddress(data.user.billingAddress || "");
+        setBillingCity(data.user.billingCity || "");
+        setBillingState(data.user.billingState || "");
+        setBillingPincode(data.user.billingPincode || "");
         localStorage.setItem("user", JSON.stringify(data.user));
       })
       .catch(() => { localStorage.removeItem("token"); localStorage.removeItem("user"); router.push("/login"); })
@@ -41,7 +53,7 @@ export default function ProfilePage() {
     if (!name.trim()) { showToast("Name is required", "error"); return; }
     setSaving(true);
     try {
-      await api.admin.updateUser(user.id, { name, phone });
+      await api.auth.updateMe({ name, phone, country, gstin, billingAddress, billingCity, billingState, billingPincode });
       const refreshed = await api.auth.me();
       setUser(refreshed.user);
       localStorage.setItem("user", JSON.stringify(refreshed.user));
@@ -112,6 +124,41 @@ export default function ProfilePage() {
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Changes
             </button>
           </div>
+        </div>
+
+        {/* Billing Details */}
+        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6 mb-6">
+          <h2 className="text-lg font-bold mb-1 flex items-center gap-2"><Mail className="w-5 h-5 text-[#00b7ff]" /> Billing Details</h2>
+          <p className="text-xs text-slate-500 mb-4">Used on GST invoices. Required for Indian customers.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Address</label>
+              <input type="text" value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} placeholder="Street / area / landmark" className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">City</label>
+              <input type="text" value={billingCity} onChange={(e) => setBillingCity(e.target.value)} className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">State</label>
+              <input type="text" value={billingState} onChange={(e) => setBillingState(e.target.value)} placeholder="e.g. Uttar Pradesh" className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">PIN Code</label>
+              <input type="text" inputMode="numeric" maxLength={10} value={billingPincode} onChange={(e) => setBillingPincode(e.target.value.replace(/\D/g, ""))} className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Country</label>
+              <input type="text" maxLength={2} value={country} onChange={(e) => setCountry(e.target.value.toUpperCase())} placeholder="IN" className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">GSTIN <span className="text-slate-400 font-normal">(optional — for GST input credit)</span></label>
+              <input type="text" maxLength={15} value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} placeholder="22AAAAA0000A1Z5" className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none font-mono" />
+            </div>
+          </div>
+          <button onClick={handleUpdateProfile} disabled={saving} className="mt-4 rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2 text-sm text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all disabled:opacity-50 flex items-center gap-2">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Billing Details
+          </button>
         </div>
 
         {/* 2FA Status */}

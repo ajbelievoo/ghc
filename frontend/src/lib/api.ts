@@ -29,11 +29,12 @@ export const api = {
   auth: {
     getConfig: () => request("/auth/config"),
     me: () => request("/auth/me"),
-    login: (body: { email: string; password: string }) =>
+    captcha: () => request("/auth/captcha"),
+    login: (body: { email: string; password: string; captchaId?: string; captchaAnswer?: string }) =>
       request("/auth/login", { method: "POST", body: JSON.stringify(body) }),
     login2FA: (body: { tempToken: string; code: string }) =>
       request("/auth/login/2fa", { method: "POST", body: JSON.stringify(body) }),
-    register: (body: { name: string; email: string; password: string }) =>
+    register: (body: { name: string; email: string; password: string; captchaId?: string; captchaAnswer?: string }) =>
       request("/auth/register", { method: "POST", body: JSON.stringify(body) }),
     verifyEmail: (body: { token: string }) =>
       request("/auth/verify-email", { method: "POST", body: JSON.stringify(body) }),
@@ -48,7 +49,7 @@ export const api = {
       request("/auth/2fa/disable", { method: "POST", body: JSON.stringify(body) }),
     changePassword: (body: { currentPassword: string; newPassword: string }) =>
       request("/auth/change-password", { method: "POST", body: JSON.stringify(body) }),
-    updateMe: (body: { name?: string; phone?: string }) =>
+    updateMe: (body: { name?: string; phone?: string; country?: string; gstin?: string; billingAddress?: string; billingCity?: string; billingState?: string; billingPincode?: string }) =>
       request("/auth/me", { method: "PUT", body: JSON.stringify(body) }),
     activity: () => request("/user/activity"),
     referral: () => request("/user/referral"),
@@ -56,7 +57,7 @@ export const api = {
     updateNotifications: (body: object) => request("/user/notifications", { method: "PUT", body: JSON.stringify(body) }),
     notificationsList: () => request("/user/notifications-list"),
     markNotificationRead: (id: string) => request(`/user/notifications/${id}/read`, { method: "POST" }),
-    forgotPassword: (body: { email: string }) =>
+    forgotPassword: (body: { email: string; captchaId?: string; captchaAnswer?: string }) =>
       request("/auth/forgot-password", { method: "POST", body: JSON.stringify(body) }),
     resetPassword: (body: { token: string; newPassword: string }) =>
       request("/auth/reset-password", { method: "POST", body: JSON.stringify(body) }),

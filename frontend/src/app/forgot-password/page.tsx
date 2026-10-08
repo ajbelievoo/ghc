@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import AuthShell from "@/components/AuthShell";
+import { CaptchaField, useCaptcha } from "@/components/CaptchaField";
 import { Mail, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
 
 export default function ForgotPasswordPage() {
@@ -11,6 +12,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const { captcha, setCaptcha, image: captchaImage, refresh: refreshCaptcha } = useCaptcha();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,10 +20,11 @@ export default function ForgotPasswordPage() {
     if (!email.trim()) { setError("Enter your email address"); return; }
     setLoading(true);
     try {
-      await api.auth.forgotPassword({ email: email.trim() });
+      await api.auth.forgotPassword({ email: email.trim(), captchaId: captcha.captchaId, captchaAnswer: captcha.captchaAnswer });
       setSent(true);
     } catch (err: any) {
       setError(err.message || "Something went wrong");
+      refreshCaptcha();
     } finally { setLoading(false); }
   };
 
@@ -56,6 +59,7 @@ export default function ForgotPasswordPage() {
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className={inputClass} required />
             </div>
           </div>
+          <CaptchaField captcha={captcha} image={captchaImage} onChange={setCaptcha} onRefresh={refreshCaptcha} />
           <button type="submit" disabled={loading} className={btnClass}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
           </button>

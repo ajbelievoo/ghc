@@ -21,6 +21,7 @@ from app.models.models import (
     DomainRegistration,
     DomainStatus,
     Invoice,
+    InvoiceStatus,
     LogType,
     PaymentTransaction,
     PaymentStatus,
@@ -32,8 +33,8 @@ from app.models.models import (
 from app.routers import admin, auth, auto_scaling, catalog, cloud, compat, health, marketplace, orders, subscriptions, support, team, wallet, webhooks
 from app.services.auto_scaling_service import evaluate_rules
 from app.services.marketplace_service import marketplace_worker
-from app.services.email_service import send_domain_renewal_reminder_email, send_renewal_reminder_email, send_suspension_email
-from app.services.tax_service import gst_fields_for_user
+from app.services.email_service import send_domain_renewal_reminder_email, send_invoice_overdue_email, send_renewal_reminder_email, send_suspension_email
+from app.services.tax_service import generate_invoice_number, gst_fields_for_user
 from app.services.usage_service import record_usage
 
 settings = get_settings()
@@ -48,6 +49,10 @@ USER_COLUMN_MIGRATIONS = {
     "email_verified": "BOOLEAN DEFAULT 1",  # existing users grandfathered as verified
     "totp_secret": "VARCHAR(64)",
     "totp_enabled": "BOOLEAN DEFAULT 0",
+    "billing_address": "VARCHAR(500)",
+    "billing_city": "VARCHAR(100)",
+    "billing_state": "VARCHAR(100)",
+    "billing_pincode": "VARCHAR(20)",
 }
 
 
@@ -108,6 +113,8 @@ def run_maintenance():
                         currency=(sub.currency or "USD").upper(),
                     )
                     db.add(invoice)
+                    db.flush()
+                    invoice.invoice_number = generate_invoice_number(invoice)
                     db.commit()
                     db.refresh(invoice)
                     _log(db, LogType.CRON, f"Renewal invoice created for subscription {sub.id}")
@@ -132,6 +139,26 @@ def run_maintenance():
                         logger.exception("Suspension email failed")
                 except Exception as e:
                     _log(db, LogType.ERROR, f"Auto-suspend failed for {sub.id}: {e}")
+
+        # Overdue invoice reminders — one email per unpaid invoice past due date
+        overdue_invoices = db.query(Invoice).filter(
+            Invoice.status == InvoiceStatus.UNPAID,
+            Invoice.due_date.isnot(None),
+            Invoice.due_date < now,
+        ).all()
+        for inv in overdue_invoices:
+            already = db.query(SystemLog).filter(
+                SystemLog.type == LogType.CRON,
+                SystemLog.message == f"Overdue invoice reminder sent for {inv.id}",
+            ).first()
+            if already:
+                continue
+            try:
+                if inv.user:
+                    send_invoice_overdue_email(db, inv, inv.user)
+                    _log(db, LogType.CRON, f"Overdue invoice reminder sent for {inv.id}")
+            except Exception:
+                logger.exception(f"Overdue invoice email failed for {inv.id}")
 
         # Domain renewal reminders (3 days before expiry)
         expiring_domains = db.query(DomainRegistration).filter(
@@ -208,6 +235,8 @@ def run_maintenance():
                     status="UNPAID",
                 )
                 db.add(invoice)
+                db.flush()
+                invoice.invoice_number = generate_invoice_number(invoice)
                 db.commit()
                 db.refresh(invoice)
                 _log(db, LogType.CRON, f"Auto-renew invoice created for {dom.domain_name}", {"invoice_id": invoice.id, "order_id": order.id})

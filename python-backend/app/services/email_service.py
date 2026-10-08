@@ -533,6 +533,27 @@ def send_suspension_email(db: Session, subscription: Subscription, user: User) -
     return send_email(db, user.email, f"GHC {subscription.plan_code or 'service'} suspended", html)
 
 
+def send_invoice_overdue_email(db: Session, invoice: Invoice, user: User) -> bool:
+    days = max(0, (datetime.utcnow() - invoice.due_date).days) if invoice.due_date else 0
+    html = render_email(
+        preheader=f"Invoice #{invoice.invoice_number or invoice.id[:8].upper()} is overdue.",
+        heading="Payment overdue",
+        paragraphs=[
+            f"Hi {_safe_subject(user.name)},",
+            f"Your invoice for <strong>{_fmt_money(invoice.amount, invoice.currency)}</strong> was due on <strong>{_fmt_dt(invoice.due_date)}</strong> and is still unpaid{f' ({days} day(s) overdue)' if days else ''}.",
+            "Pay now to avoid service suspension. If you have already paid, please ignore this reminder.",
+        ],
+        details=[
+            ("Invoice #", invoice.invoice_number or invoice.id[:8].upper()),
+            ("Amount due", _fmt_money(invoice.amount, invoice.currency)),
+            ("Due date", _fmt_dt(invoice.due_date)),
+        ],
+        cta_label="Pay Invoice",
+        cta_url=f"{settings.site_url}/dashboard?tab=invoices",
+    )
+    return send_email(db, user.email, f"Overdue: GHC invoice {invoice.invoice_number or invoice.id[:8].upper()}", html)
+
+
 def send_invoice_email(db: Session, invoice: Invoice, user: User, order: CustomerOrder, pdf_bytes: bytes) -> bool:
     """Send an invoice to the customer with PDF attached."""
     html = render_email(

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ToastProvider";
 import AuthShell from "@/components/AuthShell";
+import { CaptchaField, useCaptcha } from "@/components/CaptchaField";
 import { Eye, EyeOff, Mail, Lock, Shield, KeyRound, AlertCircle, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [notVerified, setNotVerified] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
+  const { captcha, setCaptcha, image: captchaImage, refresh: refreshCaptcha } = useCaptcha();
 
   useEffect(() => {
     api.auth.getConfig()
@@ -85,7 +87,7 @@ export default function LoginPage() {
     setNotVerified(false);
     setLoading(true);
     try {
-      const res = await api.auth.login({ email, password });
+      const res = await api.auth.login({ email, password, captchaId: captcha.captchaId, captchaAnswer: captcha.captchaAnswer });
       if (res.twoFactorRequired) {
         setTwoFactorRequired(true);
         setTempToken(res.tempToken);
@@ -105,6 +107,7 @@ export default function LoginPage() {
       const msg = err.message || "Login failed";
       if (msg.toLowerCase().includes("verify")) setNotVerified(true);
       setError(msg);
+      refreshCaptcha();
       setLoading(false);
     }
   };
@@ -272,6 +275,8 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            <CaptchaField captcha={captcha} image={captchaImage} onChange={setCaptcha} onRefresh={refreshCaptcha} />
 
             <button type="submit" disabled={loading} className={btnClass}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : null}

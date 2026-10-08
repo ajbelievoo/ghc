@@ -35,6 +35,7 @@ from app.schemas.auth import (
     UserUpdate,
     VerifyEmail,
 )
+from app.services import captcha_service
 from app.services.email_service import (
     get_admin_config,
     get_admin_flag,
@@ -115,8 +116,19 @@ def _start_2fa(user: User) -> dict:
 # ---------- Registration / Login ----------
 
 
+def _require_captcha(payload) -> None:
+    if not captcha_service.verify(getattr(payload, "captchaId", None), getattr(payload, "captchaAnswer", None)):
+        raise HTTPException(status_code=400, detail="Invalid or expired CAPTCHA — please try again")
+
+
+@router.get("/captcha", dependencies=[Depends(rate_limit(30, 60, "captcha"))])
+def get_captcha():
+    return captcha_service.generate()
+
+
 @router.post("/register", dependencies=[Depends(rate_limit(10, 60, "register"))])
 def register(payload: UserCreate, response: Response, db: Session = Depends(get_db)):
+    _require_captcha(payload)
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -150,6 +162,7 @@ def register(payload: UserCreate, response: Response, db: Session = Depends(get_
 
 @router.post("/login", dependencies=[Depends(rate_limit(15, 60, "login"))])
 def login(payload: UserLogin, response: Response, db: Session = Depends(get_db)):
+    _require_captcha(payload)
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -252,6 +265,7 @@ def resend_verification(payload: ResendVerification, db: Session = Depends(get_d
 
 @router.post("/forgot-password", dependencies=[Depends(rate_limit(5, 300, "forgot"))])
 def forgot_password(payload: ForgotPassword, db: Session = Depends(get_db)):
+    _require_captcha(payload)
     user = db.query(User).filter(User.email == payload.email).first()
     if user:
         if not _send_reset_email(db, user):
@@ -339,6 +353,19 @@ def update_me(payload: UserUpdate, db: Session = Depends(get_db), user: User = D
         user.name = payload.name
     if payload.phone is not None:
         user.phone = payload.phone
+    if payload.country is not None:
+        user.country = payload.country
+    if payload.gstin is not None:
+        user.gstin = payload.gstin
+    for src, dst in (
+        ("billingAddress", "billing_address"),
+        ("billingCity", "billing_city"),
+        ("billingState", "billing_state"),
+        ("billingPincode", "billing_pincode"),
+    ):
+        value = getattr(payload, src)
+        if value is not None:
+            setattr(user, dst, value)
     db.commit()
     db.refresh(user)
     return {"user": _user_json(user)}

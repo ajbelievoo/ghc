@@ -143,6 +143,12 @@ def generate_invoice_pdf(invoice: object, user: object, order: object = None) ->
     pdf.cell(0, 6, user.email, ln=True)
     if user.phone:
         pdf.cell(0, 6, user.phone, ln=True)
+    addr = ", ".join(p for p in [user.billing_address, user.billing_city] if p)
+    line2 = ", ".join(p for p in [user.billing_state, user.billing_pincode] if p)
+    if addr:
+        pdf.cell(0, 6, addr, ln=True)
+    if line2:
+        pdf.cell(0, 6, line2, ln=True)
     if user.gstin:
         pdf.cell(0, 6, f"GSTIN: {user.gstin}", ln=True)
     if user.country:

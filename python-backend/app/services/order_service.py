@@ -117,7 +117,7 @@ SERVICE_RESOURCE_FAMILY = {
 }
 
 
-from app.services.tax_service import gst_fields_for_user
+from app.services.tax_service import generate_invoice_number, gst_fields_for_user
 
 
 def create_customer_order(
@@ -503,6 +503,8 @@ def _ensure_invoice_and_subscription(db: Session, order: CustomerOrder):
             currency=order.currency,
         )
         db.add(invoice)
+        db.flush()
+        invoice.invoice_number = generate_invoice_number(invoice)
         # Service-option orders (upgrade/disk/backup on an existing service)
         # must not create a new subscription.
         is_option_order = bool((order.configuration_payload or {}).get("service_option"))
@@ -871,6 +873,8 @@ def execute_service_option_order(db: Session, ovh: OvhClient, order: CustomerOrd
                 currency=order.currency,
             )
             db.add(invoice)
+            db.flush()
+            invoice.invoice_number = generate_invoice_number(invoice)
             db.commit()
 
         return order
@@ -1067,6 +1071,8 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
                 currency=order.currency,
             )
             db.add(invoice)
+            db.flush()
+            invoice.invoice_number = generate_invoice_number(invoice)
             db.commit()
 
         return order

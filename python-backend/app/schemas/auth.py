@@ -11,11 +11,15 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     name: str = Field(min_length=1, max_length=255)
     phone: str | None = None
+    captchaId: str | None = None
+    captchaAnswer: str | None = None
 
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    captchaId: str | None = None
+    captchaAnswer: str | None = None
 
 
 class GoogleLogin(BaseModel):
@@ -29,6 +33,8 @@ class ChangePassword(BaseModel):
 
 class ForgotPassword(BaseModel):
     email: EmailStr
+    captchaId: str | None = None
+    captchaAnswer: str | None = None
 
 
 class ResetPassword(BaseModel):
@@ -47,6 +53,12 @@ class ResendVerification(BaseModel):
 class UserUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
+    country: str | None = Field(default=None, max_length=2)
+    gstin: str | None = Field(default=None, max_length=15)
+    billingAddress: str | None = Field(default=None, max_length=500)
+    billingCity: str | None = Field(default=None, max_length=100)
+    billingState: str | None = Field(default=None, max_length=100)
+    billingPincode: str | None = Field(default=None, max_length=20)
 
 
 class TwoFactorCode(BaseModel):
@@ -68,6 +80,12 @@ class UserResponse(BaseModel):
     created_at: str
     emailVerified: bool = Field(default=False, validation_alias="email_verified")
     twoFactorEnabled: bool = Field(default=False, validation_alias="totp_enabled")
+    country: str | None = None
+    gstin: str | None = None
+    billingAddress: str | None = Field(default=None, validation_alias="billing_address")
+    billingCity: str | None = Field(default=None, validation_alias="billing_city")
+    billingState: str | None = Field(default=None, validation_alias="billing_state")
+    billingPincode: str | None = Field(default=None, validation_alias="billing_pincode")
 
     @field_validator("created_at", mode="before")
     @classmethod
