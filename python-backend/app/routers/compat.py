@@ -317,7 +317,7 @@ def server_domains(currency: Optional[str] = None, db: Session = Depends(get_db)
     from app.models.models import PlanCatalog
     from app.services.currency_service import convert
     target = (currency or get_settings().currency or "USD").upper()
-    plans = db.query(PlanCatalog).filter(PlanCatalog.category == "DOMAINS", PlanCatalog.is_active == True).limit(100).all()
+    plans = db.query(PlanCatalog).filter(PlanCatalog.category == "DOMAINS", PlanCatalog.is_active == True).all()
     return [
         {
             "tld": p.plan_code,
@@ -392,24 +392,30 @@ def suggest_domains(keyword: str, currency: Optional[str] = None, db: Session = 
             base_currencies.add((p.durations[0].currency or p.currency or "INR").upper())
     rates_map = {bc: get_rate(db, bc, target) for bc in base_currencies}
 
-    # Fast availability: only check our own DB. Real DNS/OVH check happens at register time.
+    # Availability: our DB + real DNS delegation checks (parallel) — results must match reality.
     local_taken = set()
     for d in db.query(DomainRegistration).filter(DomainRegistration.domain_name == base, DomainRegistration.status == DomainStatus.ACTIVE).all():
         local_taken.add(d.tld.lower().lstrip("."))
 
+    valid_plans = [p for p in plans if (p.plan_code or "").lower() and (p.plan_code or "").lower() != "ovh" and p.durations and (p.durations[0].final_price or 0) > 0]
+    candidate_domains = [f"{base}.{(p.plan_code or '').lower()}" for p in valid_plans[:80]]
+    dns_taken: dict = {}
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=24) as ex:
+            flags = list(ex.map(lambda d: _domain_dns_taken(d, 1.2), candidate_domains))
+        dns_taken = dict(zip(candidate_domains, flags))
+    except Exception:
+        dns_taken = {}
+
     results = []
-    for plan in plans:
+    for plan in valid_plans:
         tld = (plan.plan_code or "").lower()
-        if not tld or tld == "ovh" or not plan.durations:
-            continue
         domain = f"{base}.{tld}"
         base_currency = (plan.durations[0].currency or plan.currency or "INR").upper()
         raw_price = plan.durations[0].final_price or 0
-        # Skip TLDs with no real pricing — they are not actually free.
-        if raw_price <= 0:
-            continue
         price = raw_price * rates_map.get(base_currency, 1.0)
-        taken = tld in local_taken
+        taken = tld in local_taken or dns_taken.get(domain, False)
         is_exact = exact_tld is not None and tld == exact_tld
         results.append({
             "domain": domain,
@@ -1762,7 +1768,9 @@ def admin_update_credentials(body: dict, db: Session = Depends(get_db), admin: U
             db.add(gateway)
         gateway.is_active = bool(gw.get("isActive", False))
         if "config" in gw:
-            gateway.config = gw["config"] or {}
+            merged = dict(gateway.config or {})
+            merged.update(gw["config"] or {})
+            gateway.config = merged
     db.commit()
     return {"success": True}
 
