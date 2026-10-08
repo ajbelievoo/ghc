@@ -80,8 +80,10 @@ from app.services.subscription_service import (
     perform_power_action,
     reinstall_os,
     rename_vps,
+    request_service_termination,
     reset_vps_password,
     set_normal_boot,
+    set_service_auto_renew,
     set_rescue_mode,
     set_vps_netboot,
     update_reverse_dns,
@@ -1622,8 +1624,11 @@ def admin_orders(status: Optional[str] = None, page: int = 1, limit: int = 50, d
             {
                 "id": o.id,
                 "userId": o.user_id,
+                "user": {"name": o.user.name, "email": o.user.email} if o.user else None,
                 "planCode": o.plan_code,
+                "displayName": (o.configuration_payload or {}).get("display_name"),
                 "category": o.category.value,
+                "currency": o.currency,
                 "customerAmount": o.customer_amount,
                 "taxAmount": o.tax_amount,
                 "taxRate": o.tax_rate,
@@ -2202,6 +2207,63 @@ def vps_option_order(server_id: str, body: dict, db: Session = Depends(get_db), 
                 "status": order.status.value,
             },
         }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/vps/ip-countries")
+def vps_ip_countries(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    try:
+        return {"countries": get_vps_ip_countries(ovh, sub)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/vps/ip-geolocation")
+def vps_ip_geolocation(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    ip_address = (body.get("ipAddress") or "").strip()
+    country = (body.get("country") or "").strip()
+    if not ip_address or not country:
+        raise HTTPException(status_code=400, detail="ipAddress and country are required")
+    try:
+        return {"success": True, "result": change_vps_ip_geolocation(ovh, sub, ip_address, country)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/auto-renew")
+def server_auto_renew(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    ovh = get_ovh_client_from_db(db)
+    enabled = bool(body.get("enabled"))
+    try:
+        return set_service_auto_renew(db, ovh, sub, enabled)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/cancel")
+def server_cancel(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    if not body.get("confirm"):
+        raise HTTPException(status_code=400, detail="Termination must be confirmed")
+    ovh = get_ovh_client_from_db(db)
+    try:
+        return request_service_termination(db, ovh, sub)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

@@ -10,7 +10,7 @@ import PublicCloudPanel from "@/components/PublicCloudPanel";
 import HpcCatalog from "@/components/HpcCatalog";
 import RoadmapHub from "@/components/RoadmapHub";
 import OrderHub from "@/components/OrderHub";
-import DomainHub from "@/components/DomainHub";
+import DomainOrderWizard from "@/components/DomainOrderWizard";
 import { Server, Globe, HardDrive, Cloud, Shield, Network, FileText, Cpu, Activity, ArrowLeft, Download, Search, Filter, MoreHorizontal, Plus, Check, CheckCircle, XCircle, X, Loader2 } from "lucide-react";
 
 interface ProductHubProps {
@@ -363,10 +363,11 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
       )}
 
       {view === "domain-search" && (
-        <DomainHub
+        <DomainOrderWizard
           user={user}
-          onBack={onBack}
-          onComplete={() => { showToast("Domain registered", "success"); if (onBack) onBack(); }}
+          currency={currency}
+          onClose={onBack || (() => {})}
+          onDone={() => { showToast("Domain registered", "success"); }}
         />
       )}
 

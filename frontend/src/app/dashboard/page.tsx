@@ -15,6 +15,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import ServerMetricsChart from "@/components/ServerMetricsChart";
 import OrderHub from "@/components/OrderHub";
 import ProductHub from "@/components/ProductHub";
+import DomainOrderWizard from "@/components/DomainOrderWizard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Server,
@@ -135,6 +136,7 @@ export default function DashboardPage() {
   const [domainColsOpen, setDomainColsOpen] = useState(false);
   const [domainCols, setDomainCols] = useState({ technical: true, renewal: true, operations: true, registrant: true });
   const [domainTableQuery, setDomainTableQuery] = useState("");
+  const [domainWizard, setDomainWizard] = useState<string | null>(null);
   const [tickets, setTickets] = useState<any[]>([]);
   const [ticketsTotal, setTicketsTotal] = useState(0);
   const [ticketsPage, setTicketsPage] = useState(1);
@@ -185,7 +187,8 @@ export default function DashboardPage() {
         const requestedDomain = params.get("domain");
         if (requestedDomain) {
           setDomainQuery(requestedDomain);
-          setTimeout(() => handleCheckDomain(requestedDomain), 0);
+          setTab("domains");
+          setDomainWizard(requestedDomain);
         }
         fetchData();
         if (requestedCategory) fetchPlansCategory(requestedCategory, requestedPlan, requestedFamily);
@@ -1598,18 +1601,29 @@ export default function DashboardPage() {
 
 
         {/* DOMAINS TAB */}
-        {!activeView && tab === "domains" && (
+        {!activeView && tab === "domains" && domainWizard !== null && (
+          <div className="space-y-6">
+            <DomainOrderWizard
+              user={user}
+              currency={currency}
+              initialQuery={domainWizard}
+              onClose={() => setDomainWizard(null)}
+              onDone={fetchMyDomains}
+            />
+          </div>
+        )}
+        {!activeView && tab === "domains" && domainWizard === null && (
           <div className="space-y-6 max-w-4xl">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-[#0f172a]">My Domains</h2>
+              <h2 className="text-2xl font-bold text-[#0f172a]">Domain names</h2>
             </div>
 
             <div id="ghc-domain-register" className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6 scroll-mt-24">
               <h3 className="text-sm font-semibold text-[#0f172a] mb-4 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-[#00b7ff]" /> Register a new domain
+                <Globe className="w-4 h-4 text-[#00b7ff]" /> Order a domain name
               </h3>
               <form
-                onSubmit={(e) => { e.preventDefault(); handleCheckDomain(); }}
+                onSubmit={(e) => { e.preventDefault(); if (domainQuery.trim()) setDomainWizard(domainQuery.trim()); else setDomainWizard(""); }}
                 className="flex flex-col gap-3 md:flex-row md:items-center"
               >
                 <input
@@ -1618,74 +1632,20 @@ export default function DashboardPage() {
                   placeholder="example.com"
                   className="flex-1 rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
                 />
-                <select
-                  value={gateway}
-                  onChange={(e) => setGateway(e.target.value)}
-                  className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
-                >
-                  {activeGateways.length === 0 && <option value="">No gateway active</option>}
-                  {activeGateways.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
                 <button
                   type="submit"
-                  disabled={domainLoading}
-                  className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2.5 text-sm font-medium text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                  className="rounded-lg bg-[#00b7ff] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#00b7ff]/85 transition-all flex items-center gap-2"
                 >
-                  {domainLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Search
+                  <Search className="w-4 h-4" /> Search &amp; Order
                 </button>
               </form>
-              {activeGateways.length === 0 && (
-                <p className="text-[10px] text-slate-500 mt-2">No payment gateways active. Contact admin to enable.</p>
-              )}
-
-              {domainResults.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  {domainResults.map((r: any) => (
-                    <div key={r.domain} className="flex flex-col gap-3 rounded-lg bg-slate-100 border border-slate-200 px-4 py-3 md:flex-row md:items-center md:justify-between">
-                      <div className="flex items-center gap-3">
-                        {r.available ? <Check className="w-5 h-5 text-green-600" /> : <X className="w-5 h-5 text-red-500" />}
-                        <div>
-                          <p className="font-medium text-[#0f172a]">{r.domain}</p>
-                          <p className="text-xs text-slate-500">{r.available ? "Available" : r.reason || "Taken"}</p>
-                        </div>
-                      </div>
-                      {r.available && (
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-bold text-[#00b7ff]">
-                            {getCurrencySymbol(r.currency || currency)}{(r.price || 0).toFixed(2)} {r.currency || currency}
-                          </span>
-                          <button
-                            onClick={() => handleRegisterDomain(r)}
-                            disabled={activeGateways.length === 0}
-                            className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs font-medium text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all disabled:opacity-50"
-                          >
-                            Register
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {domainPaymentMessage && (
-                <div className="mt-4 rounded-lg border border-[#00b7ff]/20 bg-[#00b7ff]/5 p-4">
-                  <p className="text-sm text-[#0f172a] font-medium">Manual payment instructions</p>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Amount: {getCurrencySymbol(domainPaymentMessage.currency)}{domainPaymentMessage.amount.toFixed(2)} {domainPaymentMessage.currency}
-                  </p>
-                  <p className="text-xs text-slate-600 mt-1">{domainPaymentMessage.instructions}</p>
-                  <p className="text-xs text-slate-400 mt-1">Reference: {domainPaymentMessage.txId}</p>
-                </div>
-              )}
+              <p className="text-[10px] text-slate-500 mt-2">Guided order tunnel — select extensions, duration, contacts and payment step by step.</p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">
               {/* OVH-style toolbar */}
               <div className="flex flex-wrap items-center gap-2 mb-4">
-                <button onClick={() => document.getElementById("ghc-domain-register")?.scrollIntoView({ behavior: "smooth" })} className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-semibold text-white hover:bg-[#00b7ff]/85 transition-all">Order</button>
+                <button onClick={() => setDomainWizard("")} className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-semibold text-white hover:bg-[#00b7ff]/85 transition-all">Order</button>
                 <button onClick={exportDomainsCsv} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-[#0f172a] hover:border-[#00b7ff]/50 transition-all flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> Export in CSV <ChevronDown className="w-3 h-3 text-slate-400" /></button>
                 <button disabled title="No domains awaiting restore/renewal" className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-400 cursor-not-allowed">Restore/Renew ({safeDomains.filter((d: any) => d.status === "EXPIRED").length})</button>
                 <div className="ml-auto flex items-center gap-2">

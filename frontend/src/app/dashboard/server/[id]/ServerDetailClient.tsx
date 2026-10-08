@@ -68,6 +68,7 @@ const TABS = [
   { id: "backup", label: "Automated backup", vpsOnly: true },
   { id: "disk", label: "Additional disk", vpsOnly: true },
   { id: "monitoring", label: "Monitoring" },
+  { id: "databases", label: "Databases" },
   { id: "management", label: "Management" },
 ] as const;
 
@@ -218,6 +219,7 @@ export default function ServerDetailClient() {
         {tab === "backup" && isVps && <BackupTab server={server} />}
         {tab === "disk" && isVps && <DiskTab server={server} />}
         {tab === "monitoring" && <MonitoringTab server={server} detail={detail} metrics={metrics} metricsHistory={metricsHistory} />}
+        {tab === "databases" && <DatabasesTab server={server} />}
         {tab === "management" && (
           <ManagementTab server={server} detail={detail} setServer={setServer} isVps={isVps} />
         )}
@@ -923,10 +925,39 @@ function MonitoringTab({ server, detail, metrics, metricsHistory }: any) {
   );
 }
 
+/* ================= DATABASES TAB ================= */
+
+function DatabasesTab({ server }: { server: ServerInstance }) {
+  return (
+    <div className="space-y-6">
+      <Card title="Managed databases" icon={<Database className="w-4 h-4 text-[#00b7ff]" />}>
+        <p className="text-xs text-slate-500 mb-4">
+          Attach a fully managed MySQL, PostgreSQL, MongoDB, Redis or Kafka cluster to this server
+          over the private network — no manual setup or maintenance.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+          {["MySQL", "PostgreSQL", "MongoDB", "Redis", "Kafka", "Valkey"].map((d) => (
+            <div key={d} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-medium text-[#0f172a] flex items-center gap-2">
+              <Database className="w-3.5 h-3.5 text-[#00b7ff]" /> {d}
+            </div>
+          ))}
+        </div>
+        <Link
+          href="/public-cloud?s=db-mysql"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#00b7ff] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#0090cc]"
+        >
+          <Plus className="w-4 h-4" /> Order a managed database
+        </Link>
+      </Card>
+    </div>
+  );
+}
+
 /* ================= MANAGEMENT TAB ================= */
 
 function ManagementTab({ server, detail, setServer, isVps }: any) {
   const { showToast } = useToast();
+  const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [osTemplate, setOsTemplate] = useState(server.osTemplate || "ubuntu22.04");
   const [images, setImages] = useState<any[]>([]);
@@ -935,12 +966,19 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
   const [reverseIp, setReverseIp] = useState(detail?.network?.ipv4 || server.ipAddress || "");
   const [reverseValue, setReverseValue] = useState(detail?.network?.reverseDns || "");
   const [ov, setOv] = useState<any>(null);
+  const [autoRenew, setAutoRenew] = useState<boolean>(server.autoRenew !== false);
+  const [ipCountries, setIpCountries] = useState<string[]>([]);
+  const [geoIp, setGeoIp] = useState(detail?.network?.ipv4 || server.ipAddress || "");
+  const [geoCountry, setGeoCountry] = useState("");
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelText, setCancelText] = useState("");
 
   useEffect(() => {
     if (!isVps) return;
     api.server.vpsImages(server.id).then((d) => setImages(d.images || [])).catch(() => {});
     api.server.vpsTasks(server.id).then(setTasks).catch(() => {});
     api.server.vpsOverview(server.id).then(setOv).catch(() => {});
+    api.server.vpsIpCountries(server.id).then((d) => setIpCountries(d.countries || [])).catch(() => {});
   }, [server.id, isVps]);
 
   const handlePower = async (action: string) => {
@@ -1019,6 +1057,48 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
       showToast("Reverse DNS updated", "success");
     } catch (e: any) {
       showToast(e.message || "Reverse DNS update failed", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const toggleAutoRenew = async () => {
+    const next = !autoRenew;
+    setActionLoading("autorenew");
+    try {
+      await api.server.setAutoRenew(server.id, next);
+      setAutoRenew(next);
+      setServer((s: any) => (s ? { ...s, autoRenew: next } : s));
+      showToast(next ? "Automatic renewal enabled" : "Automatic renewal disabled", "success");
+    } catch (e: any) {
+      showToast(e.message || "Renewal change failed", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const saveGeolocation = async () => {
+    if (!geoIp || !geoCountry) return;
+    setActionLoading("geo");
+    try {
+      await api.server.vpsSetIpGeolocation(server.id, { ipAddress: geoIp, country: geoCountry });
+      showToast("IP geolocation change requested", "success");
+    } catch (e: any) {
+      showToast(e.message || "Geolocation change failed", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const confirmCancel = async () => {
+    setActionLoading("cancel");
+    try {
+      await api.server.cancelService(server.id);
+      showToast("Termination requested — the service ends at its expiry date", "success");
+      setCancelOpen(false);
+      router.push("/dashboard?tab=servers");
+    } catch (e: any) {
+      showToast(e.message || "Cancellation failed", "error");
     } finally {
       setActionLoading(null);
     }
@@ -1144,6 +1224,94 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
           </div>
         </Card>
       )}
+
+      {/* IP geolocation */}
+      {isVps && ipCountries.length > 0 && (
+        <Card title="IP geolocation" icon={<Globe className="w-4 h-4 text-[#00b7ff]" />}>
+          <div className="flex gap-2 flex-wrap">
+            <select
+              value={geoIp}
+              onChange={(e) => setGeoIp(e.target.value)}
+              className="flex-1 min-w-[160px] rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm font-mono text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+            >
+              {(ov?.ips?.length ? ov.ips.map((i: any) => i.ipAddress || i) : [detail?.network?.ipv4 || server.ipAddress].filter(Boolean)).map((ip: string) => (
+                <option key={ip} value={ip}>{ip}</option>
+              ))}
+            </select>
+            <select
+              value={geoCountry}
+              onChange={(e) => setGeoCountry(e.target.value)}
+              className="flex-1 min-w-[140px] rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+            >
+              <option value="">Select country…</option>
+              {ipCountries.map((c) => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+            </select>
+            <button
+              onClick={saveGeolocation}
+              disabled={actionLoading === "geo" || !geoIp || !geoCountry}
+              className="rounded-lg bg-[#00b7ff] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0090cc] disabled:opacity-50"
+            >
+              {actionLoading === "geo" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Update"}
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-2">Changes the geolocation registered for this IP — affects geo-targeting, not routing.</p>
+        </Card>
+      )}
+
+      {/* Renewal */}
+      <Card title="Renewal" icon={<RefreshCw className="w-4 h-4 text-[#00b7ff]" />}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-[#0f172a]">Automatic renewal</p>
+            <p className="text-[10px] text-slate-400">
+              {autoRenew ? "The service renews automatically at each billing cycle." : "The service will expire at the end of the current period."}
+            </p>
+          </div>
+          <button
+            onClick={toggleAutoRenew}
+            disabled={actionLoading === "autorenew"}
+            className={`relative h-6 w-11 rounded-full transition-colors ${autoRenew ? "bg-[#00b7ff]" : "bg-slate-300"} disabled:opacity-50`}
+          >
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${autoRenew ? "left-[22px]" : "left-0.5"}`} />
+          </button>
+        </div>
+      </Card>
+
+      {/* Danger zone */}
+      <Card title="Cancel service" icon={<Trash2 className="w-4 h-4 text-red-500" />}>
+        {!cancelOpen ? (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500">Terminate this service at the end of its billing period.</p>
+            <button
+              onClick={() => setCancelOpen(true)}
+              className="rounded-lg border border-red-300 px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50"
+            >
+              Cancel service
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+            <p className="text-xs font-medium text-red-600 mb-2">
+              Type <span className="font-mono font-bold">CANCEL</span> to confirm. The service will terminate at its expiry date — this cannot be undone from the panel.
+            </p>
+            <div className="flex gap-2">
+              <input
+                value={cancelText}
+                onChange={(e) => setCancelText(e.target.value)}
+                placeholder="CANCEL"
+                className="flex-1 rounded-lg bg-white border border-red-300 px-4 py-2 text-sm text-[#0f172a] outline-none"
+              />
+              <button
+                onClick={confirmCancel}
+                disabled={actionLoading === "cancel" || cancelText !== "CANCEL"}
+                className="rounded-lg bg-red-500 px-4 py-2 text-xs font-bold text-white hover:bg-red-600 disabled:opacity-50"
+              >
+                {actionLoading === "cancel" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm termination"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* Tasks */}
       {isVps && tasks.length > 0 && (

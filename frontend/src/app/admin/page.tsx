@@ -134,7 +134,7 @@ export default function AdminPage() {
   const toggleSetting = async (key: string, currentValue: string) => { const newValue = currentValue === "true" ? "false" : "true"; try { await api.admin.updateSetting({ key, value: newValue }); setSettings((p) => p.map((s) => s.key === key ? { ...s, value: newValue } : s)); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const toggleGateway = async (name: string, currentActive: boolean) => { try { await api.admin.updateGateway({ name, isActive: !currentActive }); setGateways((p) => p.map((g) => g.name === name ? { ...g, isActive: !currentActive } : g)); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleUpdateUser = async (userId: string, data: any) => { try { await api.admin.updateUser(userId, data); loadTabData("users"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
-  const handleSaveCredentials = async (e: FormEvent) => { e.preventDefault(); try { const gatewayList = Object.entries(gwInputs).map(([name, cfg]) => ({ name, config: { keyId: cfg.keyId, keySecret: cfg.keySecret, merchantId: cfg.merchantId, webhookSecret: cfg.webhookSecret }, isActive: cfg.isActive })); await api.admin.updateCredentials({ provider, google: googleCreds, smtp, gateways: gatewayList }); showToast("Credentials saved successfully", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const handleSaveCredentials = async (e: FormEvent) => { e.preventDefault(); try { const gatewayList = Object.entries(gwInputs).map(([name, cfg]) => ({ name, config: { keyId: cfg.keyId, keySecret: cfg.keySecret, merchantId: cfg.merchantId, webhookSecret: cfg.webhookSecret, env: cfg.env }, isActive: cfg.isActive })); await api.admin.updateCredentials({ provider, google: googleCreds, smtp, gateways: gatewayList }); showToast("Credentials saved successfully", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleSaveBrand = async (e: FormEvent) => { e.preventDefault(); try { await api.admin.updateBrand(brand); showToast("Brand settings saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const getSettingValue = (key: string) => { const s = settings.find((x) => x.key === key); return s?.value || "false"; };
   const logout = () => { localStorage.removeItem("token"); localStorage.removeItem("user"); router.push("/login"); };
@@ -407,20 +407,42 @@ export default function AdminPage() {
               )}
               {panel("Payment Gateways", <CreditCard className="w-5 h-5 text-[#00b7ff]" />,
                 <div className="space-y-4">
-                  {["razorpay", "cashfree", "paypal", "payu", "stripe"].map((gwName) => (
+                  {["razorpay", "cashfree", "paypal", "payu", "stripe"].map((gwName) => {
+                    const keyLabels: Record<string, [string, string]> = {
+                      razorpay: ["Key ID", "Key Secret"],
+                      cashfree: ["App ID", "Secret Key"],
+                      paypal: ["Client ID", "Client Secret"],
+                      payu: ["Merchant Key", "Merchant Salt"],
+                      stripe: ["Publishable Key", "Secret Key"],
+                    };
+                    const [l1, l2] = keyLabels[gwName] || ["Key ID", "Key Secret"];
+                    const needsWebhook = ["razorpay", "stripe"].includes(gwName);
+                    const needsMerchant = gwName === "payu";
+                    return (
                     <div key={gwName} className="rounded-xl border border-slate-200 bg-slate-100/60 p-4">
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-sm font-medium text-[#0f172a] capitalize">{gwName}</p>
-                        <button type="button" onClick={() => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], isActive: !p[gwName]?.isActive } }))} className="transition-transform active:scale-95">
-                          {gwInputs[gwName]?.isActive ? <ToggleRight className="w-7 h-7 text-[#00b7ff]" /> : <ToggleLeft className="w-7 h-7 text-slate-500" />}
-                        </button>
+                        <div className="flex items-center gap-3">
+                          {gwName !== "razorpay" && (
+                            <select value={gwInputs[gwName]?.env || "sandbox"} onChange={(e) => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], env: e.target.value } }))} className="rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-xs text-[#0f172a] outline-none">
+                              <option value="sandbox">Test / Sandbox</option>
+                              <option value="production">Live / Production</option>
+                            </select>
+                          )}
+                          <button type="button" onClick={() => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], isActive: !p[gwName]?.isActive } }))} className="transition-transform active:scale-95">
+                            {gwInputs[gwName]?.isActive ? <ToggleRight className="w-7 h-7 text-[#00b7ff]" /> : <ToggleLeft className="w-7 h-7 text-slate-500" />}
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {secretInput("Key ID / Secret", gwInputs[gwName]?.keyId || "", (v) => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], keyId: v }})), `${gwName}_keyId`)}
-                        {secretInput("Key Secret / Webhook", gwInputs[gwName]?.keySecret || "", (v) => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], keySecret: v }})), `${gwName}_keySecret`)}
+                        {secretInput(l1, gwInputs[gwName]?.keyId || "", (v) => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], keyId: v }})), `${gwName}_keyId`)}
+                        {secretInput(l2, gwInputs[gwName]?.keySecret || "", (v) => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], keySecret: v }})), `${gwName}_keySecret`)}
+                        {needsWebhook && secretInput("Webhook Secret", gwInputs[gwName]?.webhookSecret || "", (v) => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], webhookSecret: v }})), `${gwName}_webhookSecret`)}
+                        {needsMerchant && secretInput("Merchant ID", gwInputs[gwName]?.merchantId || "", (v) => setGwInputs((p) => ({ ...p, [gwName]: { ...p[gwName], merchantId: v }})), `${gwName}_merchantId`)}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               <div className="flex justify-end">
@@ -752,7 +774,7 @@ export default function AdminPage() {
                       <tr key={o.id} className="border-b border-white/5 hover:bg-slate-100/50 transition-colors">
                         <td className="px-6 py-3 text-xs text-[#0f172a] font-mono">{o.id.slice(0, 8).toUpperCase()}</td>
                         <td className="px-6 py-3 text-xs text-[#0f172a]">{o.user?.name || 'N/A'}<br/><span className="text-slate-500">{o.user?.email}</span></td>
-                        <td className="px-6 py-3 text-xs text-slate-500">{o.planCode || 'N/A'}<br/><span className="text-slate-500">{o.category}</span></td>
+                        <td className="px-6 py-3 text-xs text-slate-500">{o.displayName || o.planCode || 'N/A'}<br/><span className="text-slate-500">{o.category}</span></td>
                         <td className="px-6 py-3 text-xs text-[#0f172a]">{getCurrencySymbol(o.currency)}{o.customerAmount?.toFixed(2) || o.amount?.toFixed(2)} {o.currency}</td>
                         <td className="px-6 py-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${o.status === 'COMPLETED' ? 'bg-[#00ff88]/10 text-[#00ff88]' : o.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-700' : o.status === 'PROCESSING' ? 'bg-[#00b7ff]/10 text-[#00b7ff]' : 'bg-red-500/10 text-red-600'}`}>{o.status}</span></td>
                         <td className="px-6 py-3 text-xs text-slate-500">{new Date(o.createdAt).toLocaleDateString()}</td>

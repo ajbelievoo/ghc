@@ -210,6 +210,13 @@ export const api = {
     vpsOptions: (id: string) => request(`/server/${id}/vps/options?currency=${selectedCurrency()}`),
     vpsOrderOption: (id: string, body: { kind: "upgrade" | "additional_disk" | "automated_backup"; planCode?: string; size?: number; duration?: string; currency?: string }) =>
       request(`/server/${id}/vps/options/order`, { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
+    vpsIpCountries: (id: string) => request(`/server/${id}/vps/ip-countries`),
+    vpsSetIpGeolocation: (id: string, body: { ipAddress: string; country: string }) =>
+      request(`/server/${id}/vps/ip-geolocation`, { method: "POST", body: JSON.stringify(body) }),
+    setAutoRenew: (id: string, enabled: boolean) =>
+      request(`/server/${id}/auto-renew`, { method: "POST", body: JSON.stringify({ enabled }) }),
+    cancelService: (id: string) =>
+      request(`/server/${id}/cancel`, { method: "POST", body: JSON.stringify({ confirm: true }) }),
   },
   billing: {
     createOrder: (body: { planCode: string; durationLabel: string; gateway: string; category: string; currency?: string }) =>
