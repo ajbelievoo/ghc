@@ -2039,8 +2039,8 @@
    "desc": "Managed Rancher for multi-cluster Kubernetes management.",
    "items": [
     {
-     "code": "rancher.ovhcloud-edition",
-     "name": "Rancher OVHcloud Edition",
+     "code": "rancher.enterprise",
+     "name": "Rancher Enterprise Edition",
      "hour": 0.63,
      "hourFmt": "\u20b90.63",
      "month": 459.9,
@@ -2049,7 +2049,7 @@
     },
     {
      "code": "rancher.standard",
-     "name": "Rancher Standard",
+     "name": "Rancher",
      "hour": 1.57,
      "hourFmt": "\u20b91.57",
      "month": 1146.1000000000001,
