@@ -557,13 +557,38 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         if not segment:
             raise ValueError(f"Unsupported category for cart: {plan.category.value}")
 
-        add_payload = _build_add_item_payload(order.plan_code, duration, plan.category, config)
-        item = ovh.add_item_to_cart(order.ovh_cart_id, segment, add_payload)
-        item_id = item.get("itemId")
-        log_ovh_step(db, order.id, "ADD_ITEM", f"/order/cart/{order.ovh_cart_id}/{segment}", add_payload, item)
+        is_pcc_host = (
+            plan.category == ServiceCategory.PRIVATE_CLOUD
+            and order.plan_code.startswith("pcc-")
+        )
+        if is_pcc_host:
+            # Private Cloud hosts/options attach to the base service pack —
+            # order `private_cloud` first, then attach the chosen SKU.
+            pack_payload = _build_add_item_payload("private_cloud", duration, plan.category, config)
+            pack_item = ovh.add_item_to_cart(order.ovh_cart_id, segment, pack_payload)
+            item_id = pack_item.get("itemId")
+            log_ovh_step(db, order.id, "ADD_ITEM", f"/order/cart/{order.ovh_cart_id}/{segment}", pack_payload, pack_item)
 
-        # 4. Add mandatory addon options (e.g. OS, backup, storage)
-        all_item_ids = _add_mandatory_options(db, ovh, order, item_id, segment, plan, duration, config)
+            option_payload = {
+                "planCode": order.plan_code,
+                "duration": f"P{duration.interval}{duration.interval_unit[0].upper()}",
+                "pricingMode": "default",
+                "quantity": 1,
+            }
+            option = ovh.add_item_option(order.ovh_cart_id, segment, item_id, option_payload)
+            all_item_ids = [item_id, option.get("itemId")]
+            log_ovh_step(
+                db, order.id, "ADD_OPTION", f"/order/cart/{order.ovh_cart_id}/{segment}/options",
+                {"itemId": item_id, "planCode": order.plan_code}, option,
+            )
+        else:
+            add_payload = _build_add_item_payload(order.plan_code, duration, plan.category, config)
+            item = ovh.add_item_to_cart(order.ovh_cart_id, segment, add_payload)
+            item_id = item.get("itemId")
+            log_ovh_step(db, order.id, "ADD_ITEM", f"/order/cart/{order.ovh_cart_id}/{segment}", add_payload, item)
+
+            # 4. Add mandatory addon options (e.g. OS, backup, storage)
+            all_item_ids = _add_mandatory_options(db, ovh, order, item_id, segment, plan, duration, config)
 
         # 5. Configure parent item
         #    vps_datacenter/vps_os and other required labels are handled below

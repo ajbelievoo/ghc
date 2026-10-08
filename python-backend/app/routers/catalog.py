@@ -51,6 +51,16 @@ def live_cloud_catalog(db: Session = Depends(get_db)):
         raise HTTPException(status_code=503, detail=f"Live catalog unavailable: {e}")
 
 
+@router.get("/private-cloud-live")
+def live_hpc_catalog(db: Session = Depends(get_db)):
+    """Real-time Hosted Private Cloud catalog — upstream API, margin applied, 30-min cache."""
+    from app.services.cloud_live_service import get_live_hpc_catalog
+    try:
+        return get_live_hpc_catalog(db)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Live catalog unavailable: {e}")
+
+
 @router.get("/margins", response_model=list[MarginSettingResponse])
 def list_margins(db: Session = Depends(get_db)):
     from app.models.models import MarginSetting

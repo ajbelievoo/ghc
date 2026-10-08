@@ -10,11 +10,25 @@ import { useCurrency, CURRENCIES } from "@/components/CurrencyProvider";
 import { useI18n } from "@/components/LanguageProvider";
 import { Language } from "@/lib/i18n";
 
-const megaMenu = [
+interface MegaLink { label: string; href: string; desc?: string }
+interface MegaGroup { title: string; items: MegaLink[] }
+interface MegaCol { title?: string; items?: MegaLink[]; groups?: MegaGroup[] }
+interface MegaEntry {
+  label: string;
+  href: string;
+  cols?: number;
+  columns: MegaCol[];
+  footerLinks?: MegaLink[];
+}
+
+const colGroups = (col: MegaCol): MegaGroup[] =>
+  col.groups ?? [{ title: col.title || "", items: col.items || [] }];
+
+const megaMenu: MegaEntry[] = [
   {
     label: "Public Cloud",
     href: "/public-cloud",
-    wide: true,
+    cols: 3,
     columns: [
       { title: "Compute & Containers", items: [
         { label: "Compute", href: "/public-cloud?s=vm", desc: "VM, GPU, and Metal instances" },
@@ -49,17 +63,56 @@ const megaMenu = [
   {
     label: "VPS & Dedicated Servers",
     href: "/dedicated-servers",
+    cols: 4,
     columns: [
       { title: "VPS & Dedicated", items: [
-        { label: "Dedicated servers", href: "/dedicated-servers", desc: "Bare metal power" },
-        { label: "VPS", href: "/vps", desc: "Virtual private servers" },
-        { label: "Distributions & Licenses", href: "/apps", desc: "OS and control panels" },
+        { label: "Dedicated servers", href: "/dedicated-servers", desc: "All performance levels. Available in minutes." },
+        { label: "VPS", href: "/vps", desc: "The right balance of performance, flexibility and cost control" },
+        { label: "Distributions & Licenses", href: "/apps", desc: "Choose an image to deploy on your server" },
       ]},
       { title: "Bare Metal Foundations", items: [
-        { label: "Network", href: "/network", desc: "Secure connectivity" },
-        { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Business continuity" },
-        { label: "Security & Identity", href: "/security", desc: "Access control" },
+        { label: "Network", href: "/network", desc: "Secure and high-performance connectivity" },
+        { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Backups and business continuity" },
+        { label: "Security & Identities", href: "/security", desc: "Granular control over your environments" },
+        { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
       ]},
+      { groups: [
+        { title: "Speed up your websites and applications", items: [
+          { label: "WordPress", href: "/vps/wordpress" },
+          { label: "Drupal", href: "/solutions/drupal" },
+          { label: "PrestaShop", href: "/solutions/prestashop" },
+          { label: "Magento", href: "/solutions/magento" },
+        ]},
+        { title: "The ideal foundation for your VMs", items: [
+          { label: "Proxmox", href: "/solutions/proxmox" },
+          { label: "KVM", href: "/solutions/kvm" },
+          { label: "VMware ESXi", href: "/solutions/vmware-esxi" },
+          { label: "Microsoft Hyper-V", href: "/solutions/hyper-v" },
+        ]},
+      ]},
+      { groups: [
+        { title: "Your data, without data loss", items: [
+          { label: "ClickHouse", href: "/solutions/clickhouse" },
+          { label: "PostgreSQL", href: "/solutions/postgresql" },
+          { label: "Cassandra", href: "/solutions/cassandra" },
+          { label: "HBase", href: "/solutions/hbase" },
+          { label: "InfluxDB", href: "/solutions/influxdb" },
+        ]},
+        { title: "The power for your critical workloads", items: [
+          { label: "GROMACS", href: "/solutions/gromacs" },
+          { label: "NAMD", href: "/solutions/namd" },
+        ]},
+        { title: "Blockchain infrastructure", items: [
+          { label: "Validator Nodes", href: "/solutions/validator-nodes" },
+          { label: "RPC Nodes", href: "/solutions/rpc-nodes" },
+          { label: "Archive Nodes", href: "/solutions/archive-nodes" },
+        ]},
+      ]},
+    ],
+    footerLinks: [
+      { label: "Prices", href: "/dedicated-servers" },
+      { label: "Guides & Documentation", href: "/kb" },
+      { label: "Roadmap & Changelog", href: "/status" },
     ],
   },
   {

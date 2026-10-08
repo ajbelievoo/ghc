@@ -39,3 +39,19 @@ export async function getCloudCatalog(): Promise<Record<string, CloudLeaf[]>> {
 }
 
 export const FALLBACK_CATALOG = catalog as unknown as Record<string, CloudLeaf[]>;
+
+export interface HpcGroup { id: string; title: string; desc: string; items: any[] }
+
+let hpcCached: HpcGroup[] | null = null;
+let hpcInflight: Promise<HpcGroup[] | null> | null = null;
+
+export async function getHpcCatalog(): Promise<HpcGroup[] | null> {
+  if (hpcCached) return hpcCached;
+  if (!hpcInflight) {
+    hpcInflight = fetch("/api/catalog/private-cloud-live")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => (hpcCached = d.groups as HpcGroup[]))
+      .catch(() => null);
+  }
+  return hpcInflight;
+}

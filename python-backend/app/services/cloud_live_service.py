@@ -224,3 +224,57 @@ def get_live_cloud_catalog(db: Session) -> Dict[str, Any]:
         if _CACHE["data"]:
             return {**_CACHE["data"], "source": "stale-cache"}
         raise
+
+
+# ---------------- Hosted Private Cloud ----------------
+
+_HPC_CACHE: Dict[str, Any] = {"ts": 0.0, "data": None}
+
+_HPC_GROUPS = [
+    {"id": "host-vsphere", "title": "Managed VMware vSphere hosts", "desc": "Managed vSphere hypervisor hosts — VMware on dedicated hardware.", "patterns": ["pcc-host-vsphere-"]},
+    {"id": "host-sddc", "title": "Managed SDDC hosts", "desc": "Software-Defined Data Center host configurations.", "patterns": ["pcc-host-sddc", "pcc-host-premier-"]},
+    {"id": "host-nsx", "title": "NSX-enabled hosts", "desc": "Hosts bundled with VMware NSX network virtualisation.", "patterns": ["pcc-host-nsx-"]},
+    {"id": "host-sap", "title": "SAP HANA certified hosts", "desc": "vSphere/NSX hosts certified for SAP HANA workloads.", "patterns": ["pcc-host-.*saphana"]},
+    {"id": "datastore", "title": "Datastores", "desc": "Additional NFS/vSAN datastores for your private cloud.", "patterns": ["pcc-datastore"]},
+    {"id": "options", "title": "Options & licences", "desc": "Backup, replication, licences and management options.", "patterns": ["pcc-", "veeam", "nsx", "vsphere", "snc-"]},
+]
+
+
+def build_live_hpc_catalog(db: Session) -> Dict[str, Any]:
+    now = time.time()
+    if _HPC_CACHE["data"] and now - _HPC_CACHE["ts"] < _TTL:
+        return _HPC_CACHE["data"]
+
+    ovh = get_ovh_client_from_db(db)
+    raw = ovh.get_public_catalog("privateCloud")
+    margin = get_margin_for_category(db, ServiceCategory.PRIVATE_CLOUD)
+    items = _collect(raw, margin)
+    for it in items.values():
+        if it["hour"] is not None and it["month"] is None:
+            it["month"] = round(it["hour"] * 730, 2)
+
+    groups = []
+    seen = set()
+    for g in _HPC_GROUPS:
+        gitems = _grp(items, g["patterns"])
+        dedup = []
+        for it in gitems:
+            if it["code"] in seen:
+                continue
+            seen.add(it["code"])
+            dedup.append(it)
+        if dedup:
+            groups.append({**{k: g[k] for k in ("id", "title", "desc")}, "items": dedup})
+
+    _HPC_CACHE["data"] = {"updated": int(now), "source": "live", "groups": groups}
+    _HPC_CACHE["ts"] = now
+    return _HPC_CACHE["data"]
+
+
+def get_live_hpc_catalog(db: Session) -> Dict[str, Any]:
+    try:
+        return build_live_hpc_catalog(db)
+    except Exception:
+        if _HPC_CACHE["data"]:
+            return {**_HPC_CACHE["data"], "source": "stale-cache"}
+        raise

@@ -7,6 +7,7 @@ import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
 import { useToast } from "@/components/ToastProvider";
 import NetworkHub from "@/components/NetworkHub";
 import PublicCloudPanel from "@/components/PublicCloudPanel";
+import HpcCatalog from "@/components/HpcCatalog";
 import RoadmapHub from "@/components/RoadmapHub";
 import OrderHub from "@/components/OrderHub";
 import DomainHub from "@/components/DomainHub";
@@ -332,6 +333,10 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
                 <button onClick={() => requestQuote(item.title)} className="text-sm text-[#00b7ff] hover:underline flex items-center gap-1">Find out more <ArrowLeft className="w-3 h-3 rotate-180" /></button>
               </div>
             ))}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-[#0f172a] mb-3">Live product catalog</h3>
+            <HpcCatalog />
           </div>
         </div>
       )}

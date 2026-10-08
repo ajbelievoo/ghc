@@ -110,65 +110,64 @@ def _extract_specs(product: Dict[str, Any], plan: Dict[str, Any], category: Serv
         tech = {}
     if not isinstance(meta, dict):
         meta = {}
+    _d = lambda v: v if isinstance(v, dict) else {}
 
     if category == ServiceCategory.DEDICATED:
         cpu = (
             _find_feature(features, ["cpu_cores", "cpu", "processor", "cores"])
-            or tech.get("cpu", {}).get("cores")
-            or tech.get("cpu", {}).get("number")
-            or product.get("cpu", {}).get("cores")
-            or plan.get("cpu", {}).get("cores")
+            or _d(tech.get("cpu")).get("cores")
+            or _d(tech.get("cpu")).get("number")
+            or _d(product.get("cpu")).get("cores")
+            or _d(plan.get("cpu")).get("cores")
         )
         ram = (
             _find_feature(features, ["ram", "memory", "ddr", "gb_ram"])
-            or tech.get("memory", {}).get("size")
-            or product.get("memory", {}).get("size")
-            or plan.get("memory", {}).get("size")
+            or _d(tech.get("memory")).get("size")
+            or _d(product.get("memory")).get("size")
+            or _d(plan.get("memory")).get("size")
         )
         disk = (
             _find_feature(features, ["storage", "disk", "hdd", "ssd", "nvme"])
-            or _first_disk_capacity(tech.get("storage", {}).get("disks", []))
-            or _first_disk_capacity(product.get("storage", {}).get("disks", []))
-            or _first_disk_capacity(plan.get("storage", {}).get("disks", []))
+            or _first_disk_capacity(_d(tech.get("storage")).get("disks", []))
+            or _first_disk_capacity(_d(product.get("storage")).get("disks", []))
+            or _first_disk_capacity(_d(plan.get("storage")).get("disks", []))
         )
         disk_type = (
             _find_feature(features, ["disk_type", "technology", "storage_type"])
-            or _first_disk_tech(tech.get("storage", {}).get("disks", []))
+            or _first_disk_tech(_d(tech.get("storage")).get("disks", []))
         )
         bw = (
             _find_feature(features, ["bandwidth", "traffic", "connection"])
-            or tech.get("network", {}).get("public", {}).get("bandwidth")
-            or tech.get("bandwidth", {}).get("level")
-            or product.get("bandwidth", {}).get("level")
-            or plan.get("bandwidth", {}).get("level")
+            or _d(_d(tech.get("network")).get("public")).get("bandwidth")
+            or _d(tech.get("bandwidth")).get("level")
+            or _d(product.get("bandwidth")).get("level")
+            or _d(plan.get("bandwidth")).get("level")
         )
     else:
         cpu = (
-            tech.get("cpu", {}).get("cores")
-            or product.get("cpu", {}).get("cores")
-            or plan.get("cpu", {}).get("cores")
+            _d(tech.get("cpu")).get("cores")
+            or _d(product.get("cpu")).get("cores")
+            or _d(plan.get("cpu")).get("cores")
             or _find_feature(features, ["cpu", "cores", "vcpu"])
         )
         ram = (
-            tech.get("memory", {}).get("size")
-            or product.get("memory", {}).get("size")
-            or plan.get("memory", {}).get("size")
+            _d(tech.get("memory")).get("size")
+            or _d(product.get("memory")).get("size")
+            or _d(plan.get("memory")).get("size")
             or _find_feature(features, ["ram", "memory", "ddr"])
         )
         disk = (
-            _first_disk_capacity(tech.get("storage", {}).get("disks", []))
-            or _first_disk_capacity(product.get("storage", {}).get("disks", []))
-            or _first_disk_capacity(plan.get("storage", {}).get("disks", []))
+            _first_disk_capacity(_d(tech.get("storage")).get("disks", []))
+            or _first_disk_capacity(_d(product.get("storage")).get("disks", []))
+            or _first_disk_capacity(_d(plan.get("storage")).get("disks", []))
             or _find_feature(features, ["storage", "disk", "ssd"])
         )
-        disk_type = _first_disk_tech(tech.get("storage", {}).get("disks", []))
-        tech_network = tech.get("network") if isinstance(tech.get("network"), dict) else {}
-        tech_bw = tech.get("bandwidth") if isinstance(tech.get("bandwidth"), dict) else {}
+        disk_type = _first_disk_tech(_d(tech.get("storage")).get("disks", []))
         bw = (
-            tech_network.get("public", {}).get("bandwidth")
-            or tech_bw.get("level")
-            or (product.get("bandwidth") or {}).get("level")
-            or (plan.get("bandwidth") or {}).get("level")
+            _d(_d(tech.get("network")).get("public")).get("bandwidth")
+            or _d(tech.get("bandwidth")).get("level")
+            or _d(product.get("bandwidth")).get("level")
+            or _d(plan.get("bandwidth")).get("level")
             or _find_feature(features, ["bandwidth", "traffic"])
         )
 
@@ -196,8 +195,12 @@ def _pcc_host_family(plan_code: str) -> Optional[str]:
     code = plan_code.lower()
     if "-vsphere-ess" in code:
         return "essentials"
-    if "-premier-" in code:
+    if "-premier-" in code or re.search(r"-pre(vsan)?\d", code) or code.endswith("-master"):
         return "premier"
+    if "saphana" in code:
+        return "sap-hana"
+    if "-hpc-" in code:
+        return "hpc"
     if "-sddc" in code:
         return "sddc"
     if "-cdi" in code:
@@ -206,7 +209,7 @@ def _pcc_host_family(plan_code: str) -> Optional[str]:
         return "storage"
     if "-gp" in code:
         return "general"
-    return None
+    return "other"
 
 
 def _pcc_host_specs(plan_code: str, invoice_name: str) -> Dict[str, Any]:
@@ -359,8 +362,16 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
                 specs = {**_pcc_host_specs(plan_code, invoice_name), **{k: v for k, v in specs.items() if v}}
             plan_family = _pcc_host_family(plan_code) if category == ServiceCategory.PRIVATE_CLOUD else None
 
-            # Detect currency from first pricing with formattedPrice before using it
-            plan_currency = settings.currency or "CAD"
+            # Detect currency from first pricing with formattedPrice before using it.
+            # Fall back to the subsidiary's currency (formattedPrice may be blank).
+            subsidiary_currency = {
+                "IN": "INR", "US": "USD", "CA": "CAD", "GB": "GBP",
+                "AU": "AUD", "SG": "SGD", "DE": "EUR", "FR": "EUR",
+                "IT": "EUR", "ES": "EUR", "PT": "EUR", "NL": "EUR",
+                "IE": "EUR", "FI": "EUR", "LT": "EUR", "MA": "USD",
+                "SN": "USD", "TN": "USD", "WS": "USD", "QC": "CAD",
+            }.get((settings.ovh_subsidiary or "").upper(), "EUR")
+            plan_currency = subsidiary_currency or settings.currency or "CAD"
             for pricing in (plan.get("pricings", []) or plan.get("prices", [])):
                 if pricing.get("formattedPrice"):
                     text = str(pricing.get("formattedPrice", ""))

@@ -15,42 +15,43 @@ const MARGIN = 1.2;
 interface PriceItem { code: string; name: string; hour?: number | null; month?: number | null; hourFmt?: string | null; monthFmt?: string | null; specs?: Record<string, string>; }
 interface Leaf { id: string; title: string; desc: string; families?: any[]; items?: PriceItem[]; simpleRows?: { name: string; price: string; note?: string }[]; }
 
-interface TreeLeaf { label: string; leaf: string }
+interface TreeLeaf { label: string; leaf: string; badge?: string }
 interface TreeNode { label: string; leaf?: string; children?: TreeLeaf[] }
 
 const buildTree = (cd: Record<string, Leaf[]>): TreeNode[] => [
-  {
-    label: "Instances & Compute",
+  { label: "Compute",
     children: [
       { label: "Instances", leaf: "instances" },
       { label: "Instance Backup", leaf: "svc:backup" },
-      { label: "Volume Management", leaf: "svc:block" },
+      { label: "Workflow Management", leaf: "svc:block" },
     ],
   },
   {
     label: "Storage",
     children: [
       { label: "Block Storage", leaf: "svc:block" },
+      { label: "File Storage", leaf: "svc:file", badge: "NEW" },
+      { label: "Volume Snapshot", leaf: "svc:block" },
+      { label: "Volume Backup", leaf: "svc:backup" },
       { label: "Object Storage", leaf: "svc:object" },
-      { label: "File Storage", leaf: "svc:file" },
       { label: "Cloud Archive", leaf: "svc:object" },
     ],
   },
   {
     label: "Network",
     children: [
-      { label: "Load Balancer", leaf: "svc:loadbalancer" },
-      { label: "Floating IPs", leaf: "svc:floatingip" },
-      { label: "Gateways", leaf: "svc:gateway" },
-      { label: "Private Network (vRack)", leaf: "svc:vrack" },
+      { label: "Private Network", leaf: "svc:vrack" },
+      { label: "Load Balancer", leaf: "svc:loadbalancer", badge: "NEW" },
+      { label: "Public IPs", leaf: "svc:floatingip", badge: "NEW" },
+      { label: "Gateway", leaf: "svc:gateway" },
     ],
   },
   {
     label: "Containers & Orchestration",
     children: [
-      { label: "Managed Kubernetes", leaf: "svc:k8s" },
-      { label: "Private Registry", leaf: "svc:registry" },
-      { label: "Rancher", leaf: "svc:rancher" },
+      { label: "Managed Rancher Service", leaf: "svc:rancher", badge: "NEW" },
+      { label: "Managed Kubernetes Service", leaf: "svc:k8s" },
+      { label: "Managed Private Registry", leaf: "svc:registry" },
     ],
   },
   { label: "Databases", children: (cd["databases"] || []).map((s) => ({ label: s.title.replace("Managed ", ""), leaf: `svc:${s.id}` })) },
@@ -113,14 +114,14 @@ const GEO_AREAS = ["All", "Europe", "North America", "Asia Pacific"];
 
 const MODEL_FILTERS = ["All types", "General Purpose", "Compute", "RAM", "Discovery", "IOPS", "GPU", "Metal"];
 
-const DISTROS = [
-  { id: "almalinux", label: "almalinux", color: "#1e88e5", versions: ["AlmaLinux 8", "AlmaLinux 9", "AlmaLinux 10 - UEFI"] },
-  { id: "cloudlinux", label: "cloudlinux", color: "#37474f", versions: ["CloudLinux 8", "CloudLinux 9"] },
-  { id: "debian", label: "debian", color: "#a80030", versions: ["Debian 11", "Debian 12", "Debian 13"] },
-  { id: "fedora", label: "fedora", color: "#51a2da", versions: ["Fedora 40", "Fedora 41"] },
-  { id: "freebsd", label: "freebsd", color: "#ab2b28", versions: ["FreeBSD 14.1"] },
-  { id: "rockylinux", label: "rockylinux", color: "#10b981", versions: ["Rocky Linux 8", "Rocky Linux 9"] },
-  { id: "ubuntu", label: "ubuntu", color: "#e95420", versions: ["Ubuntu 22.04 LTS", "Ubuntu 24.04 LTS"] },
+const DISTROS: { id: string; label: string; versions: { v: string; off?: boolean }[] }[] = [
+  { id: "almalinux", label: "almalinux", versions: ["AlmaLinux 10 - UEFI", "AlmaLinux 10", "AlmaLinux 9 - UEFI", "AlmaLinux 9", "AlmaLinux 8 - UEFI", "AlmaLinux 8"].map(v => ({ v })) },
+  { id: "cloudlinux", label: "cloudlinux", versions: ["CloudLinux 9.6", "CloudLinux 9", "CloudLinux 8.10"].map(v => ({ v })) },
+  { id: "debian", label: "debian", versions: ["Debian 13 - UEFI", "Debian 13", "Debian 12 - UEFI", "Debian 12", "Debian 11"].map(v => ({ v })) },
+  { id: "fedora", label: "fedora", versions: ["Fedora 44 - UEFI", "Fedora 44", "Fedora 43 - UEFI", "Fedora 43"].map(v => ({ v })) },
+  { id: "freebsd", label: "freebsd", versions: [{ v: "FreeBSD-15-zfs - UEFI" }, { v: "FreeBSD-15-ufs - UEFI" }, { v: "FreeBSD-14.5-zfs - UEFI", off: true }, { v: "FreeBSD-14.5-ufs - UEFI", off: true }, { v: "FreeBSD-14.3 - UEFI" }] },
+  { id: "rockylinux", label: "rockylinux", versions: ["Rocky Linux 9 - UEFI", "Rocky Linux 9", "Rocky Linux 8 - UEFI", "Rocky Linux 8"].map(v => ({ v })) },
+  { id: "ubuntu", label: "ubuntu", versions: ["Ubuntu 26.04 - UEFI", "Ubuntu 26.04", "Ubuntu 24.04 - UEFI", "Ubuntu 24.04", "Ubuntu 22.04 - UEFI", "Ubuntu 22.04"].map(v => ({ v })) },
 ];
 
 export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wallet?: any; user?: any; onTab?: (t: string) => void; launch?: string | null }) {
@@ -128,7 +129,7 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
   const { showToast } = useToast();
   const [catData, setCatData] = useState<Record<string, Leaf[]>>(FALLBACK_CATALOG as any);
   const [active, setActive] = useState("instances");
-  const [open, setOpen] = useState<Record<string, boolean>>({ "Instances & Compute": true });
+  const [open, setOpen] = useState<Record<string, boolean>>({ Compute: true });
   const [wizard, setWizard] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All types");
@@ -145,7 +146,7 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
   const [launching, setLaunching] = useState(false);
   const [projectState, setProjectState] = useState<"unknown" | "active" | "pending">("unknown");
   const [distro, setDistro] = useState("almalinux");
-  const [imageVersion, setImageVersion] = useState(DISTROS[0].versions[2]);
+  const [imageVersion, setImageVersion] = useState(DISTROS[0].versions[0].v);
   const [sshKeyName, setSshKeyName] = useState("");
   const [sshKey, setSshKey] = useState("");
   const [sshValidated, setSshValidated] = useState(false);
@@ -311,7 +312,7 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
                 {open[n.label] && (
                   <div className="mb-1">
                     {n.children.map((c) => (
-                      <button key={c.leaf + c.label} onClick={() => select(c.leaf)} className={`block w-full rounded-lg px-3 py-1.5 text-left transition ${active === c.leaf ? "bg-[#e8f6ff] text-[#00b7ff] font-bold" : "text-slate-500 hover:bg-slate-100 hover:text-[#0f172a]"}`}>{c.label}</button>
+                      <button key={c.leaf + c.label} onClick={() => select(c.leaf)} className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left transition ${active === c.leaf ? "bg-[#e8f6ff] text-[#00b7ff] font-bold" : "text-slate-500 hover:bg-slate-100 hover:text-[#0f172a]"}`}><span>{c.label}</span>{c.badge && <span className="rounded bg-emerald-100 text-emerald-600 px-1.5 py-0.5 text-[9px] font-bold">{c.badge}</span>}</button>
                     ))}
                   </div>
                 )}
@@ -469,20 +470,26 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
               <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5">
                 <p className="font-bold text-[#0f172a] mb-3">Select an image</p>
                 <p className="text-xs text-slate-500 mb-2">Distribution type</p>
-                <select className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-64 mb-4 outline-none"><option>Unix distributions</option><option>Windows</option><option>Application images</option></select>
+                <select className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-64 mb-4 outline-none">
+                  <option>Unix distributions</option>
+                  <option>Distributions + Apps</option>
+                  <option>Windows distributions</option>
+                  <option disabled>Backups — Unavailable</option>
+                </select>
                 <p className="text-[11px] text-slate-400 mb-3">To use the images, you will need to accept the supplier's user licence agreement.</p>
                 <div className="grid sm:grid-cols-3 gap-3 mb-4">
                   {DISTROS.map((d) => (
-                    <button key={d.id} onClick={() => { setDistro(d.id); setImageVersion(d.versions[d.versions.length - 1]); }} className={`flex items-center gap-3 rounded-lg border-2 px-4 py-3 transition ${distro === d.id ? "border-[#00b7ff] bg-[#e8f6ff]" : "border-slate-200 hover:border-slate-300"}`}>
+                    <button key={d.id} onClick={() => { setDistro(d.id); setImageVersion(d.versions[0].v); }} className={`flex items-center gap-3 rounded-lg border-2 px-4 py-3 transition ${distro === d.id ? "border-[#00b7ff] bg-[#e8f6ff]" : "border-slate-200 hover:border-slate-300"}`}>
                       <span className={`inline-block w-4 h-4 rounded-full border-2 shrink-0 ${distro === d.id ? "border-[#00b7ff] bg-[#00b7ff]" : "border-slate-300"}`} />
-                      <span className="w-6 h-6 rounded flex items-center justify-center text-[11px] font-black text-white shrink-0" style={{ background: d.color }}>{d.label[0].toUpperCase()}</span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/images/distros/${d.id}.svg`} alt={d.label} className="w-6 h-6 shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                       <span className="text-sm font-semibold text-[#0f172a]">{d.label}</span>
                     </button>
                   ))}
                 </div>
                 <p className="text-xs text-slate-500 mb-2">Image version</p>
                 <select value={imageVersion} onChange={(e) => setImageVersion(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-64 outline-none">
-                  {(DISTROS.find((d) => d.id === distro)?.versions || []).map((v) => <option key={v}>{v}</option>)}
+                  {(DISTROS.find((d) => d.id === distro)?.versions || []).map((ver) => <option key={ver.v} value={ver.v} disabled={ver.off}>{ver.v}{ver.off ? " — Version unavailable" : ""}</option>)}
                 </select>
               </div>
 
