@@ -307,7 +307,7 @@ class Invoice(Base):
     __tablename__ = "invoices"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    order_id = Column(String(36), ForeignKey("customer_orders.id", ondelete="CASCADE"), unique=True, nullable=False)
+    order_id = Column(String(36), ForeignKey("customer_orders.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     invoice_pdf_url = Column(String(500), nullable=True)
     invoice_number = Column(String(50), nullable=True, index=True)
