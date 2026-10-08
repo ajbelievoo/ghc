@@ -1,0 +1,622 @@
+[
+ {
+  "id": "d2",
+  "tag": "D2",
+  "name": "Discovery",
+  "desc": "Shared resources for testing, staging and small projects",
+  "items": [
+   {
+    "code": "d2-2",
+    "hour": 1.06,
+    "month": 579.0,
+    "memory": "2 GB",
+    "vcore": "1",
+    "storage": "25 GB ",
+    "public-network": "100 Mbit/s",
+    "private-network": "100 Mbit/s max."
+   },
+   {
+    "code": "d2-4",
+    "hour": 2.09,
+    "month": 1161.0,
+    "memory": "4 GB",
+    "vcore": "2",
+    "storage": "50 GB ",
+    "public-network": "250 Mbit/s",
+    "private-network": "250 Mbit/s max."
+   },
+   {
+    "code": "d2-8",
+    "hour": 3.78,
+    "month": 2089.0,
+    "memory": "8 GB",
+    "vcore": "4",
+    "storage": "50 GB ",
+    "public-network": "500 Mbit/s",
+    "private-network": "500 Mbit/s max."
+   }
+  ]
+ },
+ {
+  "id": "b3",
+  "tag": "B3",
+  "name": "General Purpose",
+  "desc": "Balanced vCores, RAM and price for most workloads",
+  "items": [
+   {
+    "code": "b3-8",
+    "hour": 5.2,
+    "month": 3796.0,
+    "memory": "8 GB",
+    "vcore": "2",
+    "storage": "Local storage low latency **",
+    "public-network": "500 Mbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "b3-16",
+    "hour": 23.432000000000002,
+    "month": 17105.36,
+    "memory": "16 GB",
+    "vcore": "4",
+    "storage": "Local storage low latency **",
+    "public-network": "1 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "b3-32",
+    "hour": 20.75,
+    "month": 15147.5,
+    "memory": "32 GB",
+    "vcore": "8",
+    "storage": "Local storage low latency **",
+    "public-network": "2 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "b3-64",
+    "hour": 93.708,
+    "month": 68406.84,
+    "memory": "64 GB",
+    "vcore": "16",
+    "storage": "Local storage low latency **",
+    "public-network": "4 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "b3-128",
+    "hour": 187.516,
+    "month": 136886.68,
+    "memory": "128 GB",
+    "vcore": "32",
+    "storage": "Local storage low latency **",
+    "public-network": "8 Gbit/s",
+    "private-network": "8 Gbit/s max."
+   },
+   {
+    "code": "b3-256",
+    "hour": 374.832,
+    "month": 273627.36,
+    "memory": "256 GB",
+    "vcore": "64",
+    "storage": "Local storage low latency **",
+    "public-network": "16 Gbit/s",
+    "private-network": "16 Gbit/s max."
+   },
+   {
+    "code": "b3-512",
+    "hour": 749.664,
+    "month": 547254.72,
+    "memory": "512 GB",
+    "vcore": "128",
+    "storage": "Local storage low latency **",
+    "public-network": "20 Gbit/s",
+    "private-network": "20 Gbit/s max."
+   },
+   {
+    "code": "b3-640",
+    "hour": 937.0799999999999,
+    "month": 684068.3999999999,
+    "memory": "640 GB",
+    "vcore": "160",
+    "storage": "Local storage low latency **",
+    "public-network": "20 Gbit/s",
+    "private-network": "20 Gbit/s max."
+   }
+  ]
+ },
+ {
+  "id": "c3",
+  "tag": "C3",
+  "name": "Compute Optimised",
+  "desc": "High-frequency computing and parallel processing workloads. vCores clocked at 2.3 GHz and higher",
+  "items": [
+   {
+    "code": "c3-4",
+    "hour": 11.166,
+    "month": 8151.18,
+    "memory": "4 GB",
+    "vcore": "2",
+    "storage": "Local storage low latency **",
+    "public-network": "250 Mbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "c3-8",
+    "hour": 22.311999999999998,
+    "month": 16287.759999999998,
+    "memory": "8 GB",
+    "vcore": "4",
+    "storage": "Local storage low latency **",
+    "public-network": "500 Mbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "c3-16",
+    "hour": 44.614000000000004,
+    "month": 32568.220000000005,
+    "memory": "16 GB",
+    "vcore": "8",
+    "storage": "Local storage low latency **",
+    "public-network": "1 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "c3-32",
+    "hour": 89.22800000000001,
+    "month": 65136.44000000001,
+    "memory": "32 GB",
+    "vcore": "16",
+    "storage": "Local storage low latency **",
+    "public-network": "2 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "c3-64",
+    "hour": 178.45600000000002,
+    "month": 130272.88000000002,
+    "memory": "64 GB",
+    "vcore": "32",
+    "storage": "Local storage low latency **",
+    "public-network": "4 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "c3-128",
+    "hour": 357.032,
+    "month": 260633.36,
+    "memory": "128 GB",
+    "vcore": "64",
+    "storage": "Local storage low latency **",
+    "public-network": "8 Gbit/s",
+    "private-network": "8 Gbit/s max."
+   },
+   {
+    "code": "c3-256",
+    "hour": 713.864,
+    "month": 521120.72000000003,
+    "memory": "256 GB",
+    "vcore": "128",
+    "storage": "Local storage low latency **",
+    "public-network": "20 Gbit/s",
+    "private-network": "20 Gbit/s max."
+   },
+   {
+    "code": "c3-320",
+    "hour": 892.3799999999999,
+    "month": 651437.3999999999,
+    "memory": "320 GB",
+    "vcore": "160",
+    "storage": "Local storage low latency **",
+    "public-network": "20 Gbit/s",
+    "private-network": "20 Gbit/s max."
+   }
+  ]
+ },
+ {
+  "id": "r3",
+  "tag": "R3",
+  "name": "RAM Optimised",
+  "desc": "High RAM-to-vCore ratio for in-memory databases, caching and analytics",
+  "items": [
+   {
+    "code": "r3-16",
+    "hour": 13.256,
+    "month": 9676.880000000001,
+    "memory": "16 GB",
+    "vcore": "2",
+    "storage": "Local storage low latency **",
+    "public-network": "500 Mbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "r3-32",
+    "hour": 26.482,
+    "month": 19331.86,
+    "memory": "32 GB",
+    "vcore": "4",
+    "storage": "Local storage low latency **",
+    "public-network": "1 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "r3-64",
+    "hour": 52.964,
+    "month": 38663.72,
+    "memory": "64 GB",
+    "vcore": "8",
+    "storage": "Local storage low latency **",
+    "public-network": "2 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "r3-128",
+    "hour": 106.008,
+    "month": 77385.84,
+    "memory": "128 GB",
+    "vcore": "16",
+    "storage": "Local storage low latency **",
+    "public-network": "4 Gbit/s",
+    "private-network": "4 Gbit/s max."
+   },
+   {
+    "code": "r3-256",
+    "hour": 211.816,
+    "month": 154625.68,
+    "memory": "256 GB",
+    "vcore": "32",
+    "storage": "Local storage low latency **",
+    "public-network": "8 Gbit/s",
+    "private-network": "8 Gbit/s max."
+   },
+   {
+    "code": "r3-512",
+    "hour": 423.632,
+    "month": 309251.36,
+    "memory": "512 GB",
+    "vcore": "64",
+    "storage": "Local storage low latency **",
+    "public-network": "20 Gbit/s",
+    "private-network": "20 Gbit/s max."
+   },
+   {
+    "code": "r3-1024",
+    "hour": 847.264,
+    "month": 618502.72,
+    "memory": "1024 GB",
+    "vcore": "128",
+    "storage": "Local storage low latency **",
+    "public-network": "20 Gbit/s",
+    "private-network": "20 Gbit/s max."
+   }
+  ]
+ },
+ {
+  "id": "i1",
+  "tag": "I1",
+  "name": "IOPS Optimised",
+  "desc": "NVMe-heavy instances for databases and storage-intensive workloads",
+  "items": [
+   {
+    "code": "i1-45",
+    "hour": 38.2,
+    "month": 19100.0,
+    "memory": "45 GB",
+    "vcore": "8",
+    "storage": "50 GB SSD",
+    "public-network": "1 Gbit/s guaranteed",
+    "private-network": "2 Gbit/s max.",
+    "nvme-disks": "1.9 TiB"
+   },
+   {
+    "code": "i1-90",
+    "hour": 76.4,
+    "month": 38300.0,
+    "memory": "90 GB",
+    "vcore": "16",
+    "storage": "50 GB SSD",
+    "public-network": "2 Gbit/s guaranteed",
+    "private-network": "4 Gbit/s max.",
+    "nvme-disks": "2 x 1.9 TiB"
+   },
+   {
+    "code": "i1-180",
+    "hour": 153.0,
+    "month": 76500.0,
+    "memory": "180 GB",
+    "vcore": "32",
+    "storage": "50 GB SSD",
+    "public-network": "8 Gbit/s guaranteed",
+    "private-network": "4 Gbit/s max.",
+    "nvme-disks": "4 x 1.9 TiB"
+   }
+  ]
+ },
+ {
+  "id": "t1",
+  "tag": "T1",
+  "name": "GPU - Tesla V100",
+  "desc": "NVIDIA Tesla V100 GPUs for AI training and rendering",
+  "items": [
+   {
+    "code": "t1-45",
+    "hour": 63.0,
+    "month": 45990.0,
+    "memory": "45 GB",
+    "vcore": "8",
+    "storage": "400 GB NVMe",
+    "public-network": "2 Gbit/s guaranteed",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "1x Tesla V100 (16 GB HBM2)"
+   },
+   {
+    "code": "t1-90",
+    "hour": 125.15,
+    "month": 90105.0,
+    "memory": "90 GB",
+    "vcore": "18",
+    "storage": "800 GB NVMe",
+    "public-network": "4 Gbit/s guaranteed",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "2x Tesla V100 (16 GB HBM2)"
+   },
+   {
+    "code": "t1-180",
+    "hour": 250.3,
+    "month": 180210.0,
+    "memory": "180 GB",
+    "vcore": "36",
+    "storage": "50 GB NVMe + 2 x 2 TB NVMe Passthrough",
+    "public-network": "10 Gbit/s",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "4x Tesla V100 (16 GB HBM2)"
+   }
+  ]
+ },
+ {
+  "id": "t1-le",
+  "tag": "T1 LE",
+  "name": "GPU - Tesla V100 (LE)",
+  "desc": "Limited edition Tesla V100 flavor",
+  "items": [
+   {
+    "code": "t1-le-45",
+    "hour": 63.0,
+    "month": 45990.0,
+    "memory": "45 GB",
+    "vcore": "8",
+    "storage": "300 GB NVMe",
+    "public-network": "2 Gbit/s guaranteed",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "1x Tesla V100 (16 GB HBM2)"
+   },
+   {
+    "code": "t1-le-90",
+    "hour": 125.15,
+    "month": 90105.0,
+    "memory": "90 GB",
+    "vcore": "16",
+    "storage": "400 GB NVMe",
+    "public-network": "4 Gbit/s guaranteed",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "2x Tesla V100 (16 GB HBM2)"
+   },
+   {
+    "code": "t1-le-180",
+    "hour": 250.3,
+    "month": 180210.0,
+    "memory": "180 GB",
+    "vcore": "32",
+    "storage": "400 GB NVMe",
+    "public-network": "10 Gbit/s",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "4x Tesla V100 (16 GB HBM2)"
+   }
+  ]
+ },
+ {
+  "id": "t2",
+  "tag": "T2",
+  "name": "GPU - Tesla V100S",
+  "desc": "NVIDIA Tesla V100S GPUs - more memory bandwidth",
+  "items": [
+   {
+    "code": "t2-45",
+    "hour": 72.0,
+    "month": 52000.0,
+    "memory": "45 GB",
+    "vcore": "15",
+    "storage": "400 GB NVMe",
+    "public-network": "2 Gbit/s guaranteed",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "1x Tesla V100S (32 GB HBM2)"
+   },
+   {
+    "code": "t2-90",
+    "hour": 144.0,
+    "month": 102970.0,
+    "memory": "90 GB",
+    "vcore": "30",
+    "storage": "800 GB NVMe",
+    "public-network": "4 Gbit/s guaranteed",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "2x Tesla V100S (32 GB HBM2)"
+   },
+   {
+    "code": "t2-180",
+    "hour": 535.5948,
+    "month": 387739.0,
+    "memory": "180 GB",
+    "vcore": "60",
+    "storage": "50 GB NVMe + 2 x 2 TB NVMe Passthrough",
+    "public-network": "10 Gbit/s",
+    "private-network": "4 Gbit/s max.",
+    "gpu": "4x Tesla V100S (32 GB HBM2)"
+   }
+  ]
+ },
+ {
+  "id": "a10",
+  "tag": "A10",
+  "name": "GPU - NVIDIA A10",
+  "desc": "NVIDIA A10 for inference and graphics",
+  "items": [
+   {
+    "code": "a10-45",
+    "hour": 70.0,
+    "month": 51100.0,
+    "memory": "42 GB",
+    "vcore": "30",
+    "storage": "400 GB SSD",
+    "public-network": "8 Gbit/s",
+    "private-network": "8 Gbit/s max.",
+    "gpu": "1x A10 (24 GB HBM2)"
+   },
+   {
+    "code": "a10-90",
+    "hour": 140.0,
+    "month": 102200.0,
+    "memory": "85 GB",
+    "vcore": "60",
+    "storage": "400 GB SSD",
+    "public-network": "16 Gbit/s",
+    "private-network": "16 Gbit/s max.",
+    "gpu": "2x A10 (24 GB HBM2)"
+   },
+   {
+    "code": "a10-180",
+    "hour": 280.0,
+    "month": 204400.0,
+    "memory": "170 GB",
+    "vcore": "120",
+    "storage": "400 GB SSD",
+    "public-network": "25 Gbit/s",
+    "private-network": "25 Gbit/s max.",
+    "gpu": "4x A10 (24 GB HBM2)"
+   }
+  ]
+ },
+ {
+  "id": "a100",
+  "tag": "A100",
+  "name": "GPU - NVIDIA A100",
+  "desc": "NVIDIA A100 80GB for large-scale AI training",
+  "items": [
+   {
+    "code": "a100-180",
+    "hour": 252.31,
+    "month": 100925.0,
+    "memory": "180 GB",
+    "vcore": "15",
+    "storage": "300 GB NVMe",
+    "public-network": "8 Gbit/s",
+    "private-network": "8 Gbit/s max.",
+    "gpu": "1x A100 (80 GB HBM2)"
+   },
+   {
+    "code": "a100-360",
+    "hour": 504.63,
+    "month": 201850.0,
+    "memory": "360 GB",
+    "vcore": "30",
+    "storage": "500 GB NVMe",
+    "public-network": "16 Gbit/s",
+    "private-network": "16 Gbit/s max.",
+    "gpu": "2x A100 (80 GB HBM2)"
+   },
+   {
+    "code": "a100-720",
+    "hour": 1009.25,
+    "month": 403700.0,
+    "memory": "720 GB",
+    "vcore": "60",
+    "storage": "500 GB NVMe",
+    "public-network": "25 Gbit/s",
+    "private-network": "25 Gbit/s max.",
+    "gpu": "4x A100 (80 GB HBM2)"
+   }
+  ]
+ },
+ {
+  "id": "l40s",
+  "tag": "L40S",
+  "name": "GPU - NVIDIA L40S",
+  "desc": "NVIDIA L40S for AI inference and rendering",
+  "items": [
+   {
+    "code": "l40s-90",
+    "hour": 128.5,
+    "month": 92520.0,
+    "memory": "90 GB",
+    "vcore": "15",
+    "storage": "400 GB NVMe",
+    "public-network": "8 Gbit/s",
+    "private-network": "8 Gbit/s max.",
+    "gpu": "1x L40S (48 GB HBM2)"
+   },
+   {
+    "code": "l40s-180",
+    "hour": 257.0,
+    "month": 185040.0,
+    "memory": "180 GB",
+    "vcore": "30",
+    "storage": "400 GB NVMe",
+    "public-network": "16 Gbit/s",
+    "private-network": "16 Gbit/s max.",
+    "gpu": "2x L40S (48 GB HBM2)"
+   },
+   {
+    "code": "l40s-360",
+    "hour": 514.0,
+    "month": 370080.0,
+    "memory": "360 GB",
+    "vcore": "60",
+    "storage": "400 GB NVMe",
+    "public-network": "25 Gbit/s",
+    "private-network": "25 Gbit/s max.",
+    "gpu": "4x L40S (48 GB HBM2)"
+   }
+  ]
+ },
+ {
+  "id": "h100",
+  "tag": "H100",
+  "name": "GPU - NVIDIA H100",
+  "desc": "NVIDIA H100 80GB - flagship AI accelerator",
+  "items": [
+   {
+    "code": "h100-380",
+    "hour": 248.0,
+    "month": 172000.0,
+    "memory": "380 GB",
+    "vcore": "30",
+    "storage": "200 GB NVMe + 3.84 TB NVMe Passthrough",
+    "public-network": "8 Gbit/s",
+    "private-network": "8 Gbit/s max.",
+    "gpu": "1x H100 (80 GB HBM2)"
+   },
+   {
+    "code": "h100-760",
+    "hour": 497.0,
+    "month": 345000.0,
+    "memory": "760 GB",
+    "vcore": "60",
+    "storage": "200 GB NVMe + 2 x 3.84 TB NVMe Passthrough",
+    "public-network": "16 Gbit/s",
+    "private-network": "16 Gbit/s max.",
+    "gpu": "2x H100 (80 GB HBM2)"
+   },
+   {
+    "code": "h100-1520",
+    "hour": 994.0,
+    "month": 689000.0,
+    "memory": "1520 GB",
+    "vcore": "120",
+    "storage": "200 GB NVMe + 4 x 3.84 TB NVMe Passthrough",
+    "public-network": "25 Gbit/s",
+    "private-network": "25 Gbit/s max.",
+    "gpu": "4x H100 (80 GB HBM2)"
+   }
+  ]
+ }
+]

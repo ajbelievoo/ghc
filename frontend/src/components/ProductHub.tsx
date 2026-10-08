@@ -48,6 +48,8 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
     if (view === "vps") return (cat === "vps" || s.planCode?.toLowerCase().includes("vps")) && (name.includes(q) || cat.includes(q));
     if (view === "dedicated") return (cat === "dedicated" || s.planCode?.toLowerCase().includes("dedicated") || cat === "bare_metal") && (name.includes(q) || cat.includes(q));
     if (view === "web-hosting") return (cat === "web_hosting" || cat === "webhosting") && (name.includes(q) || cat.includes(q));
+    if (view === "public-cloud") return (cat === "public_cloud" || s.planCode?.toLowerCase().includes("project") || name.includes("cloud")) && (name.includes(q) || cat.includes(q));
+    if (view === "private-cloud") return (cat === "private_cloud" || s.planCode?.toLowerCase().includes("private")) && (name.includes(q) || cat.includes(q));
     return name.includes(q) || cat.includes(q);
   });
 
@@ -110,6 +112,7 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
       features: ["Managed VMware vSphere", "Public VCF as-a-Service", "SAP Features Hub", "Veeam backup integration"],
       cta: "Order Private Cloud",
       orderPath: "#",
+      orderView: "order-PRIVATE_CLOUD",
     },
     "bare-metal": {
       title: "Bare Metal Cloud",
@@ -235,8 +238,37 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
         </div>
       </div>
 
-      {(view === "vps" || view === "dedicated" || view === "web-hosting" || view === "bare-metal" || view === "public-cloud") && (
+      {(view === "vps" || view === "dedicated" || view === "web-hosting" || view === "bare-metal") && (
         renderTable(filteredServers, [])
+      )}
+
+      {view === "public-cloud" && (
+        <div className="space-y-6">
+          {/* Project card */}
+          <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-[#0f172a]">Your Public Cloud project</h3>
+              {filteredServers.length > 0 ? (
+                <p className="text-sm text-slate-500 mt-1">{filteredServers.length} project{filteredServers.length > 1 ? "s" : ""} active. Instances are billed per hour — launch them below.</p>
+              ) : (
+                <p className="text-sm text-slate-500 mt-1">No project yet. Create one for free — instances are billed per hour only while running.</p>
+              )}
+            </div>
+            <button onClick={onOrder} className="rounded-lg bg-[#00b7ff] text-[#0f172a] px-6 py-3 font-semibold hover:bg-[#33c4ff] transition-all flex items-center gap-2 shrink-0"><Plus className="w-4 h-4" /> Create a project — free</button>
+          </div>
+
+          {/* Instances */}
+          {renderTable(filteredServers, [])}
+
+          {/* Hourly pricing note */}
+          <div className="rounded-2xl border border-[#00b7ff]/30 bg-[#e8f6ff] p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-[#0f172a]">Pay-as-you-go instances</p>
+              <p className="text-xs text-slate-600 mt-0.5">B3/C3/R3/D2/I1 flavors and GPU instances (V100, A10, A100, L40S, H100) launch inside your project and bill per hour. Browse the full price list on the public page.</p>
+            </div>
+            <button onClick={() => router.push("/public-cloud")} className="rounded-lg border border-[#00b7ff]/40 text-[#00b7ff] px-4 py-2 text-xs font-semibold hover:bg-[#00b7ff]/10 transition-all shrink-0">View instance pricing →</button>
+          </div>
+        </div>
       )}
 
       {view === "network" && (
@@ -305,8 +337,8 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
             <h3 className="text-xl font-bold text-[#0f172a] mb-2">Our managed virtualisation solution</h3>
             <p className="text-sm text-slate-500 max-w-2xl mx-auto mb-6">VMware on GHC. We manage the maintenance of your hardware and software infrastructure, including vSphere, vCenter and vROps.</p>
             <div className="flex justify-center gap-3">
-              <button onClick={() => requestQuote("Hosted Private Cloud")} className="rounded-lg bg-[#00b7ff] text-white px-5 py-2.5 text-sm font-semibold hover:bg-[#009fe0] transition-all">Order</button>
-              <button onClick={() => requestQuote("Hosted Private Cloud - Get started")} className="rounded-lg border border-slate-200 bg-slate-100 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-200 transition-all">Get started</button>
+              <button onClick={onOrder} className="rounded-lg bg-[#00b7ff] text-white px-5 py-2.5 text-sm font-semibold hover:bg-[#009fe0] transition-all">Order</button>
+              <button onClick={() => requestQuote("Hosted Private Cloud - Custom configuration")} className="rounded-lg border border-slate-200 bg-slate-100 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-200 transition-all">Request custom quote</button>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

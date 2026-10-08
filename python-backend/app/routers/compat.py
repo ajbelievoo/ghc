@@ -157,6 +157,8 @@ def _plan_to_frontend(p: PlanCatalog, currency: Optional[str] = None, db: Sessio
             }
             for d in p.durations
         ]
+    regions, os_options, windows = _plan_region_os(p)
+    features = _plan_features(p)
     return {
         "id": p.id,
         "planCode": p.plan_code,
@@ -173,8 +175,45 @@ def _plan_to_frontend(p: PlanCatalog, currency: Optional[str] = None, db: Sessio
         "overridePrice": p.override_price,
         "overrideMargin": p.override_margin,
         "isActive": p.is_active,
+        "regions": regions,
+        "osOptions": os_options,
+        "windowsVps": windows,
+        "features": features,
         "durations": durations,
     }
+
+
+def _plan_metadata(p: PlanCatalog) -> dict:
+    meta = p.catalog_metadata or {}
+    if isinstance(meta, str):
+        try:
+            import json as _json
+            meta = _json.loads(meta)
+        except Exception:
+            meta = {}
+    return meta if isinstance(meta, dict) else {}
+
+
+def _plan_region_os(p: PlanCatalog):
+    """Extract (regions, os_count, windows_supported) from OVH catalog metadata."""
+    cfgs = _plan_metadata(p).get("configurations", []) or []
+    regions, os_vals = [], []
+    for c in cfgs:
+        name = (c.get("name") or "").lower()
+        vals = c.get("values") or []
+        if not isinstance(vals, list):
+            continue
+        if ("datacenter" in name or name == "region") and len(vals) > len(regions):
+            regions = vals
+        if ("_os" in name or name in ("os", "image")) and len(vals) > len(os_vals):
+            os_vals = vals
+    windows = any("windows" in str(v).lower() for v in os_vals)
+    return regions, len(os_vals), windows
+
+
+def _plan_features(p: PlanCatalog) -> dict:
+    feats = _plan_metadata(p).get("blobs", {}).get("commercial", {}).get("features") or []
+    return {f["name"]: f["value"] for f in feats if isinstance(f, dict) and f.get("name")}
 
 
 def _subscription_to_server(s: Subscription) -> dict:

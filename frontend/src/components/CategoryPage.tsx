@@ -56,6 +56,8 @@ interface Plan {
   cpuCores?: number; ramGb?: number; diskGb?: number;
   diskType?: string; bandwidthMbps?: number;
   metadata?: any;
+  regions?: string[]; osOptions?: number; windowsVps?: boolean;
+  features?: Record<string, string>;
   durations?: { durationLabel: string; interval: number; intervalUnit: string; finalPrice: number; monthlyPrice: number; rawPrice: number; currency?: string }[];
 }
 
@@ -490,6 +492,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
   };
 
   const getRegions = (plan: Plan): string[] => {
+    if (plan?.regions?.length) return plan.regions;
     const cfgs = plan?.metadata?.configurations || [];
     for (const c of cfgs) {
       const name = `${c?.name || ""}`.toLowerCase();
@@ -582,6 +585,16 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
                     </div>
                   </div>
                 )}
+                <div className="rounded border border-slate-200 bg-white p-4 md:col-span-3">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">What's included</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(plan.features || {}).map(([k, v]) => (
+                      <span key={k} className="rounded bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">{k}: {v}</span>
+                    ))}
+                    {(plan.osOptions || 0) > 0 && <span className="rounded bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">{plan.osOptions} OS images</span>}
+                    {plan.windowsVps && <span className="rounded bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800">Windows available</span>}
+                  </div>
+                </div>
               </div>
               {(plan.durations || []).length > 0 && (
                 <div className="mt-4 rounded border border-slate-200 bg-white p-4">
@@ -902,6 +915,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
                   ["Bandwidth", (p: Plan) => getBandwidthInfo(p)],
                   ["Family", (p: Plan) => p.family || "-"],
                   ["Regions", (p: Plan) => { const r = getRegions(p); return r.length ? `${r.length} (${r.slice(0, 5).join(", ")}${r.length > 5 ? "…" : ""})` : "-"; }],
+                  ["OS images", (p: Plan) => p.osOptions ? `${p.osOptions}${p.windowsVps ? " (incl. Windows)" : ""}` : "-"],
                   ["Plan code", (p: Plan) => p.planCode],
                   ["Billing periods", (p: Plan) => (p.durations || []).map(d => d.durationLabel).join(", ") || "-"],
                 ] as [string, (p: Plan) => string][]).map(([label, fn], i) => (
