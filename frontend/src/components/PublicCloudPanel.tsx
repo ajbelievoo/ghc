@@ -75,25 +75,41 @@ const buildTree = (cd: Record<string, Leaf[]>): TreeNode[] => [
 ];
 
 const DEPLOY_MODES = [
-  { id: "1az", tag: "1-AZ", title: "1-AZ Region", desc: "High resilience, high availability deployment in a single zone.", recommended: true },
-  { id: "3az", tag: "3-AZ", title: "3-AZ Region", desc: "Deploy across 3 zones in one region — built-in redundancy.", badge: "NEW" },
-  { id: "lz", tag: "LZ", title: "Local Zone", desc: "Deploy an instance as close as possible to your users.", badge: "NEW" },
+  { id: "1az", tag: "1-AZ", title: "1-AZ Region", desc: "Resilient and low-cost deployment in 1 zone.", recommended: true },
+  { id: "3az", tag: "3-AZ", title: "3-AZ Region", desc: "High-resilience, high-availability deployment in 3 zones.", badge: "NEW" },
+  { id: "lz", tag: "LZ", title: "Local Zone", desc: "Deploy as close as possible for low latency.", badge: "NEW" },
 ];
 
-const REGIONS: Record<string, { code: string; name: string; flag: string }[]> = {
+interface RegionDef { code: string; name: string; flag: string; area: string }
+const REGIONS: Record<string, RegionDef[]> = {
   "1az": [
-    { code: "GRA", name: "Gravelines", flag: "🇫🇷" }, { code: "RBX", name: "Roubaix", flag: "🇫🇷" },
-    { code: "SBG", name: "Strasbourg", flag: "🇫🇷" }, { code: "WAW", name: "Warsaw", flag: "🇵🇱" },
-    { code: "DE", name: "Frankfurt", flag: "🇩🇪" }, { code: "UK", name: "London", flag: "🇬🇧" },
-    { code: "BHS", name: "Beauharnois", flag: "🇨🇦" }, { code: "SGP", name: "Singapore", flag: "🇸🇬" },
-    { code: "SYD", name: "Sydney", flag: "🇦🇺" }, { code: "MUM", name: "Mumbai", flag: "🇮🇳" },
+    { code: "GRA", name: "Gravelines", flag: "🇫🇷", area: "Europe" },
+    { code: "RBX", name: "Roubaix", flag: "🇫🇷", area: "Europe" },
+    { code: "SBG", name: "Strasbourg", flag: "🇫🇷", area: "Europe" },
+    { code: "WAW", name: "Warsaw", flag: "🇵🇱", area: "Europe" },
+    { code: "DE", name: "Frankfurt", flag: "🇩🇪", area: "Europe" },
+    { code: "UK", name: "London (Erith)", flag: "🇬🇧", area: "Europe" },
+    { code: "BHS", name: "Beauharnois", flag: "🇨🇦", area: "North America" },
+    { code: "VIN", name: "Vint Hill", flag: "🇺🇸", area: "North America" },
+    { code: "HIL", name: "Hillsboro", flag: "🇺🇸", area: "North America" },
+    { code: "SGP", name: "Singapore", flag: "🇸🇬", area: "Asia Pacific" },
+    { code: "SYD", name: "Sydney", flag: "🇦🇺", area: "Asia Pacific" },
+    { code: "MUM", name: "Mumbai", flag: "🇮🇳", area: "Asia Pacific" },
   ],
-  "3az": [{ code: "PAR", name: "Paris", flag: "🇫🇷" }],
+  "3az": [
+    { code: "EU-WEST-PAR", name: "Paris", flag: "🇫🇷", area: "Europe" },
+    { code: "EU-SOUTH-MIL", name: "Milan", flag: "🇮🇹", area: "Europe" },
+  ],
   lz: [
-    { code: "MAD", name: "Madrid", flag: "🇪🇸" }, { code: "BRU", name: "Brussels", flag: "🇧🇪" },
-    { code: "AMS", name: "Amsterdam", flag: "🇳🇱" }, { code: "PRG", name: "Prague", flag: "🇨🇿" },
+    { code: "MAD", name: "Madrid", flag: "🇪🇸", area: "Europe" },
+    { code: "BRU", name: "Brussels", flag: "🇧🇪", area: "Europe" },
+    { code: "AMS", name: "Amsterdam", flag: "🇳🇱", area: "Europe" },
+    { code: "PRG", name: "Prague", flag: "🇨🇿", area: "Europe" },
+    { code: "LIS", name: "Lisbon", flag: "🇵🇹", area: "Europe" },
+    { code: "ZRH", name: "Zurich", flag: "🇨🇭", area: "Europe" },
   ],
 };
+const GEO_AREAS = ["All", "Europe", "North America", "Asia Pacific"];
 
 const MODEL_FILTERS = ["All types", "General Purpose", "Compute", "RAM", "Discovery", "IOPS", "GPU", "Metal"];
 
@@ -110,13 +126,17 @@ const DISTROS = [
 export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wallet?: any; user?: any; onTab?: (t: string) => void; launch?: string | null }) {
   const { currency } = useCurrency();
   const { showToast } = useToast();
-  const [catData, setCatData] = useState<Record<string, Leaf>>(FALLBACK_CATALOG as any);
+  const [catData, setCatData] = useState<Record<string, Leaf[]>>(FALLBACK_CATALOG as any);
   const [active, setActive] = useState("instances");
   const [open, setOpen] = useState<Record<string, boolean>>({ "Instances & Compute": true });
   const [wizard, setWizard] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All types");
   const [deployMode, setDeployMode] = useState("1az");
+  const [geo, setGeo] = useState("All");
+  const [azChoice, setAzChoice] = useState<"auto" | "manual">("auto");
+  const [az, setAz] = useState("a");
+  const [inclUnavailable, setInclUnavailable] = useState(false);
   const [region, setRegion] = useState("");
   const [name, setName] = useState("");
   const [model, setModel] = useState<PriceItem | null>(null);
@@ -342,7 +362,7 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
 
               <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5">
                 <p className="font-bold text-[#0f172a] mb-1">Select a region</p>
-                <p className="text-xs text-slate-500 mb-4">Choose a deployment mode, then a region.</p>
+                <p className="text-xs text-slate-500 mb-4">Filter a deployment mode</p>
                 <div className="grid sm:grid-cols-3 gap-3 mb-5">
                   {DEPLOY_MODES.map((m) => (
                     <button key={m.id} onClick={() => { setDeployMode(m.id); setRegion(""); }} className={`text-left rounded-xl border-2 p-4 transition relative ${deployMode === m.id ? "border-[#00b7ff] bg-[#e8f6ff]" : "border-slate-200 hover:border-slate-300"}`}>
@@ -352,33 +372,62 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
                     </button>
                   ))}
                 </div>
-                <div className="grid sm:grid-cols-4 gap-2">
-                  {REGIONS[deployMode].map((r) => (
+                <div className="mb-3">
+                  <p className="text-xs text-slate-500 mb-1.5">Select a geographic area</p>
+                  <select value={geo} onChange={(e) => setGeo(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm w-64 outline-none">
+                    {GEO_AREAS.map((g) => <option key={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div className="grid sm:grid-cols-3 gap-2 mb-4">
+                  {REGIONS[deployMode].filter((r) => geo === "All" || r.area === geo).map((r) => (
                     <button key={r.code} onClick={() => setRegion(r.code)} className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2.5 text-sm transition ${region === r.code ? "border-[#00b7ff] bg-[#e8f6ff] font-bold" : "border-slate-200 hover:border-slate-300"}`}>
-                      <span>{r.flag}</span><span className="font-semibold text-[#0f172a]">{r.code}</span><span className="text-xs text-slate-500">{r.name}</span>
+                      <span>{r.flag}</span>
+                      <span className="flex-1 text-left"><span className="block font-semibold text-[#0f172a]">{r.name}</span><span className="block text-[10px] text-slate-400">{r.code}</span></span>
+                      <span className="rounded bg-[#00b7ff]/15 text-[#00b7ff] px-1.5 py-0.5 text-[9px] font-bold">{DEPLOY_MODES.find(m => m.id === deployMode)?.tag}</span>
                     </button>
                   ))}
                 </div>
+                {region && (
+                  <div>
+                    <p className="text-xs font-bold text-[#0f172a] mb-2">Choose your Availability Zone</p>
+                    <p className="text-[11px] text-slate-500 mb-2">A default Availability Zone has been selected. You can customise this choice.</p>
+                    <label className="flex items-center gap-2 text-sm mb-1 cursor-pointer"><input type="radio" checked={azChoice === "auto"} onChange={() => setAzChoice("auto")} className="accent-[#00b7ff]" />Choose for me</label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="radio" checked={azChoice === "manual"} onChange={() => setAzChoice("manual")} className="accent-[#00b7ff]" />I choose my availability zone
+                      {azChoice === "manual" && (
+                        <select value={az} onChange={(e) => setAz(e.target.value)} className="rounded border border-slate-200 px-2 py-1 text-xs">
+                          {["a", "b", "c"].map((z) => <option key={z}>{region}-{z.toUpperCase()}</option>)}
+                        </select>
+                      )}
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <p className="font-bold text-[#0f172a]">Select a model</p>
-                  <div className="flex items-center gap-2">
-                    <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 outline-none">
+                  <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer order-last">
+                    <input type="checkbox" checked={inclUnavailable} onChange={(e) => setInclUnavailable(e.target.checked)} className="accent-[#00b7ff] w-3.5 h-3.5" />Include unavailable
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-end gap-4 mb-4">
+                  <div><p className="text-[11px] text-slate-500 mb-1">Instance model</p>
+                    <select className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 outline-none w-44"><option>Best Sellers <span className="text-emerald-600">New</span></option><option>All models</option></select></div>
+                  <div><p className="text-[11px] text-slate-500 mb-1">Type</p>
+                    <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 outline-none w-44">
                       {MODEL_FILTERS.map((t) => <option key={t}>{t}</option>)}
-                    </select>
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="rounded-lg border border-slate-200 pl-8 pr-3 py-1.5 text-xs w-40 outline-none focus:border-[#00b7ff]" />
-                    </div>
+                    </select></div>
+                  <div className="relative ml-auto">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="rounded-lg border border-slate-200 pl-8 pr-3 py-1.5 text-xs w-40 outline-none focus:border-[#00b7ff]" />
                   </div>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-[420px] overflow-y-auto">
                   <table className="w-full text-left min-w-[720px]">
                     <thead className="sticky top-0 bg-[#f8faff]">
                       <tr className="border-b border-slate-200">
-                        <th className={th}></th><th className={th}>Name</th><th className={th}>Memory</th><th className={th}>vCore</th><th className={th}>Storage</th><th className={th}>GPU</th><th className={th}>₹/hour</th><th className={th}>~₹/month</th>
+                        <th className={th}></th><th className={th}>Name</th><th className={th}>Memory</th><th className={th}>vCore</th><th className={th}>Storage</th><th className={th}>GPU</th><th className={th}>Deployment</th><th className={th}>₹/hour</th><th className={th}>~₹/month</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -390,6 +439,7 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
                           <td className="px-4 py-2.5 text-sm">{f.specs?.vcore || "—"}</td>
                           <td className="px-4 py-2.5 text-xs text-slate-500">{f.specs?.storage || "—"}</td>
                           <td className="px-4 py-2.5 text-xs text-slate-500">{f.specs?.gpu || "—"}</td>
+                          <td className="px-4 py-2.5"><span className="rounded bg-[#00b7ff]/15 text-[#00b7ff] px-1.5 py-0.5 text-[9px] font-bold">{DEPLOY_MODES.find(m => m.id === deployMode)?.tag}</span></td>
                           <td className="px-4 py-2.5 text-sm font-bold">{fmt(f.hour)}</td>
                           <td className="px-4 py-2.5 text-sm text-slate-500">~{fmt(f.month)}</td>
                         </tr>

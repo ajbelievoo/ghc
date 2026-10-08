@@ -19,7 +19,20 @@ export async function getCloudCatalog(): Promise<Record<string, CloudLeaf[]>> {
   if (!inflight) {
     inflight = fetch("/api/catalog/cloud-live")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d) => (cached = d.catalog as Record<string, CloudLeaf[]>))
+      .then((d) => {
+        const live = d.catalog as Record<string, CloudLeaf[]>;
+        // Merge: live data wins; sections empty upstream fall back to the snapshot.
+        const merged = { ...catalog as unknown as Record<string, CloudLeaf[]> };
+        for (const [group, secs] of Object.entries(live)) {
+          merged[group] = (secs as CloudLeaf[]).map((sec) => {
+            const empty = !(sec.items?.length || sec.simpleRows?.length || (sec.families || []).some((f) => f.items?.length));
+            const fb = (merged[group] || []).find((s) => s.id === sec.id);
+            return empty && fb ? { ...sec, ...fb, desc: sec.desc || fb.desc } : sec;
+          });
+        }
+        cached = merged;
+        return merged;
+      })
       .catch(() => (cached = catalog as unknown as Record<string, CloudLeaf[]>));
   }
   return inflight;

@@ -46,6 +46,9 @@ CATALOG_REGISTRY = [
         "endpoint": "privateCloud",
         "family": "privateCloud",
         "default_filter": lambda p: True,
+        # Dedicated host SKUs (pcc-host-*) carry the real pricing; the base
+        # private_cloud service pack is free. Beta hosts are skipped.
+        "addon_filter": lambda a: str(a.get("planCode") or "").startswith("pcc-host-") and "ocpbeta" not in str(a.get("planCode") or ""),
         "optional": True,
     },
     {
@@ -95,10 +98,18 @@ def _extract_specs(product: Dict[str, Any], plan: Dict[str, Any], category: Serv
     """Extract technical specs from OVH catalog blobs."""
     prod_blobs = product.get("blobs", {}) or {}
     plan_blobs = plan.get("blobs", {}) or {}
+    if not isinstance(prod_blobs, dict):
+        prod_blobs = {}
+    if not isinstance(plan_blobs, dict):
+        plan_blobs = {}
     tech = prod_blobs.get("technical") or plan_blobs.get("technical") or {}
     commercial = prod_blobs.get("commercial") or plan_blobs.get("commercial") or {}
     features = commercial.get("features", []) if isinstance(commercial, dict) else []
     meta = prod_blobs.get("meta") or plan_blobs.get("meta") or {}
+    if not isinstance(tech, dict):
+        tech = {}
+    if not isinstance(meta, dict):
+        meta = {}
 
     if category == ServiceCategory.DEDICATED:
         cpu = (
@@ -151,11 +162,13 @@ def _extract_specs(product: Dict[str, Any], plan: Dict[str, Any], category: Serv
             or _find_feature(features, ["storage", "disk", "ssd"])
         )
         disk_type = _first_disk_tech(tech.get("storage", {}).get("disks", []))
+        tech_network = tech.get("network") if isinstance(tech.get("network"), dict) else {}
+        tech_bw = tech.get("bandwidth") if isinstance(tech.get("bandwidth"), dict) else {}
         bw = (
-            tech.get("network", {}).get("public", {}).get("bandwidth")
-            or tech.get("bandwidth", {}).get("level")
-            or product.get("bandwidth", {}).get("level")
-            or plan.get("bandwidth", {}).get("level")
+            tech_network.get("public", {}).get("bandwidth")
+            or tech_bw.get("level")
+            or (product.get("bandwidth") or {}).get("level")
+            or (plan.get("bandwidth") or {}).get("level")
             or _find_feature(features, ["bandwidth", "traffic"])
         )
 
@@ -176,6 +189,43 @@ def _extract_specs(product: Dict[str, Any], plan: Dict[str, Any], category: Serv
         "bandwidth_mbps": _coerce_int(bw),
         "description": description,
     }
+
+
+def _pcc_host_family(plan_code: str) -> Optional[str]:
+    """Map pcc-host-* SKUs to a storefront range (Essentials, Premier, SDDC...)."""
+    code = plan_code.lower()
+    if "-vsphere-ess" in code:
+        return "essentials"
+    if "-premier-" in code:
+        return "premier"
+    if "-sddc" in code:
+        return "sddc"
+    if "-cdi" in code:
+        return "cdi"
+    if "-sto" in code:
+        return "storage"
+    if "-gp" in code:
+        return "general"
+    return None
+
+
+def _pcc_host_specs(plan_code: str, invoice_name: str) -> Dict[str, Any]:
+    """Derive cores/RAM from host SKU codes like gp5-48x1536, ess64, pre192."""
+    specs: Dict[str, Any] = {}
+    match = re.search(r"(\d+)x(\d+)", plan_code)
+    if match:
+        specs["cpu_cores"] = int(match.group(1))
+        specs["ram_gb"] = int(match.group(2))
+        return specs
+    for pattern in (r"-ess(\d+)", r"-pre(\d+)", r"sddc-\d+-sddc-(\d+)", r"sddc(\d+)"):
+        match = re.search(pattern, plan_code)
+        if match:
+            specs["ram_gb"] = int(match.group(1))
+            return specs
+    match = re.search(r"(\d+)\s*GB", invoice_name or "", re.IGNORECASE)
+    if match:
+        specs["ram_gb"] = int(match.group(1))
+    return specs
 
 
 def _parse_duration(duration_iso: str) -> Tuple[int, str]:
@@ -291,7 +341,12 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
     plans = catalog.get("plans", []) or []
     product_map = {p.get("name"): p for p in products if p.get("name")}
 
-    for plan in filter(plan_filter, plans):
+    addon_filter = registry.get("addon_filter")
+    items: List[Dict[str, Any]] = [p for p in plans if plan_filter(p)]
+    if addon_filter:
+        items += [a for a in (catalog.get("addons") or []) if addon_filter(a)]
+
+    for plan in items:
         try:
             plan_code = plan.get("planCode")
             if not plan_code:
@@ -300,6 +355,9 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
             product = product_map.get(plan.get("product") or plan_code, {})
             specs = _extract_specs(product, plan, category)
             invoice_name = plan.get("invoiceName") or plan.get("planCode") or ""
+            if category == ServiceCategory.PRIVATE_CLOUD and plan_code.startswith("pcc-host-"):
+                specs = {**_pcc_host_specs(plan_code, invoice_name), **{k: v for k, v in specs.items() if v}}
+            plan_family = _pcc_host_family(plan_code) if category == ServiceCategory.PRIVATE_CLOUD else None
 
             # Detect currency from first pricing with formattedPrice before using it
             plan_currency = settings.currency or "CAD"
@@ -324,7 +382,7 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
             if existing:
                 existing.invoice_name = invoice_name
                 existing.description = specs.get("description")
-                existing.family = family
+                existing.family = plan_family or family
                 existing.category = category
                 existing.cpu_cores = specs.get("cpu_cores")
                 existing.ram_gb = specs.get("ram_gb")
@@ -339,7 +397,7 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
                     invoice_name=invoice_name,
                     description=specs.get("description"),
                     category=category,
-                    family=family,
+                    family=plan_family or family,
                     cpu_cores=specs.get("cpu_cores"),
                     ram_gb=specs.get("ram_gb"),
                     disk_gb=specs.get("disk_gb"),
