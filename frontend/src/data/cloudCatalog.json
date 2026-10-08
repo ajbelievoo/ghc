@@ -1,0 +1,6207 @@
+{
+ "compute": [
+  {
+   "id": "vm",
+   "title": "Virtual Machine Instances",
+   "desc": "Get versatile instances that can be adapted to suit all your needs.",
+   "families": [
+    {
+     "id": "b3",
+     "tag": "B3",
+     "name": "General Purpose",
+     "desc": "Balanced CPU/RAM resources for development servers, and web or enterprise applications.",
+     "items": [
+      {
+       "code": "b3-8",
+       "name": "b3-8",
+       "hour": 5.2,
+       "hourFmt": "\u20b95.2",
+       "month": 3796.0,
+       "monthFmt": "~\u20b93,796",
+       "specs": {
+        "memory": "8 GB",
+        "vcore": "2",
+        "storage": "Local storage low latency **",
+        "public-network": "500 Mbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "b3-16",
+       "name": "b3-16",
+       "hour": 23.432000000000002,
+       "hourFmt": "\u20b923.432",
+       "month": 17105.36,
+       "monthFmt": "~\u20b917,105.36",
+       "specs": {
+        "memory": "16 GB",
+        "vcore": "4",
+        "storage": "Local storage low latency **",
+        "public-network": "1 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "b3-32",
+       "name": "b3-32",
+       "hour": 20.75,
+       "hourFmt": "\u20b920.75",
+       "month": 15147.5,
+       "monthFmt": "~\u20b915,147.5",
+       "specs": {
+        "memory": "32 GB",
+        "vcore": "8",
+        "storage": "Local storage low latency **",
+        "public-network": "2 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "b3-64",
+       "name": "b3-64",
+       "hour": 93.708,
+       "hourFmt": "\u20b993.708",
+       "month": 68406.84,
+       "monthFmt": "~\u20b968,406.84",
+       "specs": {
+        "memory": "64 GB",
+        "vcore": "16",
+        "storage": "Local storage low latency **",
+        "public-network": "4 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "b3-128",
+       "name": "b3-128",
+       "hour": 187.516,
+       "hourFmt": "\u20b9187.516",
+       "month": 136886.68,
+       "monthFmt": "~\u20b91,36,886.68",
+       "specs": {
+        "memory": "128 GB",
+        "vcore": "32",
+        "storage": "Local storage low latency **",
+        "public-network": "8 Gbit/s",
+        "private-network": "8 Gbit/s max."
+       }
+      },
+      {
+       "code": "b3-256",
+       "name": "b3-256",
+       "hour": 374.832,
+       "hourFmt": "\u20b9374.832",
+       "month": 273627.36,
+       "monthFmt": "~\u20b92,73,627.36",
+       "specs": {
+        "memory": "256 GB",
+        "vcore": "64",
+        "storage": "Local storage low latency **",
+        "public-network": "16 Gbit/s",
+        "private-network": "16 Gbit/s max."
+       }
+      },
+      {
+       "code": "b3-512",
+       "name": "b3-512",
+       "hour": 749.664,
+       "hourFmt": "\u20b9749.664",
+       "month": 547254.72,
+       "monthFmt": "~\u20b95,47,254.72",
+       "specs": {
+        "memory": "512 GB",
+        "vcore": "128",
+        "storage": "Local storage low latency **",
+        "public-network": "20 Gbit/s",
+        "private-network": "20 Gbit/s max."
+       }
+      },
+      {
+       "code": "b3-640",
+       "name": "b3-640",
+       "hour": 937.0799999999999,
+       "hourFmt": "\u20b9937.08",
+       "month": 684068.3999999999,
+       "monthFmt": "~\u20b96,84,068.4",
+       "specs": {
+        "memory": "640 GB",
+        "vcore": "160",
+        "storage": "Local storage low latency **",
+        "public-network": "20 Gbit/s",
+        "private-network": "20 Gbit/s max."
+       }
+      }
+     ]
+    },
+    {
+     "id": "c3",
+     "tag": "C3",
+     "name": "Compute Optimised",
+     "desc": "High-frequency computing and parallel processing workloads. vCores clocked at 2.3 GHz and higher.",
+     "items": [
+      {
+       "code": "c3-4",
+       "name": "c3-4",
+       "hour": 11.166,
+       "hourFmt": "\u20b911.166",
+       "month": 8151.18,
+       "monthFmt": "~\u20b98,151.18",
+       "specs": {
+        "memory": "4 GB",
+        "vcore": "2",
+        "storage": "Local storage low latency **",
+        "public-network": "250 Mbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "c3-8",
+       "name": "c3-8",
+       "hour": 22.311999999999998,
+       "hourFmt": "\u20b922.312",
+       "month": 16287.759999999998,
+       "monthFmt": "~\u20b916,287.76",
+       "specs": {
+        "memory": "8 GB",
+        "vcore": "4",
+        "storage": "Local storage low latency **",
+        "public-network": "500 Mbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "c3-16",
+       "name": "c3-16",
+       "hour": 44.614000000000004,
+       "hourFmt": "\u20b944.614",
+       "month": 32568.220000000005,
+       "monthFmt": "~\u20b932,568.22",
+       "specs": {
+        "memory": "16 GB",
+        "vcore": "8",
+        "storage": "Local storage low latency **",
+        "public-network": "1 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "c3-32",
+       "name": "c3-32",
+       "hour": 89.22800000000001,
+       "hourFmt": "\u20b989.228",
+       "month": 65136.44000000001,
+       "monthFmt": "~\u20b965,136.44",
+       "specs": {
+        "memory": "32 GB",
+        "vcore": "16",
+        "storage": "Local storage low latency **",
+        "public-network": "2 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "c3-64",
+       "name": "c3-64",
+       "hour": 178.45600000000002,
+       "hourFmt": "\u20b9178.456",
+       "month": 130272.88000000002,
+       "monthFmt": "~\u20b91,30,272.88",
+       "specs": {
+        "memory": "64 GB",
+        "vcore": "32",
+        "storage": "Local storage low latency **",
+        "public-network": "4 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "c3-128",
+       "name": "c3-128",
+       "hour": 357.032,
+       "hourFmt": "\u20b9357.032",
+       "month": 260633.36,
+       "monthFmt": "~\u20b92,60,633.36",
+       "specs": {
+        "memory": "128 GB",
+        "vcore": "64",
+        "storage": "Local storage low latency **",
+        "public-network": "8 Gbit/s",
+        "private-network": "8 Gbit/s max."
+       }
+      },
+      {
+       "code": "c3-256",
+       "name": "c3-256",
+       "hour": 713.864,
+       "hourFmt": "\u20b9713.864",
+       "month": 521120.72000000003,
+       "monthFmt": "~\u20b95,21,120.72",
+       "specs": {
+        "memory": "256 GB",
+        "vcore": "128",
+        "storage": "Local storage low latency **",
+        "public-network": "20 Gbit/s",
+        "private-network": "20 Gbit/s max."
+       }
+      },
+      {
+       "code": "c3-320",
+       "name": "c3-320",
+       "hour": 892.3799999999999,
+       "hourFmt": "\u20b9892.38",
+       "month": 651437.3999999999,
+       "monthFmt": "~\u20b96,51,437.4",
+       "specs": {
+        "memory": "320 GB",
+        "vcore": "160",
+        "storage": "Local storage low latency **",
+        "public-network": "20 Gbit/s",
+        "private-network": "20 Gbit/s max."
+       }
+      }
+     ]
+    },
+    {
+     "id": "r3",
+     "tag": "R3",
+     "name": "RAM Optimised",
+     "desc": "High RAM-to-vCore ratio for in-memory databases, caching and analytics.",
+     "items": [
+      {
+       "code": "r3-16",
+       "name": "r3-16",
+       "hour": 13.256,
+       "hourFmt": "\u20b913.256",
+       "month": 9676.880000000001,
+       "monthFmt": "~\u20b99,676.88",
+       "specs": {
+        "memory": "16 GB",
+        "vcore": "2",
+        "storage": "Local storage low latency **",
+        "public-network": "500 Mbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "r3-32",
+       "name": "r3-32",
+       "hour": 26.482,
+       "hourFmt": "\u20b926.482",
+       "month": 19331.86,
+       "monthFmt": "~\u20b919,331.86",
+       "specs": {
+        "memory": "32 GB",
+        "vcore": "4",
+        "storage": "Local storage low latency **",
+        "public-network": "1 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "r3-64",
+       "name": "r3-64",
+       "hour": 52.964,
+       "hourFmt": "\u20b952.964",
+       "month": 38663.72,
+       "monthFmt": "~\u20b938,663.72",
+       "specs": {
+        "memory": "64 GB",
+        "vcore": "8",
+        "storage": "Local storage low latency **",
+        "public-network": "2 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "r3-128",
+       "name": "r3-128",
+       "hour": 106.008,
+       "hourFmt": "\u20b9106.008",
+       "month": 77385.84,
+       "monthFmt": "~\u20b977,385.84",
+       "specs": {
+        "memory": "128 GB",
+        "vcore": "16",
+        "storage": "Local storage low latency **",
+        "public-network": "4 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "r3-256",
+       "name": "r3-256",
+       "hour": 211.816,
+       "hourFmt": "\u20b9211.816",
+       "month": 154625.68,
+       "monthFmt": "~\u20b91,54,625.68",
+       "specs": {
+        "memory": "256 GB",
+        "vcore": "32",
+        "storage": "Local storage low latency **",
+        "public-network": "8 Gbit/s",
+        "private-network": "8 Gbit/s max."
+       }
+      },
+      {
+       "code": "r3-512",
+       "name": "r3-512",
+       "hour": 423.632,
+       "hourFmt": "\u20b9423.632",
+       "month": 309251.36,
+       "monthFmt": "~\u20b93,09,251.36",
+       "specs": {
+        "memory": "512 GB",
+        "vcore": "64",
+        "storage": "Local storage low latency **",
+        "public-network": "20 Gbit/s",
+        "private-network": "20 Gbit/s max."
+       }
+      },
+      {
+       "code": "r3-1024",
+       "name": "r3-1024",
+       "hour": 847.264,
+       "hourFmt": "\u20b9847.264",
+       "month": 618502.72,
+       "monthFmt": "~\u20b96,18,502.72",
+       "specs": {
+        "memory": "1024 GB",
+        "vcore": "128",
+        "storage": "Local storage low latency **",
+        "public-network": "20 Gbit/s",
+        "private-network": "20 Gbit/s max."
+       }
+      }
+     ]
+    },
+    {
+     "id": "d2",
+     "tag": "D2",
+     "name": "Discovery",
+     "desc": "Shared resources at unbeatable prices \u2014 for testing, staging and small projects.",
+     "items": [
+      {
+       "code": "d2-2",
+       "name": "d2-2",
+       "hour": 1.06,
+       "hourFmt": "\u20b91.06",
+       "month": 579.0,
+       "monthFmt": "\u20b9579",
+       "specs": {
+        "memory": "2 GB",
+        "vcore": "1",
+        "storage": "25 GB ",
+        "public-network": "100 Mbit/s",
+        "private-network": "100 Mbit/s max."
+       }
+      },
+      {
+       "code": "d2-4",
+       "name": "d2-4",
+       "hour": 2.09,
+       "hourFmt": "\u20b92.09",
+       "month": 1161.0,
+       "monthFmt": "\u20b91,161",
+       "specs": {
+        "memory": "4 GB",
+        "vcore": "2",
+        "storage": "50 GB ",
+        "public-network": "250 Mbit/s",
+        "private-network": "250 Mbit/s max."
+       }
+      },
+      {
+       "code": "d2-8",
+       "name": "d2-8",
+       "hour": 3.78,
+       "hourFmt": "\u20b93.78",
+       "month": 2089.0,
+       "monthFmt": "\u20b92,089",
+       "specs": {
+        "memory": "8 GB",
+        "vcore": "4",
+        "storage": "50 GB ",
+        "public-network": "500 Mbit/s",
+        "private-network": "500 Mbit/s max."
+       }
+      }
+     ]
+    },
+    {
+     "id": "i1",
+     "tag": "I1",
+     "name": "IOPS Optimised",
+     "desc": "Instances with high NVMe IOPS for databases and storage-intensive workloads.",
+     "items": [
+      {
+       "code": "i1-45",
+       "name": "i1-45",
+       "hour": 38.2,
+       "hourFmt": "\u20b938.2",
+       "month": 19100.0,
+       "monthFmt": "\u20b919,100",
+       "specs": {
+        "memory": "45 GB",
+        "vcore": "8",
+        "storage": "50 GB SSD",
+        "public-network": "1 Gbit/s guaranteed",
+        "private-network": "2 Gbit/s max.",
+        "nvme-disks": "1.9 TiB"
+       }
+      },
+      {
+       "code": "i1-90",
+       "name": "i1-90",
+       "hour": 76.4,
+       "hourFmt": "\u20b976.4",
+       "month": 38300.0,
+       "monthFmt": "\u20b938,300",
+       "specs": {
+        "memory": "90 GB",
+        "vcore": "16",
+        "storage": "50 GB SSD",
+        "public-network": "2 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "nvme-disks": "2 x 1.9 TiB"
+       }
+      },
+      {
+       "code": "i1-180",
+       "name": "i1-180",
+       "hour": 153.0,
+       "hourFmt": "\u20b9153",
+       "month": 76500.0,
+       "monthFmt": "\u20b976,500",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "32",
+        "storage": "50 GB SSD",
+        "public-network": "8 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "nvme-disks": "4 x 1.9 TiB"
+       }
+      }
+     ]
+    },
+    {
+     "id": "b2",
+     "tag": "B2",
+     "name": "General Purpose (previous gen)",
+     "desc": "Previous-generation balanced instances at lower prices.",
+     "items": [
+      {
+       "code": "b2-7",
+       "name": "b2-7",
+       "hour": 7.19,
+       "hourFmt": "\u20b97.19",
+       "month": 2553.0,
+       "monthFmt": "\u20b92,553",
+       "specs": {
+        "memory": "7 GB",
+        "vcore": "2",
+        "storage": "50 GB SSD",
+        "public-network": "250 Mbit/s guaranteed",
+        "private-network": "300 Mbit/s max."
+       }
+      },
+      {
+       "code": "b2-15",
+       "name": "b2-15",
+       "hour": 35.54,
+       "hourFmt": "\u20b935.54",
+       "month": 11193.0,
+       "monthFmt": "\u20b911,193",
+       "specs": {
+        "memory": "15 GB",
+        "vcore": "4",
+        "storage": "100 GB SSD",
+        "public-network": "250 Mbit/s guaranteed",
+        "private-network": "1 Gbit/s max."
+       }
+      },
+      {
+       "code": "b2-30",
+       "name": "b2-30",
+       "hour": 59.84,
+       "hourFmt": "\u20b959.84",
+       "month": 17796.0,
+       "monthFmt": "\u20b917,796",
+       "specs": {
+        "memory": "30 GB",
+        "vcore": "8",
+        "storage": "200 GB SSD",
+        "public-network": "500 Mbit/s guaranteed",
+        "private-network": "2 Gbit/s max."
+       }
+      },
+      {
+       "code": "b2-60",
+       "name": "b2-60",
+       "hour": 89.6,
+       "hourFmt": "\u20b989.6",
+       "month": 28270.0,
+       "monthFmt": "\u20b928,270",
+       "specs": {
+        "memory": "60 GB",
+        "vcore": "16",
+        "storage": "400 GB SSD",
+        "public-network": "1 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "b2-120",
+       "name": "b2-120",
+       "hour": 145.4,
+       "hourFmt": "\u20b9145.4",
+       "month": 48300.0,
+       "monthFmt": "\u20b948,300",
+       "specs": {
+        "memory": "120 GB",
+        "vcore": "32",
+        "storage": "400 GB SSD",
+        "public-network": "10 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      }
+     ]
+    },
+    {
+     "id": "c2",
+     "tag": "C2",
+     "name": "Compute Optimised (previous gen)",
+     "desc": "Previous-generation compute instances.",
+     "items": [
+      {
+       "code": "c2-7",
+       "name": "c2-7",
+       "hour": 10.33,
+       "hourFmt": "\u20b910.33",
+       "month": 3713.0,
+       "monthFmt": "\u20b93,713",
+       "specs": {
+        "memory": "7 GB",
+        "vcore": "2",
+        "storage": "50 GB SSD",
+        "public-network": "250 Mbit/s guaranteed",
+        "private-network": "300 Mbit/s max."
+       }
+      },
+      {
+       "code": "c2-15",
+       "name": "c2-15",
+       "hour": 20.04,
+       "hourFmt": "\u20b920.04",
+       "month": 7193.0,
+       "monthFmt": "\u20b97,193",
+       "specs": {
+        "memory": "15 GB",
+        "vcore": "4",
+        "storage": "100 GB SSD",
+        "public-network": "250 Mbit/s guaranteed",
+        "private-network": "1 Gbit/s max."
+       }
+      },
+      {
+       "code": "c2-30",
+       "name": "c2-30",
+       "hour": 40.4,
+       "hourFmt": "\u20b940.4",
+       "month": 14553.0,
+       "monthFmt": "\u20b914,553",
+       "specs": {
+        "memory": "30 GB",
+        "vcore": "8",
+        "storage": "200 GB SSD",
+        "public-network": "500 Mbit/s guaranteed",
+        "private-network": "2 Gbit/s max."
+       }
+      },
+      {
+       "code": "c2-60",
+       "name": "c2-60",
+       "hour": 79.0,
+       "hourFmt": "\u20b979",
+       "month": 28480.0,
+       "monthFmt": "\u20b928,480",
+       "specs": {
+        "memory": "60 GB",
+        "vcore": "16",
+        "storage": "400 GB SSD",
+        "public-network": "1 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "c2-120",
+       "name": "c2-120",
+       "hour": 224.9,
+       "hourFmt": "\u20b9224.9",
+       "month": 74260.0,
+       "monthFmt": "\u20b974,260",
+       "specs": {
+        "memory": "120 GB",
+        "vcore": "32",
+        "storage": "400 GB SSD",
+        "public-network": "10 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      }
+     ]
+    },
+    {
+     "id": "r2",
+     "tag": "R2",
+     "name": "RAM Optimised (previous gen)",
+     "desc": "Previous-generation RAM-optimised instances.",
+     "items": [
+      {
+       "code": "r2-15",
+       "name": "r2-15",
+       "hour": 25.44,
+       "hourFmt": "\u20b925.44",
+       "month": 8127.0,
+       "monthFmt": "\u20b98,127",
+       "specs": {
+        "memory": "15 GB",
+        "vcore": "2",
+        "storage": "50 GB SSD",
+        "public-network": "250 Mbit/s guaranteed",
+        "private-network": "1 Gbit/s max."
+       }
+      },
+      {
+       "code": "r2-30",
+       "name": "r2-30",
+       "hour": 42.7,
+       "hourFmt": "\u20b942.7",
+       "month": 11686.0,
+       "monthFmt": "\u20b911,686",
+       "specs": {
+        "memory": "30 GB",
+        "vcore": "2",
+        "storage": "50 GB SSD",
+        "public-network": "250 Mbit/s guaranteed",
+        "private-network": "1 Gbit/s max."
+       }
+      },
+      {
+       "code": "r2-60",
+       "name": "r2-60",
+       "hour": 58.53,
+       "hourFmt": "\u20b958.53",
+       "month": 16997.0,
+       "monthFmt": "\u20b916,997",
+       "specs": {
+        "memory": "60 GB",
+        "vcore": "4",
+        "storage": "100 GB SSD",
+        "public-network": "250 Mbit/s guaranteed",
+        "private-network": "2 Gbit/s max."
+       }
+      },
+      {
+       "code": "r2-120",
+       "name": "r2-120",
+       "hour": 85.3,
+       "hourFmt": "\u20b985.3",
+       "month": 26620.0,
+       "monthFmt": "\u20b926,620",
+       "specs": {
+        "memory": "120 GB",
+        "vcore": "8",
+        "storage": "200 GB SSD",
+        "public-network": "1 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max."
+       }
+      },
+      {
+       "code": "r2-240",
+       "name": "r2-240",
+       "hour": 91.9,
+       "hourFmt": "\u20b991.9",
+       "month": 33120.0,
+       "monthFmt": "\u20b933,120",
+       "specs": {
+        "memory": "240 GB",
+        "vcore": "16",
+        "storage": "400 GB SSD",
+        "public-network": "10 Gbit/s",
+        "private-network": "4 Gbit/s max."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "gpu",
+   "title": "Cloud GPU",
+   "desc": "Instances with dedicated NVIDIA GPUs for AI, ML, rendering and HPC.",
+   "families": [
+    {
+     "id": "t1",
+     "tag": "T1",
+     "name": "GPU - Tesla V100",
+     "desc": "NVIDIA Tesla V100 (16 GB HBM2).",
+     "items": [
+      {
+       "code": "t1-45",
+       "name": "t1-45",
+       "hour": 63.0,
+       "hourFmt": "\u20b963",
+       "month": 45990.0,
+       "monthFmt": "~\u20b945,990",
+       "specs": {
+        "memory": "45 GB",
+        "vcore": "8",
+        "storage": "400 GB NVMe",
+        "public-network": "2 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "1x Tesla V100 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "t1-le-45",
+       "name": "t1-le-45",
+       "hour": 63.0,
+       "hourFmt": "\u20b963",
+       "month": 45990.0,
+       "monthFmt": "~\u20b945,990",
+       "specs": {
+        "memory": "45 GB",
+        "vcore": "8",
+        "storage": "300 GB NVMe",
+        "public-network": "2 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "1x Tesla V100 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "t1-90",
+       "name": "t1-90",
+       "hour": 125.15,
+       "hourFmt": "\u20b9125.15",
+       "month": 90105.0,
+       "monthFmt": "\u20b990,105",
+       "specs": {
+        "memory": "90 GB",
+        "vcore": "18",
+        "storage": "800 GB NVMe",
+        "public-network": "4 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "2x Tesla V100 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "t1-le-90",
+       "name": "t1-le-90",
+       "hour": 125.15,
+       "hourFmt": "\u20b9125.15",
+       "month": 90105.0,
+       "monthFmt": "\u20b990,105",
+       "specs": {
+        "memory": "90 GB",
+        "vcore": "16",
+        "storage": "400 GB NVMe",
+        "public-network": "4 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "2x Tesla V100 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "t1-180",
+       "name": "t1-180",
+       "hour": 250.3,
+       "hourFmt": "\u20b9250.3",
+       "month": 180210.0,
+       "monthFmt": "\u20b91,80,210",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "36",
+        "storage": "50 GB NVMe + 2 x 2 TB NVMe Passthrough",
+        "public-network": "10 Gbit/s",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "4x Tesla V100 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "t1-le-180",
+       "name": "t1-le-180",
+       "hour": 250.3,
+       "hourFmt": "\u20b9250.3",
+       "month": 180210.0,
+       "monthFmt": "\u20b91,80,210",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "32",
+        "storage": "400 GB NVMe",
+        "public-network": "10 Gbit/s",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "4x Tesla V100 (16 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "t1-le",
+     "tag": "T1 LE",
+     "name": "GPU - Tesla V100 LE",
+     "desc": "Limited edition Tesla V100 flavor.",
+     "items": [
+      {
+       "code": "t1-le-45",
+       "name": "t1-le-45",
+       "hour": 63.0,
+       "hourFmt": "\u20b963",
+       "month": 45990.0,
+       "monthFmt": "~\u20b945,990",
+       "specs": {
+        "memory": "45 GB",
+        "vcore": "8",
+        "storage": "300 GB NVMe",
+        "public-network": "2 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "1x Tesla V100 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "t1-le-90",
+       "name": "t1-le-90",
+       "hour": 125.15,
+       "hourFmt": "\u20b9125.15",
+       "month": 90105.0,
+       "monthFmt": "\u20b990,105",
+       "specs": {
+        "memory": "90 GB",
+        "vcore": "16",
+        "storage": "400 GB NVMe",
+        "public-network": "4 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "2x Tesla V100 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "t1-le-180",
+       "name": "t1-le-180",
+       "hour": 250.3,
+       "hourFmt": "\u20b9250.3",
+       "month": 180210.0,
+       "monthFmt": "\u20b91,80,210",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "32",
+        "storage": "400 GB NVMe",
+        "public-network": "10 Gbit/s",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "4x Tesla V100 (16 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "t2",
+     "tag": "T2",
+     "name": "GPU - Tesla V100S",
+     "desc": "NVIDIA Tesla V100S (32 GB HBM2).",
+     "items": [
+      {
+       "code": "t2-45",
+       "name": "t2-45",
+       "hour": 72.0,
+       "hourFmt": "\u20b972",
+       "month": 52000.0,
+       "monthFmt": "\u20b952,000",
+       "specs": {
+        "memory": "45 GB",
+        "vcore": "15",
+        "storage": "400 GB NVMe",
+        "public-network": "2 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "1x Tesla V100S (32 GB HBM2)"
+       }
+      },
+      {
+       "code": "t2-90",
+       "name": "t2-90",
+       "hour": 144.0,
+       "hourFmt": "\u20b9144",
+       "month": 102970.0,
+       "monthFmt": "\u20b91,02,970",
+       "specs": {
+        "memory": "90 GB",
+        "vcore": "30",
+        "storage": "800 GB NVMe",
+        "public-network": "4 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "2x Tesla V100S (32 GB HBM2)"
+       }
+      },
+      {
+       "code": "t2-180",
+       "name": "t2-180",
+       "hour": 535.5948,
+       "hourFmt": "\u20b9535.5948",
+       "month": 387739.0,
+       "monthFmt": "\u20b93,87,739",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "60",
+        "storage": "50 GB NVMe + 2 x 2 TB NVMe Passthrough",
+        "public-network": "10 Gbit/s",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "4x Tesla V100S (32 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "t2-le",
+     "tag": "T2 LE",
+     "name": "GPU - Tesla V100S LE",
+     "desc": "Limited edition V100S flavor.",
+     "items": [
+      {
+       "code": "t2-le-45",
+       "name": "t2-le-45",
+       "hour": 72.0,
+       "hourFmt": "\u20b972",
+       "month": 52000.0,
+       "monthFmt": "\u20b952,000",
+       "specs": {
+        "memory": "45 GB",
+        "vcore": "15",
+        "storage": "300 GB NVMe",
+        "public-network": "2 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "1x Tesla V100S (32 GB HBM2)"
+       }
+      },
+      {
+       "code": "t2-le-90",
+       "name": "t2-le-90",
+       "hour": 144.0,
+       "hourFmt": "\u20b9144",
+       "month": 102970.0,
+       "monthFmt": "\u20b91,02,970",
+       "specs": {
+        "memory": "90 GB",
+        "vcore": "30",
+        "storage": "500 GB NVMe",
+        "public-network": "4 Gbit/s guaranteed",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "2x Tesla V100S (32 GB HBM2)"
+       }
+      },
+      {
+       "code": "t2-le-180",
+       "name": "t2-le-180",
+       "hour": 286.0,
+       "hourFmt": "\u20b9286",
+       "month": 205955.0,
+       "monthFmt": "\u20b92,05,955",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "60",
+        "storage": "500 GB NVMe",
+        "public-network": "10 Gbit/s",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "4x Tesla V100S (32 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "l4",
+     "tag": "L4",
+     "name": "GPU - NVIDIA L4",
+     "desc": "Efficient NVIDIA L4 for inference and media.",
+     "items": [
+      {
+       "code": "l4-90",
+       "name": "l4-90",
+       "hour": 69.0,
+       "hourFmt": "\u20b969",
+       "month": 49680.0,
+       "monthFmt": "\u20b949,680",
+       "specs": {
+        "memory": "90 GB",
+        "vcore": "22",
+        "storage": "400 GB NVMe",
+        "public-network": "8 Gbit/s",
+        "private-network": "8 Gbit/s max.",
+        "gpu": "1x L4 (24 GB HBM2)"
+       }
+      },
+      {
+       "code": "l4-180",
+       "name": "l4-180",
+       "hour": 296.0,
+       "hourFmt": "\u20b9296",
+       "month": 216080.0,
+       "monthFmt": "\u20b92,16,080",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "45",
+        "storage": "400 GB NVMe",
+        "public-network": "16 Gbit/s",
+        "private-network": "16 Gbit/s max.",
+        "gpu": "2x L4 (24 GB HBM2)"
+       }
+      },
+      {
+       "code": "l4-360",
+       "name": "l4-360",
+       "hour": 593.0,
+       "hourFmt": "\u20b9593",
+       "month": 432890.0,
+       "monthFmt": "~\u20b94,32,890",
+       "specs": {
+        "memory": "360 GB",
+        "vcore": "90",
+        "storage": "400 GB NVMe",
+        "public-network": "25 Gbit/s",
+        "private-network": "25 Gbit/s max.",
+        "gpu": "4x L4 (24 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "rtx5000",
+     "tag": "RTX",
+     "name": "GPU - RTX 5000",
+     "desc": "NVIDIA RTX 5000 for graphics and rendering.",
+     "items": [
+      {
+       "code": "rtx5000-28",
+       "name": "rtx5000-28",
+       "hour": 46.052,
+       "hourFmt": "\u20b946.052",
+       "month": 33617.96,
+       "monthFmt": "~\u20b933,617.96",
+       "specs": {
+        "memory": "28 GB",
+        "vcore": "4",
+        "storage": "400 GB SSD",
+        "public-network": "2 Gbit/s",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "1x Quadro-RTX5000 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "rtx5000-56",
+       "name": "rtx5000-56",
+       "hour": 92.104,
+       "hourFmt": "\u20b992.104",
+       "month": 67235.92,
+       "monthFmt": "~\u20b967,235.92",
+       "specs": {
+        "memory": "56 GB",
+        "vcore": "8",
+        "storage": "400 GB SSD",
+        "public-network": "4 Gbit/s",
+        "private-network": "4 Gbit/s max.",
+        "gpu": "2x Quadro-RTX5000 (16 GB HBM2)"
+       }
+      },
+      {
+       "code": "rtx5000-84",
+       "name": "rtx5000-84",
+       "hour": 151.208,
+       "hourFmt": "\u20b9151.208",
+       "month": 110381.84,
+       "monthFmt": "~\u20b91,10,381.84",
+       "specs": {
+        "memory": "84 GB",
+        "vcore": "16",
+        "storage": "400 GB SSD",
+        "public-network": "10 Gbit/s",
+        "private-network": "10 Gbit/s max.",
+        "gpu": "3x Quadro-RTX5000 (16 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "a10",
+     "tag": "A10",
+     "name": "GPU - NVIDIA A10",
+     "desc": "NVIDIA A10 (24 GB) for inference and graphics.",
+     "items": [
+      {
+       "code": "a10-45",
+       "name": "a10-45",
+       "hour": 70.0,
+       "hourFmt": "\u20b970",
+       "month": 51100.0,
+       "monthFmt": "~\u20b951,100",
+       "specs": {
+        "memory": "42 GB",
+        "vcore": "30",
+        "storage": "400 GB SSD",
+        "public-network": "8 Gbit/s",
+        "private-network": "8 Gbit/s max.",
+        "gpu": "1x A10 (24 GB HBM2)"
+       }
+      },
+      {
+       "code": "a10-90",
+       "name": "a10-90",
+       "hour": 140.0,
+       "hourFmt": "\u20b9140",
+       "month": 102200.0,
+       "monthFmt": "~\u20b91,02,200",
+       "specs": {
+        "memory": "85 GB",
+        "vcore": "60",
+        "storage": "400 GB SSD",
+        "public-network": "16 Gbit/s",
+        "private-network": "16 Gbit/s max.",
+        "gpu": "2x A10 (24 GB HBM2)"
+       }
+      },
+      {
+       "code": "a10-180",
+       "name": "a10-180",
+       "hour": 280.0,
+       "hourFmt": "\u20b9280",
+       "month": 204400.0,
+       "monthFmt": "~\u20b92,04,400",
+       "specs": {
+        "memory": "170 GB",
+        "vcore": "120",
+        "storage": "400 GB SSD",
+        "public-network": "25 Gbit/s",
+        "private-network": "25 Gbit/s max.",
+        "gpu": "4x A10 (24 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "l40s",
+     "tag": "L40S",
+     "name": "GPU - NVIDIA L40S",
+     "desc": "NVIDIA L40S (48 GB) for AI inference.",
+     "items": [
+      {
+       "code": "l40s-90",
+       "name": "l40s-90",
+       "hour": 128.5,
+       "hourFmt": "\u20b9128.5",
+       "month": 92520.0,
+       "monthFmt": "\u20b992,520",
+       "specs": {
+        "memory": "90 GB",
+        "vcore": "15",
+        "storage": "400 GB NVMe",
+        "public-network": "8 Gbit/s",
+        "private-network": "8 Gbit/s max.",
+        "gpu": "1x L40S (48 GB HBM2)"
+       }
+      },
+      {
+       "code": "l40s-180",
+       "name": "l40s-180",
+       "hour": 257.0,
+       "hourFmt": "\u20b9257",
+       "month": 185040.0,
+       "monthFmt": "\u20b91,85,040",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "30",
+        "storage": "400 GB NVMe",
+        "public-network": "16 Gbit/s",
+        "private-network": "16 Gbit/s max.",
+        "gpu": "2x L40S (48 GB HBM2)"
+       }
+      },
+      {
+       "code": "l40s-360",
+       "name": "l40s-360",
+       "hour": 514.0,
+       "hourFmt": "\u20b9514",
+       "month": 370080.0,
+       "monthFmt": "\u20b93,70,080",
+       "specs": {
+        "memory": "360 GB",
+        "vcore": "60",
+        "storage": "400 GB NVMe",
+        "public-network": "25 Gbit/s",
+        "private-network": "25 Gbit/s max.",
+        "gpu": "4x L40S (48 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "a100",
+     "tag": "A100",
+     "name": "GPU - NVIDIA A100",
+     "desc": "NVIDIA A100 (80 GB HBM2) for large-scale AI training.",
+     "items": [
+      {
+       "code": "a100-180",
+       "name": "a100-180",
+       "hour": 252.31,
+       "hourFmt": "\u20b9252.31",
+       "month": 100925.0,
+       "monthFmt": "\u20b91,00,925",
+       "specs": {
+        "memory": "180 GB",
+        "vcore": "15",
+        "storage": "300 GB NVMe",
+        "public-network": "8 Gbit/s",
+        "private-network": "8 Gbit/s max.",
+        "gpu": "1x A100 (80 GB HBM2)"
+       }
+      },
+      {
+       "code": "a100-360",
+       "name": "a100-360",
+       "hour": 504.63,
+       "hourFmt": "\u20b9504.63",
+       "month": 201850.0,
+       "monthFmt": "\u20b92,01,850",
+       "specs": {
+        "memory": "360 GB",
+        "vcore": "30",
+        "storage": "500 GB NVMe",
+        "public-network": "16 Gbit/s",
+        "private-network": "16 Gbit/s max.",
+        "gpu": "2x A100 (80 GB HBM2)"
+       }
+      },
+      {
+       "code": "a100-720",
+       "name": "a100-720",
+       "hour": 1009.25,
+       "hourFmt": "\u20b91,009.25",
+       "month": 403700.0,
+       "monthFmt": "\u20b94,03,700",
+       "specs": {
+        "memory": "720 GB",
+        "vcore": "60",
+        "storage": "500 GB NVMe",
+        "public-network": "25 Gbit/s",
+        "private-network": "25 Gbit/s max.",
+        "gpu": "4x A100 (80 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "h100",
+     "tag": "H100",
+     "name": "GPU - NVIDIA H100",
+     "desc": "NVIDIA H100 \u2014 flagship AI accelerator.",
+     "items": [
+      {
+       "code": "h100-380",
+       "name": "h100-380",
+       "hour": 248.0,
+       "hourFmt": "\u20b9248",
+       "month": 172000.0,
+       "monthFmt": "\u20b91,72,000",
+       "specs": {
+        "memory": "380 GB",
+        "vcore": "30",
+        "storage": "200 GB NVMe + 3.84 TB NVMe Passthrough",
+        "public-network": "8 Gbit/s",
+        "private-network": "8 Gbit/s max.",
+        "gpu": "1x H100 (80 GB HBM2)"
+       }
+      },
+      {
+       "code": "h100-760",
+       "name": "h100-760",
+       "hour": 497.0,
+       "hourFmt": "\u20b9497",
+       "month": 345000.0,
+       "monthFmt": "\u20b93,45,000",
+       "specs": {
+        "memory": "760 GB",
+        "vcore": "60",
+        "storage": "200 GB NVMe + 2 x 3.84 TB NVMe Passthrough",
+        "public-network": "16 Gbit/s",
+        "private-network": "16 Gbit/s max.",
+        "gpu": "2x H100 (80 GB HBM2)"
+       }
+      },
+      {
+       "code": "h100-1520",
+       "name": "h100-1520",
+       "hour": 994.0,
+       "hourFmt": "\u20b9994",
+       "month": 689000.0,
+       "monthFmt": "\u20b96,89,000",
+       "specs": {
+        "memory": "1520 GB",
+        "vcore": "120",
+        "storage": "200 GB NVMe + 4 x 3.84 TB NVMe Passthrough",
+        "public-network": "25 Gbit/s",
+        "private-network": "25 Gbit/s max.",
+        "gpu": "4x H100 (80 GB HBM2)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "h200",
+     "tag": "H200",
+     "name": "GPU - NVIDIA H200",
+     "desc": "NVIDIA H200 with HBM3e memory.",
+     "items": [
+      {
+       "code": "h200-1920",
+       "name": "h200-1920",
+       "hour": 4258.8,
+       "hourFmt": "\u20b94,258.8",
+       "month": 3108924.0,
+       "monthFmt": "~\u20b931,08,924",
+       "specs": {
+        "memory": "1920 GB",
+        "vcore": "224",
+        "storage": "400 GB NVMe + 4 x 7.68 TB NVMe Passthrough",
+        "public-network": "25 Gbit/s",
+        "private-network": "25 Gbit/s max.",
+        "gpu": "8x H200 (141 GB HBM3e)"
+       }
+      },
+      {
+       "code": "h200-1920-eph",
+       "name": "h200-1920-eph",
+       "hour": 4258.8,
+       "hourFmt": "\u20b94,258.8",
+       "month": 3108924.0,
+       "monthFmt": "\u20b931,08,924",
+       "specs": {
+        "memory": "1920 GB",
+        "vcore": "224",
+        "storage": "400 GB NVMe + 20 TB NVMe Ephemeral",
+        "public-network": "25 Gbit/s",
+        "private-network": "25 Gbit/s max.",
+        "gpu": "8x H200 (141 GB HBM3e)"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "metal",
+   "title": "Metal Instances",
+   "desc": "Bare-metal performance inside the Public Cloud \u2014 dedicated hardware, API-driven.",
+   "families": [
+    {
+     "id": "bm",
+     "tag": "BM",
+     "name": "Metal Instances",
+     "desc": "Single-tenant bare metal instances.",
+     "items": [
+      {
+       "code": "bm-l1",
+       "name": "bm-l1",
+       "hour": 124.0,
+       "hourFmt": "\u20b9124",
+       "month": 44400.0,
+       "monthFmt": "\u20b944,400",
+       "specs": {
+        "memory": "128 GB",
+        "vcore": "16",
+        "storage": "2 x 960 GB SSD",
+        "public-network": "1 Gbit/s guaranteed",
+        "private-network": "2 Gbit/s max."
+       }
+      },
+      {
+       "code": "bm-m1",
+       "name": "bm-m1",
+       "hour": 72.6,
+       "hourFmt": "\u20b972.6",
+       "month": 25600.0,
+       "monthFmt": "\u20b925,600",
+       "specs": {
+        "memory": "64 GB",
+        "vcore": "8",
+        "storage": "2 x 960 GB SSD",
+        "public-network": "1 Gbit/s guaranteed",
+        "private-network": "2 Gbit/s max."
+       }
+      },
+      {
+       "code": "bm-s1",
+       "name": "bm-s1",
+       "hour": 42.7,
+       "hourFmt": "\u20b942.7",
+       "month": 14500.0,
+       "monthFmt": "\u20b914,500",
+       "specs": {
+        "memory": "32 GB",
+        "vcore": "4",
+        "storage": "2 x 960 GB SSD",
+        "public-network": "1 Gbit/s guaranteed",
+        "private-network": "2 Gbit/s max."
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "backup",
+   "title": "Instance Backup",
+   "desc": "Back up your instances and volumes \u2014 billed per GB stored per hour.",
+   "simpleRows": [
+    {
+     "name": "Instance snapshot",
+     "price": "\u20b90.0016/GB-hr",
+     "note": "Replicated x3"
+    },
+    {
+     "name": "Volume backup",
+     "price": "\u20b90.0016/GB-hr",
+     "note": "Replicated x3"
+    },
+    {
+     "name": "Volume snapshot",
+     "price": "\u20b90.0062/GB-hr",
+     "note": "Replicated x3"
+    }
+   ]
+  },
+  {
+   "id": "private-images",
+   "title": "Private Image Catalog",
+   "desc": "Store and manage your own images. Image catalog is free \u2014 you pay only for the underlying object storage.",
+   "simpleRows": [
+    {
+     "name": "Private image storage",
+     "price": "\u20b90.0016/GB-hr",
+     "note": "Object Storage rate"
+    }
+   ]
+  },
+  {
+   "id": "public-images",
+   "title": "Public Image Catalog",
+   "desc": "Ready-to-use Linux and Windows images maintained for you. Free of charge.",
+   "simpleRows": [
+    {
+     "name": "Public images",
+     "price": "Free",
+     "note": "Ubuntu, Debian, Rocky, Windows, panels"
+    }
+   ]
+  }
+ ],
+ "network": [
+  {
+   "id": "loadbalancer",
+   "title": "Load Balancer",
+   "desc": "L4/L7 load balancing with health checks, SSL termination and multi-region support.",
+   "items": [
+    {
+     "code": "octavia-loadbalancer.loadbalancer-l",
+     "name": "Load Balancer L",
+     "hour": 4.83,
+     "hourFmt": "\u20b94.83",
+     "month": 3525.9,
+     "monthFmt": "~\u20b93,525.9",
+     "specs": {
+      "bandwidth": "2 Gbit/s",
+      "connections-per-second": "1000",
+      "requests-per-second": "40000",
+      "high-availability": "",
+      "tls": ""
+     }
+    },
+    {
+     "code": "octavia-loadbalancer.loadbalancer-m",
+     "name": "Load Balancer M",
+     "hour": 1.81,
+     "hourFmt": "\u20b91.81",
+     "month": 1321.3,
+     "monthFmt": "~\u20b91,321.3",
+     "specs": {
+      "bandwidth": "500 Mbit/s",
+      "connections-per-second": "500",
+      "requests-per-second": "20000",
+      "high-availability": "",
+      "tls": ""
+     }
+    },
+    {
+     "code": "octavia-loadbalancer.loadbalancer-s",
+     "name": "Load Balancer S",
+     "hour": 0.722,
+     "hourFmt": "\u20b90.722",
+     "month": 527.06,
+     "monthFmt": "~\u20b9527.06",
+     "specs": {
+      "bandwidth": "200 Mbit/s",
+      "connections-per-second": "250",
+      "requests-per-second": "10000",
+      "high-availability": "",
+      "tls": ""
+     }
+    },
+    {
+     "code": "octavia-loadbalancer.loadbalancer-xl",
+     "name": "Load Balancer XL",
+     "hour": 19.07,
+     "hourFmt": "\u20b919.07",
+     "month": 13921.1,
+     "monthFmt": "~\u20b913,921.1",
+     "specs": {
+      "bandwidth": "4 Gbit/s",
+      "connections-per-second": "2000",
+      "requests-per-second": "80000",
+      "high-availability": "",
+      "tls": ""
+     }
+    }
+   ]
+  },
+  {
+   "id": "floatingip",
+   "title": "Floating IP",
+   "desc": "Flexible public IPv4 addresses, movable between instances.",
+   "items": [
+    {
+     "code": "floatingip.floatingip",
+     "name": "Floating IP IPv4 (/32)",
+     "hour": 0.27378,
+     "hourFmt": "\u20b90.27378",
+     "month": 199.85940000000002,
+     "monthFmt": "~\u20b9199.8594",
+     "specs": {}
+    },
+    {
+     "code": "publicip.ip",
+     "name": "Public IP IPv4 (/32)",
+     "hour": 0.27378,
+     "hourFmt": "\u20b90.27378",
+     "month": 199.85940000000002,
+     "monthFmt": "~\u20b9199.8594",
+     "specs": {}
+    }
+   ]
+  },
+  {
+   "id": "gateway",
+   "title": "Gateway",
+   "desc": "Managed outbound gateway (SNAT) for private instances.",
+   "items": [
+    {
+     "code": "gateway.l",
+     "name": "Gateway L",
+     "hour": 4.22,
+     "hourFmt": "\u20b94.22",
+     "month": 3080.6,
+     "monthFmt": "~\u20b93,080.6",
+     "specs": {
+      "public-network": "2 Gbit/s",
+      "high-availability": "",
+      "snat-outbound": "",
+      "floating-ip-support-inbound": ""
+     }
+    },
+    {
+     "code": "gateway.m",
+     "name": "Gateway M",
+     "hour": 0.965,
+     "hourFmt": "\u20b90.965",
+     "month": 704.4499999999999,
+     "monthFmt": "~\u20b9704.45",
+     "specs": {
+      "public-network": "500 Mbit/s",
+      "high-availability": "",
+      "snat-outbound": "",
+      "floating-ip-support-inbound": ""
+     }
+    },
+    {
+     "code": "gateway.s",
+     "name": "Gateway S",
+     "hour": 0.243,
+     "hourFmt": "\u20b90.243",
+     "month": 177.39,
+     "monthFmt": "~\u20b9177.39",
+     "specs": {
+      "public-network": "200 Mbit/s",
+      "high-availability": "",
+      "snat-outbound": "",
+      "floating-ip-support-inbound": ""
+     }
+    },
+    {
+     "code": "gateway.xl",
+     "name": "Gateway XL",
+     "hour": 15.26,
+     "hourFmt": "\u20b915.26",
+     "month": 11139.8,
+     "monthFmt": "~\u20b911,139.8",
+     "specs": {
+      "public-network": "4 Gbit/s",
+      "high-availability": "",
+      "snat-outbound": "",
+      "floating-ip-support-inbound": ""
+     }
+    },
+    {
+     "code": "gateway.2xl",
+     "name": "Gateway 2XL",
+     "hour": 38.14,
+     "hourFmt": "\u20b938.14",
+     "month": 27842.2,
+     "monthFmt": "~\u20b927,842.2",
+     "specs": {
+      "public-network": "8 Gbit/s",
+      "high-availability": "",
+      "snat-outbound": "",
+      "floating-ip-support-inbound": ""
+     }
+    }
+   ]
+  },
+  {
+   "id": "vrack",
+   "title": "Private Network (vRack)",
+   "desc": "Private L2 networking between all your services \u2014 free.",
+   "items": [
+    {
+     "code": "bandwidth_instance_vrack_in",
+     "name": "Incoming traffic",
+     "hour": 0.8987,
+     "hourFmt": "\u20b90.8987",
+     "month": 656.051,
+     "monthFmt": "~\u20b9656.051",
+     "specs": {}
+    },
+    {
+     "code": "bandwidth_instance_vrack_out",
+     "name": "Outgoing traffic",
+     "hour": 0.8987,
+     "hourFmt": "\u20b90.8987",
+     "month": 656.051,
+     "monthFmt": "~\u20b9656.051",
+     "specs": {}
+    }
+   ]
+  }
+ ],
+ "storage": [
+  {
+   "id": "block",
+   "title": "Block Storage",
+   "desc": "Persistent volumes attachable to instances \u2014 billed per GB per hour.",
+   "items": [
+    {
+     "code": "volume.classic",
+     "name": "Classic",
+     "hour": 0.00516,
+     "hourFmt": "\u20b90.00516",
+     "month": 3.7668,
+     "monthFmt": "~\u20b93.7668",
+     "specs": {
+      "volume": "classic-multiattach",
+      "iops": "From 500 IOPS"
+     }
+    },
+    {
+     "code": "volume.high-speed",
+     "name": "High Speed",
+     "hour": 0.0103,
+     "hourFmt": "\u20b90.0103",
+     "month": 7.519,
+     "monthFmt": "~\u20b97.519",
+     "specs": {
+      "volume": "high-speed",
+      "iops": "Up to 3000 IOPS"
+     }
+    },
+    {
+     "code": "volume.snapshot",
+     "name": "Storage replicated x3",
+     "hour": 0.00516,
+     "hourFmt": "\u20b90.00516",
+     "month": 3.7668,
+     "monthFmt": "~\u20b93.7668",
+     "specs": {}
+    },
+    {
+     "code": "volume.high-speed-gen2",
+     "name": "High Speed Gen2",
+     "hour": 0.0103,
+     "hourFmt": "\u20b90.0103",
+     "month": 7.519,
+     "monthFmt": "~\u20b97.519",
+     "specs": {
+      "volume": "high-speed-gen2",
+      "bandwidth": "0.5 MB/s/GB up to 512 MB/s *",
+      "iops": "30 IOPS/GB up to 20000 IOPS **"
+     }
+    }
+   ]
+  },
+  {
+   "id": "file",
+   "title": "File Storage",
+   "desc": "Managed NFS file shares, replicated x3.",
+   "items": [
+    {
+     "code": "share-snapshot.standard",
+     "name": "Storage replicated x3",
+     "hour": 0.00516,
+     "hourFmt": "\u20b90.00516",
+     "month": 3.7668,
+     "monthFmt": "~\u20b93.7668",
+     "specs": {}
+    },
+    {
+     "code": "share.standard",
+     "name": "File Storage Standard",
+     "hour": 0.020066,
+     "hourFmt": "\u20b90.020066",
+     "month": 14.64818,
+     "monthFmt": "~\u20b914.64818",
+     "specs": {
+      "offer": "share.standard.hour.consumption",
+      "bandwidth": "0.25 MB/s/GB up to 128 MB/s maximum per volume",
+      "iops": "24 IOPS/GB up to 16000 IOPS per volume"
+     }
+    }
+   ]
+  },
+  {
+   "id": "local",
+   "title": "Local Storage",
+   "desc": "Instance-attached low-latency NVMe storage.",
+   "items": [
+    {
+     "code": "instance.local-storage-gen3-gb",
+     "name": "Local storage low latency",
+     "hour": 0.0147857,
+     "hourFmt": "\u20b90.0147857",
+     "month": 10.793561,
+     "monthFmt": "~\u20b910.793561",
+     "specs": {
+      "compatibility": "Gen 3 (B3, C3, R3)",
+      "sla": "99.99%",
+      "storage": "1 GB"
+     }
+    }
+   ]
+  },
+  {
+   "id": "object",
+   "title": "Object Storage",
+   "desc": "S3-compatible object storage classes.",
+   "items": [
+    {
+     "code": "archive",
+     "name": "Cloud Archive",
+     "hour": 0.000287,
+     "hourFmt": "\u20b90.000287",
+     "month": 0.20950999999999997,
+     "monthFmt": "~\u20b90.20951",
+     "specs": {
+      "offer": "archive.consumption",
+      "internal-traffic": "Free",
+      "incoming-public-traffic": "\u20b90.869 /GB",
+      "outgoing-public-traffic": "Free",
+      "api-requests": "Free",
+      "minimum-storage-billed": "N/A",
+      "data-retrieval": "Free"
+     }
+    },
+    {
+     "code": "coldarchive.archive",
+     "name": "coldarchive.archive",
+     "hour": 0.00014919,
+     "hourFmt": "\u20b90.00014919",
+     "month": 0.1089087,
+     "monthFmt": "~\u20b90.1089087",
+     "specs": {}
+    },
+    {
+     "code": "coldarchive.archive-discount",
+     "name": "coldarchive.archive-discount",
+     "hour": 0.00013834,
+     "hourFmt": "\u20b90.00013834",
+     "month": 0.1009882,
+     "monthFmt": "~\u20b90.1009882",
+     "specs": {}
+    },
+    {
+     "code": "coldarchive.archive-fees",
+     "name": "coldarchive.archive-fees",
+     "hour": 0.00014919,
+     "hourFmt": "\u20b90.00014919",
+     "month": 0.1089087,
+     "monthFmt": "~\u20b90.1089087",
+     "specs": {}
+    },
+    {
+     "code": "coldarchive.restore",
+     "name": "coldarchive.restore",
+     "hour": 0.4015625,
+     "hourFmt": "\u20b90.4015625",
+     "month": 293.140625,
+     "monthFmt": "~\u20b9293.140625",
+     "specs": {}
+    },
+    {
+     "code": "image",
+     "name": "Storage replicated x3",
+     "hour": 0.001339,
+     "hourFmt": "\u20b90.001339",
+     "month": 0.97747,
+     "monthFmt": "~\u20b90.97747",
+     "specs": {}
+    },
+    {
+     "code": "snapshot",
+     "name": "Storage replicated x3",
+     "hour": 0.001339,
+     "hourFmt": "\u20b90.001339",
+     "month": 0.97747,
+     "monthFmt": "~\u20b90.97747",
+     "specs": {}
+    },
+    {
+     "code": "storage",
+     "name": "Standard Object Storage SWIFT",
+     "hour": 0.001339,
+     "hourFmt": "\u20b90.001339",
+     "month": 0.97747,
+     "monthFmt": "~\u20b90.97747",
+     "specs": {
+      "offer": "storage.consumption",
+      "internal-traffic": "Free",
+      "incoming-public-traffic": "Free",
+      "outgoing-public-traffic": "Free",
+      "api-requests": "Free",
+      "minimum-storage-billed": "N/A",
+      "data-retrieval": "Free"
+     }
+    },
+    {
+     "code": "storage-high-perf",
+     "name": "High Performance",
+     "hour": 0.00202083,
+     "hourFmt": "\u20b90.00202083",
+     "month": 1.4752059,
+     "monthFmt": "~\u20b91.4752059",
+     "specs": {
+      "offer": "storage-high-perf.consumption",
+      "internal-traffic": "Free",
+      "incoming-public-traffic": "Free",
+      "outgoing-public-traffic": "Free",
+      "api-requests": "Free",
+      "minimum-storage-billed": "N/A",
+      "data-retrieval": "Free"
+     }
+    },
+    {
+     "code": "storage-standard",
+     "name": "Standard",
+     "hour": 0.00081945,
+     "hourFmt": "\u20b90.00081945",
+     "month": 0.5981985,
+     "monthFmt": "~\u20b90.5981985",
+     "specs": {
+      "offer": "storage-standard.consumption",
+      "internal-traffic": "Free",
+      "incoming-public-traffic": "Free",
+      "outgoing-public-traffic": "Free",
+      "api-requests": "Free",
+      "minimum-storage-billed": "N/A",
+      "data-retrieval": "Free"
+     }
+    },
+    {
+     "code": "storage-standard-ia",
+     "name": "Infrequent Access",
+     "hour": 0.00049244,
+     "hourFmt": "\u20b90.00049244",
+     "month": 0.3594812,
+     "monthFmt": "~\u20b90.3594812",
+     "specs": {
+      "offer": "storage-standard-ia.consumption",
+      "internal-traffic": "Free",
+      "incoming-public-traffic": "Free",
+      "outgoing-public-traffic": "Free",
+      "api-requests": "Free",
+      "minimum-storage-billed": "30 days",
+      "data-retrieval": "\u20b90.35948"
+     }
+    },
+    {
+     "code": "volume-backup.storage",
+     "name": "Storage replicated x3",
+     "hour": 0.001339,
+     "hourFmt": "\u20b90.001339",
+     "month": 0.97747,
+     "monthFmt": "~\u20b90.97747",
+     "specs": {}
+    }
+   ]
+  }
+ ],
+ "containers": [
+  {
+   "id": "k8s",
+   "title": "Managed Kubernetes",
+   "desc": "Managed Kubernetes control plane \u2014 free. Pay only for worker node instances.",
+   "items": [
+    {
+     "code": "mks.free",
+     "name": "Free",
+     "hour": 2.06,
+     "hourFmt": "\u20b92.06",
+     "month": 1503.8,
+     "monthFmt": "~\u20b91,503.8",
+     "specs": {
+      "slo": "99.5% SLO",
+      "etcd-quota": "400 MiB",
+      "max-nodes": "100"
+     }
+    },
+    {
+     "code": "mks.standard",
+     "name": "Standard",
+     "hour": 8.9,
+     "hourFmt": "\u20b98.9",
+     "month": 6497.0,
+     "monthFmt": "~\u20b96,497",
+     "specs": {
+      "slo": "99.99% SLA",
+      "etcd-quota": "8 GiB",
+      "max-nodes": "500"
+     }
+    }
+   ]
+  },
+  {
+   "id": "registry",
+   "title": "Managed Private Registry",
+   "desc": "Managed OCI registry for container images and Helm charts.",
+   "items": [
+    {
+     "code": "registry.l-plan-equivalent",
+     "name": "L",
+     "hour": 22.2,
+     "hourFmt": "\u20b922.2",
+     "month": 16206.0,
+     "monthFmt": "~\u20b916,206",
+     "specs": {
+      "storage": "5 TiB",
+      "public-network": "Included",
+      "concurrent-connections": "90 connections (18 x 5)*",
+      "vulnerability-scanning": ""
+     }
+    },
+    {
+     "code": "registry.m-plan-equivalent",
+     "name": "M",
+     "hour": 5.14,
+     "hourFmt": "\u20b95.14",
+     "month": 3752.2,
+     "monthFmt": "~\u20b93,752.2",
+     "specs": {
+      "storage": "600 GiB",
+      "public-network": "Included",
+      "concurrent-connections": "45 connections (9 x 5)*",
+      "vulnerability-scanning": ""
+     }
+    },
+    {
+     "code": "registry.s-plan-equivalent",
+     "name": "S",
+     "hour": 2.06,
+     "hourFmt": "\u20b92.06",
+     "month": 1503.8,
+     "monthFmt": "~\u20b91,503.8",
+     "specs": {
+      "storage": "200 GiB",
+      "public-network": "Included",
+      "concurrent-connections": "15 connections (3 x 5)*"
+     }
+    }
+   ]
+  },
+  {
+   "id": "rancher",
+   "title": "Managed Rancher",
+   "desc": "Managed Rancher for multi-cluster Kubernetes management.",
+   "items": [
+    {
+     "code": "rancher.ovhcloud-edition",
+     "name": "Rancher OVHcloud Edition",
+     "hour": 0.63,
+     "hourFmt": "\u20b90.63",
+     "month": 459.9,
+     "monthFmt": "~\u20b9459.9",
+     "specs": {}
+    },
+    {
+     "code": "rancher.standard",
+     "name": "Rancher Standard",
+     "hour": 1.57,
+     "hourFmt": "\u20b91.57",
+     "month": 1146.1000000000001,
+     "monthFmt": "~\u20b91,146.1",
+     "specs": {}
+    }
+   ]
+  }
+ ],
+ "databases": [
+  {
+   "id": "db-mysql",
+   "title": "Managed MySQL",
+   "desc": "Fully managed MySQL \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.mysql-discovery-b3-4",
+     "name": "Discovery B3-4",
+     "hour": 7.687125,
+     "hourFmt": "\u20b97.687125",
+     "month": 5611.60125,
+     "monthFmt": "~\u20b95,611.60125",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 80 GiB to 400 GiB",
+      "memory": "4 GB",
+      "vcore": "1",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-discovery-b3-8",
+     "name": "Discovery B3-8",
+     "hour": 21.0577,
+     "hourFmt": "\u20b921.0577",
+     "month": 15372.121000000001,
+     "monthFmt": "~\u20b915,372.121",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-discovery-b3-16",
+     "name": "Discovery B3-16",
+     "hour": 39.7757,
+     "hourFmt": "\u20b939.7757",
+     "month": 29036.261,
+     "monthFmt": "~\u20b929,036.261",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-discovery-b3-32",
+     "name": "Discovery B3-32",
+     "hour": 79.5514,
+     "hourFmt": "\u20b979.5514",
+     "month": 58072.522,
+     "monthFmt": "~\u20b958,072.522",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-discovery-b3-64",
+     "name": "Discovery B3-64",
+     "hour": 168.4616,
+     "hourFmt": "\u20b9168.4616",
+     "month": 122976.96800000001,
+     "monthFmt": "~\u20b91,22,976.968",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 1.25 TiB to 6.25 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-discovery-b3-128",
+     "name": "Discovery B3-128",
+     "hour": 336.9232,
+     "hourFmt": "\u20b9336.9232",
+     "month": 245953.93600000002,
+     "monthFmt": "~\u20b92,45,953.936",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 2.5 TiB to 12.5 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-discovery-b3-256",
+     "name": "Discovery B3-256",
+     "hour": 636.4105,
+     "hourFmt": "\u20b9636.4105",
+     "month": 464579.665,
+     "monthFmt": "~\u20b94,64,579.665",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 5 TiB to 25 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-essential-db1-4",
+     "name": "Essential DB1-4",
+     "hour": 7.5619,
+     "hourFmt": "\u20b97.5619",
+     "month": 5520.187,
+     "monthFmt": "~\u20b95,520.187",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 80 GiB to 240 GiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-essential-db1-7",
+     "name": "Essential DB1-7",
+     "hour": 16.4386,
+     "hourFmt": "\u20b916.4386",
+     "month": 12000.178,
+     "monthFmt": "~\u20b912,000.178",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 160 GiB to 480 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-essential-db1-15",
+     "name": "Essential DB1-15",
+     "hour": 32.8877,
+     "hourFmt": "\u20b932.8877",
+     "month": 24008.021,
+     "monthFmt": "~\u20b924,008.021",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 320 GiB to 960 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-essential-db1-30",
+     "name": "Essential DB1-30",
+     "hour": 65.7859,
+     "hourFmt": "\u20b965.7859",
+     "month": 48023.707,
+     "monthFmt": "~\u20b948,023.707",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 640 GiB to 1.875 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-production-b3-8",
+     "name": "Production B3-8",
+     "hour": 47.897,
+     "hourFmt": "\u20b947.897",
+     "month": 34964.81,
+     "monthFmt": "~\u20b934,964.81",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-production-b3-16",
+     "name": "Production B3-16",
+     "hour": 90.471,
+     "hourFmt": "\u20b990.471",
+     "month": 66043.83,
+     "monthFmt": "~\u20b966,043.83",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-production-b3-32",
+     "name": "Production B3-32",
+     "hour": 191.5848,
+     "hourFmt": "\u20b9191.5848",
+     "month": 139856.904,
+     "monthFmt": "~\u20b91,39,856.904",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-production-b3-64",
+     "name": "Production B3-64",
+     "hour": 434.254,
+     "hourFmt": "\u20b9434.254",
+     "month": 317005.42000000004,
+     "monthFmt": "~\u20b93,17,005.42",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 1.25 TiB to 6.25 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-production-b3-128",
+     "name": "Production B3-128",
+     "hour": 868.5116,
+     "hourFmt": "\u20b9868.5116",
+     "month": 634013.468,
+     "monthFmt": "~\u20b96,34,013.468",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 2.5 TiB to 12.5 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-production-b3-256",
+     "name": "Production B3-256",
+     "hour": 1532.6652,
+     "hourFmt": "\u20b91,532.6652",
+     "month": 1118845.596,
+     "monthFmt": "~\u20b911,18,845.596",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 5 TiB to 25 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-business-db1-4",
+     "name": "Business DB1-4",
+     "hour": 19.2494,
+     "hourFmt": "\u20b919.2494",
+     "month": 14052.062000000002,
+     "monthFmt": "~\u20b914,052.062",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 80 GiB to 240 GiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-business-db1-7",
+     "name": "Business DB1-7",
+     "hour": 38.5042,
+     "hourFmt": "\u20b938.5042",
+     "month": 28108.066,
+     "monthFmt": "~\u20b928,108.066",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 160 GiB to 480 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-business-db1-15",
+     "name": "Business DB1-15",
+     "hour": 77.0084,
+     "hourFmt": "\u20b977.0084",
+     "month": 56216.132,
+     "monthFmt": "~\u20b956,216.132",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 320 GiB to 960 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-business-db1-30",
+     "name": "Business DB1-30",
+     "hour": 154.3224,
+     "hourFmt": "\u20b9154.3224",
+     "month": 112655.35199999998,
+     "monthFmt": "~\u20b91,12,655.352",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 640 GiB to 1.875 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-business-db1-60",
+     "name": "Business DB1-60",
+     "hour": 315.3574,
+     "hourFmt": "\u20b9315.3574",
+     "month": 230210.902,
+     "monthFmt": "~\u20b92,30,210.902",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 1.25 TiB to 3.75 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-business-db1-120",
+     "name": "Business DB1-120",
+     "hour": 618.2066,
+     "hourFmt": "\u20b9618.2066",
+     "month": 451290.81799999997,
+     "monthFmt": "~\u20b94,51,290.818",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 2.5 TiB to 7.5 TiB",
+      "memory": "120 GB",
+      "vcore": "32",
+      "public-network": "10 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-enterprise-db1-4",
+     "name": "Enterprise DB1-4",
+     "hour": 29.3325,
+     "hourFmt": "\u20b929.3325",
+     "month": 21412.725,
+     "monthFmt": "~\u20b921,412.725",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 80 GiB to 240 GiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-enterprise-db1-7",
+     "name": "Enterprise DB1-7",
+     "hour": 58.9671,
+     "hourFmt": "\u20b958.9671",
+     "month": 43045.983,
+     "monthFmt": "~\u20b943,045.983",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 480 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-enterprise-db1-15",
+     "name": "Enterprise DB1-15",
+     "hour": 117.9246,
+     "hourFmt": "\u20b9117.9246",
+     "month": 86084.958,
+     "monthFmt": "~\u20b986,084.958",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 960 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-enterprise-db1-30",
+     "name": "Enterprise DB1-30",
+     "hour": 236.44050000000001,
+     "hourFmt": "\u20b9236.4405",
+     "month": 172601.565,
+     "monthFmt": "~\u20b91,72,601.565",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 1.875 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-enterprise-db1-60",
+     "name": "Enterprise DB1-60",
+     "hour": 463.4259,
+     "hourFmt": "\u20b9463.4259",
+     "month": 338300.907,
+     "monthFmt": "~\u20b93,38,300.907",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.25 TiB to 3.75 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-enterprise-db1-120",
+     "name": "Enterprise DB1-120",
+     "hour": 927.3099,
+     "hourFmt": "\u20b9927.3099",
+     "month": 676936.227,
+     "monthFmt": "~\u20b96,76,936.227",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 2.5 TiB to 7.5 TiB",
+      "memory": "120 GB",
+      "vcore": "32",
+      "public-network": "10 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-advanced-b3-8",
+     "name": "Advanced B3-8",
+     "hour": 87.7581,
+     "hourFmt": "\u20b987.7581",
+     "month": 64063.413,
+     "monthFmt": "~\u20b964,063.413",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-advanced-b3-16",
+     "name": "Advanced B3-16",
+     "hour": 154.8627,
+     "hourFmt": "\u20b9154.8627",
+     "month": 113049.771,
+     "monthFmt": "~\u20b91,13,049.771",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-advanced-b3-32",
+     "name": "Advanced B3-32",
+     "hour": 351.0219,
+     "hourFmt": "\u20b9351.0219",
+     "month": 256245.98700000002,
+     "monthFmt": "~\u20b92,56,245.987",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-advanced-b3-64",
+     "name": "Advanced B3-64",
+     "hour": 619.4553,
+     "hourFmt": "\u20b9619.4553",
+     "month": 452202.36899999995,
+     "monthFmt": "~\u20b94,52,202.369",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.25 TiB to 6.25 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-advanced-b3-128",
+     "name": "Advanced B3-128",
+     "hour": 1238.9025,
+     "hourFmt": "\u20b91,238.9025",
+     "month": 904398.825,
+     "monthFmt": "~\u20b99,04,398.825",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 2.5 TiB to 12.5 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mysql-advanced-b3-256",
+     "name": "Advanced B3-256",
+     "hour": 2340.1563,
+     "hourFmt": "\u20b92,340.1563",
+     "month": 1708314.0990000002,
+     "monthFmt": "~\u20b917,08,314.099",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 5 TiB to 25 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    }
+   ]
+  },
+  {
+   "id": "db-postgresql",
+   "title": "Managed PostgreSQL",
+   "desc": "Fully managed PostgreSQL \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.postgresql-discovery-b3-4",
+     "name": "Discovery B3-4",
+     "hour": 12.261426,
+     "hourFmt": "\u20b912.261426",
+     "month": 8950.84098,
+     "monthFmt": "~\u20b98,950.84098",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 80 GiB to 400 GiB",
+      "memory": "4 GB",
+      "vcore": "1",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-discovery-b3-8",
+     "name": "Discovery B3-8",
+     "hour": 21.0577,
+     "hourFmt": "\u20b921.0577",
+     "month": 15372.121000000001,
+     "monthFmt": "~\u20b915,372.121",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-discovery-b3-16",
+     "name": "Discovery B3-16",
+     "hour": 39.7757,
+     "hourFmt": "\u20b939.7757",
+     "month": 29036.261,
+     "monthFmt": "~\u20b929,036.261",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-discovery-b3-32",
+     "name": "Discovery B3-32",
+     "hour": 79.5514,
+     "hourFmt": "\u20b979.5514",
+     "month": 58072.522,
+     "monthFmt": "~\u20b958,072.522",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-discovery-b3-64",
+     "name": "Discovery B3-64",
+     "hour": 159.1027,
+     "hourFmt": "\u20b9159.1027",
+     "month": 116144.971,
+     "monthFmt": "~\u20b91,16,144.971",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 1.25 TiB to 6.25 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-discovery-b3-128",
+     "name": "Discovery B3-128",
+     "hour": 336.9232,
+     "hourFmt": "\u20b9336.9232",
+     "month": 245953.93600000002,
+     "monthFmt": "~\u20b92,45,953.936",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 2.5 TiB to 12.5 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-discovery-b3-256",
+     "name": "Discovery B3-256",
+     "hour": 636.4105,
+     "hourFmt": "\u20b9636.4105",
+     "month": 464579.665,
+     "monthFmt": "~\u20b94,64,579.665",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 5 TiB to 25 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-essential-db1-4",
+     "name": "Essential DB1-4",
+     "hour": 7.5619,
+     "hourFmt": "\u20b97.5619",
+     "month": 5520.187,
+     "monthFmt": "~\u20b95,520.187",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 80 GiB to 240 GiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-essential-db1-7",
+     "name": "Essential DB1-7",
+     "hour": 16.4386,
+     "hourFmt": "\u20b916.4386",
+     "month": 12000.178,
+     "monthFmt": "~\u20b912,000.178",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 160 GiB to 480 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-essential-db1-15",
+     "name": "Essential DB1-15",
+     "hour": 32.8877,
+     "hourFmt": "\u20b932.8877",
+     "month": 24008.021,
+     "monthFmt": "~\u20b924,008.021",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 320 GiB to 960 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-essential-db1-30",
+     "name": "Essential DB1-30",
+     "hour": 65.7859,
+     "hourFmt": "\u20b965.7859",
+     "month": 48023.707,
+     "monthFmt": "~\u20b948,023.707",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 640 GiB to 1.875 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-production-b3-8",
+     "name": "Production B3-8",
+     "hour": 45.2328,
+     "hourFmt": "\u20b945.2328",
+     "month": 33019.943999999996,
+     "monthFmt": "~\u20b933,019.944",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-production-b3-16",
+     "name": "Production B3-16",
+     "hour": 95.791,
+     "hourFmt": "\u20b995.791",
+     "month": 69927.43,
+     "monthFmt": "~\u20b969,927.43",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-production-b3-32",
+     "name": "Production B3-32",
+     "hour": 180.942,
+     "hourFmt": "\u20b9180.942",
+     "month": 132087.66,
+     "monthFmt": "~\u20b91,32,087.66",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-production-b3-64",
+     "name": "Production B3-64",
+     "hour": 434.254,
+     "hourFmt": "\u20b9434.254",
+     "month": 317005.42000000004,
+     "monthFmt": "~\u20b93,17,005.42",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 1.25 TiB to 6.25 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-production-b3-128",
+     "name": "Production B3-128",
+     "hour": 766.334,
+     "hourFmt": "\u20b9766.334",
+     "month": 559423.82,
+     "monthFmt": "~\u20b95,59,423.82",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 2.5 TiB to 12.5 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-production-b3-256",
+     "name": "Production B3-256",
+     "hour": 1737.0234,
+     "hourFmt": "\u20b91,737.0234",
+     "month": 1268027.082,
+     "monthFmt": "~\u20b912,68,027.082",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 5 TiB to 25 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-business-db1-4",
+     "name": "Business DB1-4",
+     "hour": 19.2494,
+     "hourFmt": "\u20b919.2494",
+     "month": 14052.062000000002,
+     "monthFmt": "~\u20b914,052.062",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 80 GiB to 240 GiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-business-db1-7",
+     "name": "Business DB1-7",
+     "hour": 39.2734,
+     "hourFmt": "\u20b939.2734",
+     "month": 28669.582000000002,
+     "monthFmt": "~\u20b928,669.582",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 160 GiB to 480 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-business-db1-15",
+     "name": "Business DB1-15",
+     "hour": 77.0084,
+     "hourFmt": "\u20b977.0084",
+     "month": 56216.132,
+     "monthFmt": "~\u20b956,216.132",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 320 GiB to 960 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-business-db1-30",
+     "name": "Business DB1-30",
+     "hour": 157.5048,
+     "hourFmt": "\u20b9157.5048",
+     "month": 114978.50399999999,
+     "monthFmt": "~\u20b91,14,978.504",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 640 GiB to 1.875 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-business-db1-60",
+     "name": "Business DB1-60",
+     "hour": 308.9506,
+     "hourFmt": "\u20b9308.9506",
+     "month": 225533.938,
+     "monthFmt": "~\u20b92,25,533.938",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 1.25 TiB to 3.75 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-business-db1-120",
+     "name": "Business DB1-120",
+     "hour": 631.0098,
+     "hourFmt": "\u20b9631.0098",
+     "month": 460637.15400000004,
+     "monthFmt": "~\u20b94,60,637.154",
+     "specs": {
+      "nodes": "2",
+      "storage": "From 2.5 TiB to 7.5 TiB",
+      "memory": "120 GB",
+      "vcore": "32",
+      "public-network": "10 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-enterprise-db1-4",
+     "name": "Enterprise DB1-4",
+     "hour": 29.3325,
+     "hourFmt": "\u20b929.3325",
+     "month": 21412.725,
+     "monthFmt": "~\u20b921,412.725",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 80 GiB to 240 GiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-enterprise-db1-7",
+     "name": "Enterprise DB1-7",
+     "hour": 57.756299999999996,
+     "hourFmt": "\u20b957.7563",
+     "month": 42162.098999999995,
+     "monthFmt": "~\u20b942,162.099",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 480 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-enterprise-db1-15",
+     "name": "Enterprise DB1-15",
+     "hour": 117.9246,
+     "hourFmt": "\u20b9117.9246",
+     "month": 86084.958,
+     "monthFmt": "~\u20b986,084.958",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 960 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-enterprise-db1-30",
+     "name": "Enterprise DB1-30",
+     "hour": 231.48359999999997,
+     "hourFmt": "\u20b9231.4836",
+     "month": 168983.02799999996,
+     "monthFmt": "~\u20b91,68,983.028",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 1.875 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-enterprise-db1-60",
+     "name": "Enterprise DB1-60",
+     "hour": 473.409,
+     "hourFmt": "\u20b9473.409",
+     "month": 345588.57,
+     "monthFmt": "~\u20b93,45,588.57",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.25 TiB to 3.75 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-enterprise-db1-120",
+     "name": "Enterprise DB1-120",
+     "hour": 947.8518,
+     "hourFmt": "\u20b9947.8518",
+     "month": 691931.814,
+     "monthFmt": "~\u20b96,91,931.814",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 2.5 TiB to 7.5 TiB",
+      "memory": "120 GB",
+      "vcore": "32",
+      "public-network": "10 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-advanced-b3-8",
+     "name": "Advanced B3-8",
+     "hour": 87.7581,
+     "hourFmt": "\u20b987.7581",
+     "month": 64063.413,
+     "monthFmt": "~\u20b964,063.413",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-advanced-b3-16",
+     "name": "Advanced B3-16",
+     "hour": 154.8627,
+     "hourFmt": "\u20b9154.8627",
+     "month": 113049.771,
+     "monthFmt": "~\u20b91,13,049.771",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-advanced-b3-32",
+     "name": "Advanced B3-32",
+     "hour": 351.0219,
+     "hourFmt": "\u20b9351.0219",
+     "month": 256245.98700000002,
+     "monthFmt": "~\u20b92,56,245.987",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-advanced-b3-64",
+     "name": "Advanced B3-64",
+     "hour": 585.0347999999999,
+     "hourFmt": "\u20b9585.0348",
+     "month": 427075.4039999999,
+     "monthFmt": "~\u20b94,27,075.404",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.25 TiB to 6.25 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-advanced-b3-128",
+     "name": "Advanced B3-128",
+     "hour": 1404.093,
+     "hourFmt": "\u20b91,404.093",
+     "month": 1024987.89,
+     "monthFmt": "~\u20b910,24,987.89",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 2.5 TiB to 12.5 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.postgresql-advanced-b3-256",
+     "name": "Advanced B3-256",
+     "hour": 2808.1863,
+     "hourFmt": "\u20b92,808.1863",
+     "month": 2049975.9989999998,
+     "monthFmt": "~\u20b920,49,975.999",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 5 TiB to 25 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    }
+   ]
+  },
+  {
+   "id": "db-mongodb",
+   "title": "Managed MongoDB",
+   "desc": "Fully managed MongoDB \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.mongodb-discovery-db2-free",
+     "name": "Discovery DB2-FREE",
+     "hour": 229.06439999999998,
+     "hourFmt": "\u20b9229.0644",
+     "month": 167217.012,
+     "monthFmt": "~\u20b91,67,217.012",
+     "specs": {
+      "nodes": "3",
+      "storage": "512 MiB",
+      "memory": "0 GB",
+      "vcore": "0",
+      "public-network": "0 Mbit/s",
+      "private-network-max": "0 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-db2-2",
+     "name": "Production DB2-2",
+     "hour": 7.0266,
+     "hourFmt": "\u20b97.0266",
+     "month": 5129.418000000001,
+     "monthFmt": "~\u20b95,129.418",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 10 GiB to 100 GiB",
+      "memory": "2 GB",
+      "vcore": "1",
+      "public-network": "100 Mbit/s",
+      "private-network-max": "100 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-db2-4",
+     "name": "Production DB2-4",
+     "hour": 14.1477,
+     "hourFmt": "\u20b914.1477",
+     "month": 10327.821,
+     "monthFmt": "~\u20b910,327.821",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 20 GiB to 250 GiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-db2-7",
+     "name": "Production DB2-7",
+     "hour": 31.8534,
+     "hourFmt": "\u20b931.8534",
+     "month": 23252.982,
+     "monthFmt": "~\u20b923,252.982",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 40 GiB to 500 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-db2-15",
+     "name": "Production DB2-15",
+     "hour": 63.994800000000005,
+     "hourFmt": "\u20b963.9948",
+     "month": 46716.204000000005,
+     "monthFmt": "~\u20b946,716.204",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 80 GiB to 1000 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-db2-30",
+     "name": "Production DB2-30",
+     "hour": 115.0419,
+     "hourFmt": "\u20b9115.0419",
+     "month": 83980.587,
+     "monthFmt": "~\u20b983,980.587",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 1.953125 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-db2-60",
+     "name": "Production DB2-60",
+     "hour": 249.75420000000003,
+     "hourFmt": "\u20b9249.7542",
+     "month": 182320.56600000002,
+     "monthFmt": "~\u20b91,82,320.566",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 3.90625 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-b3-8",
+     "name": "Production B3-8",
+     "hour": 27.864,
+     "hourFmt": "\u20b927.864",
+     "month": 20340.72,
+     "monthFmt": "~\u20b920,340.72",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 40 GiB to 500 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-b3-16",
+     "name": "Production B3-16",
+     "hour": 58.4922,
+     "hourFmt": "\u20b958.4922",
+     "month": 42699.306,
+     "monthFmt": "~\u20b942,699.306",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 80 GiB to 1000 GiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-b3-32",
+     "name": "Production B3-32",
+     "hour": 107.58870000000002,
+     "hourFmt": "\u20b9107.5887",
+     "month": 78539.75100000002,
+     "monthFmt": "~\u20b978,539.751",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 1.953125 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-b3-64",
+     "name": "Production B3-64",
+     "hour": 308.50350000000003,
+     "hourFmt": "\u20b9308.5035",
+     "month": 225207.55500000002,
+     "monthFmt": "~\u20b92,25,207.555",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 3.90625 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-b3-128",
+     "name": "Production B3-128",
+     "hour": 433.7301,
+     "hourFmt": "\u20b9433.7301",
+     "month": 316622.973,
+     "monthFmt": "~\u20b93,16,622.973",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 7.8125 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-production-b3-256",
+     "name": "Production B3-256",
+     "hour": 867.4566,
+     "hourFmt": "\u20b9867.4566",
+     "month": 633243.318,
+     "monthFmt": "~\u20b96,33,243.318",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.25 TiB to 7.8125 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-db2-15",
+     "name": "Advanced DB2-15",
+     "hour": 194.1999,
+     "hourFmt": "\u20b9194.1999",
+     "month": 141765.927,
+     "monthFmt": "~\u20b91,41,765.927",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 80 GiB to 1000 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-db2-30",
+     "name": "Advanced DB2-30",
+     "hour": 387.2844,
+     "hourFmt": "\u20b9387.2844",
+     "month": 282717.612,
+     "monthFmt": "~\u20b92,82,717.612",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 1.953125 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-db2-60",
+     "name": "Advanced DB2-60",
+     "hour": 709.1324999999999,
+     "hourFmt": "\u20b9709.1325",
+     "month": 517666.725,
+     "monthFmt": "~\u20b95,17,666.725",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 3.90625 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-db2-120",
+     "name": "Advanced DB2-120",
+     "hour": 1544.3874,
+     "hourFmt": "\u20b91,544.3874",
+     "month": 1127402.8020000001,
+     "monthFmt": "~\u20b911,27,402.802",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 3.90625 TiB",
+      "memory": "120 GB",
+      "vcore": "32",
+      "public-network": "10 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-b3-16",
+     "name": "Advanced B3-16",
+     "hour": 187.9641,
+     "hourFmt": "\u20b9187.9641",
+     "month": 137213.793,
+     "monthFmt": "~\u20b91,37,213.793",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 80 GiB to 1000 GiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-b3-32",
+     "name": "Advanced B3-32",
+     "hour": 114.7899,
+     "hourFmt": "\u20b9114.7899",
+     "month": 83796.62700000001,
+     "monthFmt": "~\u20b983,796.627",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 1.953125 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-b3-64",
+     "name": "Advanced B3-64",
+     "hour": 229.06439999999998,
+     "hourFmt": "\u20b9229.0644",
+     "month": 167217.012,
+     "monthFmt": "~\u20b91,67,217.012",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 3.90625 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-b3-128",
+     "name": "Advanced B3-128",
+     "hour": 462.7236,
+     "hourFmt": "\u20b9462.7236",
+     "month": 337788.228,
+     "monthFmt": "~\u20b93,37,788.228",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 7.8125 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.mongodb-advanced-b3-256",
+     "name": "Advanced B3-256",
+     "hour": 3007.3107,
+     "hourFmt": "\u20b93,007.3107",
+     "month": 2195336.811,
+     "monthFmt": "~\u20b921,95,336.811",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.25 TiB to 7.8125 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    }
+   ]
+  },
+  {
+   "id": "db-redis",
+   "title": "Managed Redis",
+   "desc": "Fully managed Redis \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.redis-essential-db1-4",
+     "name": "Essential DB1-4",
+     "hour": 6.5688,
+     "hourFmt": "\u20b96.5688",
+     "month": 4795.224,
+     "monthFmt": "~\u20b94,795.224",
+     "specs": {
+      "nodes": "1",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.redis-essential-db1-7",
+     "name": "Essential DB1-7",
+     "hour": 13.2917,
+     "hourFmt": "\u20b913.2917",
+     "month": 9702.941,
+     "monthFmt": "~\u20b99,702.941",
+     "specs": {
+      "nodes": "1",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.redis-business-db1-4",
+     "name": "Business DB1-4",
+     "hour": 15.6798,
+     "hourFmt": "\u20b915.6798",
+     "month": 11446.254,
+     "monthFmt": "~\u20b911,446.254",
+     "specs": {
+      "nodes": "2",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.redis-business-db1-7",
+     "name": "Business DB1-7",
+     "hour": 33.6148,
+     "hourFmt": "\u20b933.6148",
+     "month": 24538.804,
+     "monthFmt": "~\u20b924,538.804",
+     "specs": {
+      "nodes": "2",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.redis-business-db1-15",
+     "name": "Business DB1-15",
+     "hour": 51.339,
+     "hourFmt": "\u20b951.339",
+     "month": 37477.47,
+     "monthFmt": "~\u20b937,477.47",
+     "specs": {
+      "nodes": "2",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.redis-business-db1-30",
+     "name": "Business DB1-30",
+     "hour": 101.4134,
+     "hourFmt": "\u20b9101.4134",
+     "month": 74031.78199999999,
+     "monthFmt": "~\u20b974,031.782",
+     "specs": {
+      "nodes": "2",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.redis-business-db1-60",
+     "name": "Business DB1-60",
+     "hour": 198.0216,
+     "hourFmt": "\u20b9198.0216",
+     "month": 144555.768,
+     "monthFmt": "~\u20b91,44,555.768",
+     "specs": {
+      "nodes": "2",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.redis-business-db1-120",
+     "name": "Business DB1-120",
+     "hour": 394.821,
+     "hourFmt": "\u20b9394.821",
+     "month": 288219.33,
+     "monthFmt": "~\u20b92,88,219.33",
+     "specs": {
+      "nodes": "2",
+      "memory": "120 GB",
+      "vcore": "32",
+      "public-network": "10 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    }
+   ]
+  },
+  {
+   "id": "db-valkey",
+   "title": "Managed Valkey",
+   "desc": "Fully managed Valkey \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.valkey-discovery-b3-4",
+     "name": "Discovery B3-4",
+     "hour": 8.712501,
+     "hourFmt": "\u20b98.712501",
+     "month": 6360.12573,
+     "monthFmt": "~\u20b96,360.12573",
+     "specs": {
+      "nodes": "1",
+      "memory": "4 GB",
+      "vcore": "1",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-discovery-b3-8",
+     "name": "Discovery B3-8",
+     "hour": 15.842,
+     "hourFmt": "\u20b915.842",
+     "month": 11564.66,
+     "monthFmt": "~\u20b911,564.66",
+     "specs": {
+      "nodes": "1",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-discovery-b3-16",
+     "name": "Discovery B3-16",
+     "hour": 35.3997,
+     "hourFmt": "\u20b935.3997",
+     "month": 25841.781000000003,
+     "monthFmt": "~\u20b925,841.781",
+     "specs": {
+      "nodes": "1",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-discovery-b3-32",
+     "name": "Discovery B3-32",
+     "hour": 70.8102,
+     "hourFmt": "\u20b970.8102",
+     "month": 51691.445999999996,
+     "monthFmt": "~\u20b951,691.446",
+     "specs": {
+      "nodes": "1",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-production-b3-8",
+     "name": "Production B3-8",
+     "hour": 29.9422,
+     "hourFmt": "\u20b929.9422",
+     "month": 21857.806,
+     "monthFmt": "~\u20b921,857.806",
+     "specs": {
+      "nodes": "2",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-production-b3-16",
+     "name": "Production B3-16",
+     "hour": 66.8656,
+     "hourFmt": "\u20b966.8656",
+     "month": 48811.888,
+     "monthFmt": "~\u20b948,811.888",
+     "specs": {
+      "nodes": "2",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-production-b3-32",
+     "name": "Production B3-32",
+     "hour": 160.5048,
+     "hourFmt": "\u20b9160.5048",
+     "month": 117168.50399999999,
+     "monthFmt": "~\u20b91,17,168.504",
+     "specs": {
+      "nodes": "2",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-production-b3-64",
+     "name": "Production B3-64",
+     "hour": 284.37,
+     "hourFmt": "\u20b9284.37",
+     "month": 207590.1,
+     "monthFmt": "~\u20b92,07,590.1",
+     "specs": {
+      "nodes": "2",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-production-b3-128",
+     "name": "Production B3-128",
+     "hour": 534.9698,
+     "hourFmt": "\u20b9534.9698",
+     "month": 390527.95399999997,
+     "monthFmt": "~\u20b93,90,527.954",
+     "specs": {
+      "nodes": "2",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.valkey-production-b3-256",
+     "name": "Production B3-256",
+     "hour": 1137.4608,
+     "hourFmt": "\u20b91,137.4608",
+     "month": 830346.3840000001,
+     "monthFmt": "~\u20b98,30,346.384",
+     "specs": {
+      "nodes": "2",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    }
+   ]
+  },
+  {
+   "id": "db-kafka",
+   "title": "Managed Kafka",
+   "desc": "Fully managed Kafka \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.kafka-production-b3-8",
+     "name": "Production B3-8",
+     "hour": 88.8765,
+     "hourFmt": "\u20b988.8765",
+     "month": 64879.844999999994,
+     "monthFmt": "~\u20b964,879.845",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-production-b3-16",
+     "name": "Production B3-16",
+     "hour": 169.2894,
+     "hourFmt": "\u20b9169.2894",
+     "month": 123581.262,
+     "monthFmt": "~\u20b91,23,581.262",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-production-b3-32",
+     "name": "Production B3-32",
+     "hour": 338.5746,
+     "hourFmt": "\u20b9338.5746",
+     "month": 247159.45799999998,
+     "monthFmt": "~\u20b92,47,159.458",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.25 TiB to 6.25 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-business-db1-4",
+     "name": "Business DB1-4",
+     "hour": 49.047,
+     "hourFmt": "\u20b949.047",
+     "month": 35804.31,
+     "monthFmt": "~\u20b935,804.31",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 480 GiB to 1.40625 TiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-business-db1-7",
+     "name": "Business DB1-7",
+     "hour": 97.1772,
+     "hourFmt": "\u20b997.1772",
+     "month": 70939.356,
+     "monthFmt": "~\u20b970,939.356",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 960 GiB to 2.8125 TiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-business-db1-15",
+     "name": "Business DB1-15",
+     "hour": 187.44209999999998,
+     "hourFmt": "\u20b9187.4421",
+     "month": 136832.73299999998,
+     "monthFmt": "~\u20b91,36,832.733",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.875 TiB to 5.625 TiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-business-db1-30",
+     "name": "Business DB1-30",
+     "hour": 362.9343,
+     "hourFmt": "\u20b9362.9343",
+     "month": 264942.039,
+     "monthFmt": "~\u20b92,64,942.039",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 3.75 TiB to 11.25 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-business-db1-60",
+     "name": "Business DB1-60",
+     "hour": 715.5366,
+     "hourFmt": "\u20b9715.5366",
+     "month": 522341.718,
+     "monthFmt": "~\u20b95,22,341.718",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 7.5 TiB to 22.5 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-enterprise-db1-7",
+     "name": "Enterprise DB1-7",
+     "hour": 199.107,
+     "hourFmt": "\u20b9199.107",
+     "month": 145348.11,
+     "monthFmt": "~\u20b91,45,348.11",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 1.875 TiB to 5.625 TiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-enterprise-db1-15",
+     "name": "Enterprise DB1-15",
+     "hour": 369.4572,
+     "hourFmt": "\u20b9369.4572",
+     "month": 269703.756,
+     "monthFmt": "~\u20b92,69,703.756",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 3.75 TiB to 11.25 TiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-enterprise-db1-30",
+     "name": "Enterprise DB1-30",
+     "hour": 728.988,
+     "hourFmt": "\u20b9728.988",
+     "month": 532161.24,
+     "monthFmt": "~\u20b95,32,161.24",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 7.5 TiB to 22.5 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-enterprise-db1-60",
+     "name": "Enterprise DB1-60",
+     "hour": 1431.0732,
+     "hourFmt": "\u20b91,431.0732",
+     "month": 1044683.436,
+     "monthFmt": "~\u20b910,44,683.436",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 15 TiB to 45 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-advanced-b3-8",
+     "name": "Advanced B3-8",
+     "hour": 177.753,
+     "hourFmt": "\u20b9177.753",
+     "month": 129759.68999999999,
+     "monthFmt": "~\u20b91,29,759.69",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-advanced-b3-16",
+     "name": "Advanced B3-16",
+     "hour": 338.5788,
+     "hourFmt": "\u20b9338.5788",
+     "month": 247162.524,
+     "monthFmt": "~\u20b92,47,162.524",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.kafka-advanced-b3-32",
+     "name": "Advanced B3-32",
+     "hour": 711.003,
+     "hourFmt": "\u20b9711.003",
+     "month": 519032.19,
+     "monthFmt": "~\u20b95,19,032.19",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 1.25 TiB to 6.25 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    }
+   ]
+  },
+  {
+   "id": "db-opensearch",
+   "title": "Managed OpenSearch",
+   "desc": "Fully managed OpenSearch \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.opensearch-discovery-b3-4",
+     "name": "Discovery B3-4",
+     "hour": 10.716271,
+     "hourFmt": "\u20b910.716271",
+     "month": 7822.87783,
+     "monthFmt": "~\u20b97,822.87783",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 40 GiB to 200 GiB",
+      "memory": "4 GB",
+      "vcore": "1",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-discovery-b3-8",
+     "name": "Discovery B3-8",
+     "hour": 18.4132,
+     "hourFmt": "\u20b918.4132",
+     "month": 13441.636,
+     "monthFmt": "~\u20b913,441.636",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 80 GiB to 400 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-discovery-b3-16",
+     "name": "Discovery B3-16",
+     "hour": 34.7804,
+     "hourFmt": "\u20b934.7804",
+     "month": 25389.692,
+     "monthFmt": "~\u20b925,389.692",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-discovery-b3-32",
+     "name": "Discovery B3-32",
+     "hour": 69.5608,
+     "hourFmt": "\u20b969.5608",
+     "month": 50779.384,
+     "monthFmt": "~\u20b950,779.384",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-discovery-b3-64",
+     "name": "Discovery B3-64",
+     "hour": 139.1216,
+     "hourFmt": "\u20b9139.1216",
+     "month": 101558.768,
+     "monthFmt": "~\u20b91,01,558.768",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-essential-db1-4",
+     "name": "Essential DB1-4",
+     "hour": 8.4722,
+     "hourFmt": "\u20b98.4722",
+     "month": 6184.706000000001,
+     "monthFmt": "~\u20b96,184.706",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 40 GiB to 120 GiB",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-essential-db1-7",
+     "name": "Essential DB1-7",
+     "hour": 17.1762,
+     "hourFmt": "\u20b917.1762",
+     "month": 12538.626,
+     "monthFmt": "~\u20b912,538.626",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 80 GiB to 240 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-essential-db1-15",
+     "name": "Essential DB1-15",
+     "hour": 33.462,
+     "hourFmt": "\u20b933.462",
+     "month": 24427.260000000002,
+     "monthFmt": "~\u20b924,427.26",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 160 GiB to 480 GiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-production-b3-8",
+     "name": "Production B3-8",
+     "hour": 58.023,
+     "hourFmt": "\u20b958.023",
+     "month": 42356.79,
+     "monthFmt": "~\u20b942,356.79",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 80 GiB to 400 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-production-b3-16",
+     "name": "Production B3-16",
+     "hour": 131.5164,
+     "hourFmt": "\u20b9131.5164",
+     "month": 96006.97200000001,
+     "monthFmt": "~\u20b996,006.972",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-production-b3-32",
+     "name": "Production B3-32",
+     "hour": 219.19079999999997,
+     "hourFmt": "\u20b9219.1908",
+     "month": 160009.28399999999,
+     "monthFmt": "~\u20b91,60,009.284",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-production-b3-64",
+     "name": "Production B3-64",
+     "hour": 526.0605,
+     "hourFmt": "\u20b9526.0605",
+     "month": 384024.16500000004,
+     "monthFmt": "~\u20b93,84,024.165",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-business-db1-7",
+     "name": "Business DB1-7",
+     "hour": 53.631,
+     "hourFmt": "\u20b953.631",
+     "month": 39150.63,
+     "monthFmt": "~\u20b939,150.63",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 240 GiB to 720 GiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-business-db1-15",
+     "name": "Business DB1-15",
+     "hour": 107.2617,
+     "hourFmt": "\u20b9107.2617",
+     "month": 78301.041,
+     "monthFmt": "~\u20b978,301.041",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 480 GiB to 1.40625 TiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-business-db1-30",
+     "name": "Business DB1-30",
+     "hour": 220.2453,
+     "hourFmt": "\u20b9220.2453",
+     "month": 160779.069,
+     "monthFmt": "~\u20b91,60,779.069",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 960 GiB to 2.8125 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-business-db1-60",
+     "name": "Business DB1-60",
+     "hour": 440.98619999999994,
+     "hourFmt": "\u20b9440.9862",
+     "month": 321919.926,
+     "monthFmt": "~\u20b93,21,919.926",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 1.875 TiB to 5.625 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-business-db1-120",
+     "name": "Business DB1-120",
+     "hour": 884.8161,
+     "hourFmt": "\u20b9884.8161",
+     "month": 645915.753,
+     "monthFmt": "~\u20b96,45,915.753",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 3.75 TiB to 11.25 TiB",
+      "memory": "120 GB",
+      "vcore": "32",
+      "public-network": "10 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-enterprise-db1-7",
+     "name": "Enterprise DB1-7",
+     "hour": 108.17880000000001,
+     "hourFmt": "\u20b9108.1788",
+     "month": 78970.524,
+     "monthFmt": "~\u20b978,970.524",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 480 GiB to 1.40625 TiB",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-enterprise-db1-15",
+     "name": "Enterprise DB1-15",
+     "hour": 217.2738,
+     "hourFmt": "\u20b9217.2738",
+     "month": 158609.87399999998,
+     "monthFmt": "~\u20b91,58,609.874",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 960 GiB to 2.8125 TiB",
+      "memory": "15 GB",
+      "vcore": "4",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "1 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-enterprise-db1-30",
+     "name": "Enterprise DB1-30",
+     "hour": 443.8944,
+     "hourFmt": "\u20b9443.8944",
+     "month": 324042.912,
+     "monthFmt": "~\u20b93,24,042.912",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 1.875 TiB to 5.625 TiB",
+      "memory": "30 GB",
+      "vcore": "8",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "2 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-enterprise-db1-60",
+     "name": "Enterprise DB1-60",
+     "hour": 886.0188,
+     "hourFmt": "\u20b9886.0188",
+     "month": 646793.724,
+     "monthFmt": "~\u20b96,46,793.724",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 3.75 TiB to 11.25 TiB",
+      "memory": "60 GB",
+      "vcore": "16",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-enterprise-db1-120",
+     "name": "Enterprise DB1-120",
+     "hour": 1738.1904,
+     "hourFmt": "\u20b91,738.1904",
+     "month": 1268878.9919999999,
+     "monthFmt": "~\u20b912,68,878.992",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 7.5 TiB to 22.5 TiB",
+      "memory": "120 GB",
+      "vcore": "32",
+      "public-network": "10 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-advanced-b3-8",
+     "name": "Advanced B3-8",
+     "hour": 140.6838,
+     "hourFmt": "\u20b9140.6838",
+     "month": 102699.174,
+     "monthFmt": "~\u20b91,02,699.174",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 80 GiB to 400 GiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-advanced-b3-16",
+     "name": "Advanced B3-16",
+     "hour": 281.3676,
+     "hourFmt": "\u20b9281.3676",
+     "month": 205398.348,
+     "monthFmt": "~\u20b92,05,398.348",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 160 GiB to 800 GiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-advanced-b3-32",
+     "name": "Advanced B3-32",
+     "hour": 496.53779999999995,
+     "hourFmt": "\u20b9496.5378",
+     "month": 362472.594,
+     "monthFmt": "~\u20b93,62,472.594",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 320 GiB to 1.5625 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.opensearch-advanced-b3-64",
+     "name": "Advanced B3-64",
+     "hour": 937.9110000000001,
+     "hourFmt": "\u20b9937.911",
+     "month": 684675.03,
+     "monthFmt": "~\u20b96,84,675.03",
+     "specs": {
+      "nodes": "6",
+      "storage": "From 640 GiB to 3.125 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    }
+   ]
+  },
+  {
+   "id": "db-clickhouse",
+   "title": "Managed ClickHouse",
+   "desc": "Fully managed ClickHouse \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.clickhouse-discovery-b3-8",
+     "name": "Discovery B3-8",
+     "hour": 25.0269,
+     "hourFmt": "\u20b925.0269",
+     "month": 18269.637000000002,
+     "monthFmt": "~\u20b918,269.637",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-discovery-b3-16",
+     "name": "Discovery B3-16",
+     "hour": 62.706797,
+     "hourFmt": "\u20b962.706797",
+     "month": 45775.96181,
+     "monthFmt": "~\u20b945,775.96181",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-discovery-b3-32",
+     "name": "Discovery B3-32",
+     "hour": 117.818692,
+     "hourFmt": "\u20b9117.818692",
+     "month": 86007.64516,
+     "monthFmt": "~\u20b986,007.64516",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-discovery-b3-64",
+     "name": "Discovery B3-64",
+     "hour": 162.7694,
+     "hourFmt": "\u20b9162.7694",
+     "month": 118821.662,
+     "monthFmt": "~\u20b91,18,821.662",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-discovery-b3-128",
+     "name": "Discovery B3-128",
+     "hour": 386.930692,
+     "hourFmt": "\u20b9386.930692",
+     "month": 282459.40516,
+     "monthFmt": "~\u20b92,82,459.40516",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-discovery-b3-256",
+     "name": "Discovery B3-256",
+     "hour": 709.93237,
+     "hourFmt": "\u20b9709.93237",
+     "month": 518250.6301,
+     "monthFmt": "~\u20b95,18,250.6301",
+     "specs": {
+      "nodes": "1",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-production-b3-8",
+     "name": "Production B3-8",
+     "hour": 68.7801,
+     "hourFmt": "\u20b968.7801",
+     "month": 50209.473000000005,
+     "monthFmt": "~\u20b950,209.473",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-production-b3-16",
+     "name": "Production B3-16",
+     "hour": 127.35840000000002,
+     "hourFmt": "\u20b9127.3584",
+     "month": 92971.63200000001,
+     "monthFmt": "~\u20b992,971.632",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "16 GB",
+      "vcore": "4",
+      "public-network": "1 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-production-b3-32",
+     "name": "Production B3-32",
+     "hour": 229.60649999999998,
+     "hourFmt": "\u20b9229.6065",
+     "month": 167612.745,
+     "monthFmt": "~\u20b91,67,612.745",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "32 GB",
+      "vcore": "8",
+      "public-network": "2 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-production-b3-64",
+     "name": "Production B3-64",
+     "hour": 414.0684,
+     "hourFmt": "\u20b9414.0684",
+     "month": 302269.932,
+     "monthFmt": "~\u20b93,02,269.932",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "64 GB",
+      "vcore": "16",
+      "public-network": "4 Gbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-production-b3-128",
+     "name": "Production B3-128",
+     "hour": 786.9368999999999,
+     "hourFmt": "\u20b9786.9369",
+     "month": 574463.9369999999,
+     "monthFmt": "~\u20b95,74,463.937",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "128 GB",
+      "vcore": "32",
+      "public-network": "8 Gbit/s",
+      "private-network-max": "8 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.clickhouse-production-b3-256",
+     "name": "Production B3-256",
+     "hour": 1562.241,
+     "hourFmt": "\u20b91,562.241",
+     "month": 1140435.93,
+     "monthFmt": "~\u20b911,40,435.93",
+     "specs": {
+      "nodes": "3",
+      "storage": "From 100 GiB to 39.0625 TiB",
+      "memory": "256 GB",
+      "vcore": "64",
+      "public-network": "16 Gbit/s",
+      "private-network-max": "16 Gbit/s"
+     }
+    }
+   ]
+  },
+  {
+   "id": "db-grafana",
+   "title": "Managed Grafana",
+   "desc": "Fully managed Grafana \u2014 backups, updates and monitoring included.",
+   "items": [
+    {
+     "code": "databases.grafana-discovery-b3-8",
+     "name": "Discovery B3-8",
+     "hour": 13.3219,
+     "hourFmt": "\u20b913.3219",
+     "month": 9724.987,
+     "monthFmt": "~\u20b99,724.987",
+     "specs": {
+      "nodes": "1",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.grafana-essential-db1-4",
+     "name": "Essential DB1-4",
+     "hour": 6.5688,
+     "hourFmt": "\u20b96.5688",
+     "month": 4795.224,
+     "monthFmt": "~\u20b94,795.224",
+     "specs": {
+      "nodes": "1",
+      "memory": "4 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "250 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.grafana-essential-db1-7",
+     "name": "Essential DB1-7",
+     "hour": 13.5513,
+     "hourFmt": "\u20b913.5513",
+     "month": 9892.448999999999,
+     "monthFmt": "~\u20b99,892.449",
+     "specs": {
+      "nodes": "1",
+      "memory": "7 GB",
+      "vcore": "2",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "300 Mbit/s"
+     }
+    },
+    {
+     "code": "databases.grafana-production-b3-4",
+     "name": "Production B3-4",
+     "hour": 7.759396,
+     "hourFmt": "\u20b97.759396",
+     "month": 5664.35908,
+     "monthFmt": "~\u20b95,664.35908",
+     "specs": {
+      "nodes": "1",
+      "memory": "4 GB",
+      "vcore": "1",
+      "public-network": "250 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    },
+    {
+     "code": "databases.grafana-production-b3-8",
+     "name": "Production B3-8",
+     "hour": 13.3223,
+     "hourFmt": "\u20b913.3223",
+     "month": 9725.279,
+     "monthFmt": "~\u20b99,725.279",
+     "specs": {
+      "nodes": "1",
+      "memory": "8 GB",
+      "vcore": "2",
+      "public-network": "500 Mbit/s",
+      "private-network-max": "4 Gbit/s"
+     }
+    }
+   ]
+  }
+ ],
+ "analytics": [
+  {
+   "id": "analytics",
+   "title": "Analytics",
+   "desc": "Kafka, ClickHouse, Grafana and OpenSearch analytics services are billed like Managed Databases \u2014 see the Databases section for node prices.",
+   "simpleRows": []
+  }
+ ],
+ "data-platform": [
+  {
+   "id": "dp",
+   "title": "Data Platform",
+   "desc": "Managed data processing, lakehouse and application services.",
+   "items": [
+    {
+     "code": "dataplatform.application-services",
+     "name": "Applications Services compute",
+     "hour": 6.6712,
+     "hourFmt": "\u20b96.6712",
+     "month": 4869.976,
+     "monthFmt": "~\u20b94,869.976",
+     "specs": {}
+    },
+    {
+     "code": "dataplatform.data-processing-engine",
+     "name": "Data Processing Engine compute",
+     "hour": 6.6712,
+     "hourFmt": "\u20b96.6712",
+     "month": 4869.976,
+     "monthFmt": "~\u20b94,869.976",
+     "specs": {}
+    },
+    {
+     "code": "dataplatform.included-services",
+     "name": "Connectors, Control Center and IAM services",
+     "hour": 456.1433,
+     "hourFmt": "\u20b9456.1433",
+     "month": 332984.609,
+     "monthFmt": "~\u20b93,32,984.609",
+     "specs": {}
+    },
+    {
+     "code": "dataplatform.lakehouse-manager-query",
+     "name": "Data Lakehouse & Analytics queries compute",
+     "hour": 456.1433,
+     "hourFmt": "\u20b9456.1433",
+     "month": 332984.609,
+     "monthFmt": "~\u20b93,32,984.609",
+     "specs": {}
+    },
+    {
+     "code": "dataplatform.lakehouse-manager-storage",
+     "name": "Data Lakehouse storage",
+     "hour": 0.00228466,
+     "hourFmt": "\u20b90.00228466",
+     "month": 1.6678018,
+     "monthFmt": "~\u20b91.6678018",
+     "specs": {}
+    }
+   ]
+  }
+ ],
+ "ai": [
+  {
+   "id": "ai-notebooks",
+   "title": "AI Notebooks",
+   "desc": "Managed Jupyter/VSCode notebooks on CPU or GPU \u2014 billed per second.",
+   "items": [
+    {
+     "code": "ai-notebook.ai1-1-cpu",
+     "name": "ai-notebook.ai1-1-cpu",
+     "hour": 2.88,
+     "hourFmt": "\u20b92.88",
+     "month": 2102.4,
+     "monthFmt": "~\u20b92,102.4",
+     "specs": {
+      "node": "ai1-1-cpu",
+      "memory": "4 GB",
+      "vcore": "1",
+      "temporary-local-storage": "40 GiB",
+      "public-network": "500 Mbit/s"
+     }
+    },
+    {
+     "code": "ai-notebook.ai1-1-gpu",
+     "name": "ai-notebook.ai1-1-gpu",
+     "hour": 167.4,
+     "hourFmt": "\u20b9167.4",
+     "month": 122202.0,
+     "monthFmt": "~\u20b91,22,202",
+     "specs": {
+      "node": "ai1-1-gpu",
+      "memory": "40 GB",
+      "vcore": "13",
+      "temporary-local-storage": "750 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Tesla V100S 32 GiB 16.4 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-notebook.ai1-le-1-gpu",
+     "name": "ai-notebook.ai1-le-1-gpu",
+     "hour": 82.575,
+     "hourFmt": "\u20b982.58",
+     "month": 60279.75,
+     "monthFmt": "~\u20b960,279.75",
+     "specs": {
+      "node": "ai1-le-1-gpu",
+      "memory": "40 GB",
+      "vcore": "13",
+      "temporary-local-storage": "500 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Tesla V100S 32 GiB 16.4 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-notebook.l4-1-gpu",
+     "name": "ai-notebook.l4-1-gpu",
+     "hour": 75.3972,
+     "hourFmt": "\u20b975.4",
+     "month": 55039.956,
+     "monthFmt": "~\u20b955,039.96",
+     "specs": {
+      "node": "l4-1-gpu",
+      "memory": "80 GB",
+      "vcore": "20",
+      "temporary-local-storage": "500 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ada Lovelace L4 24 GiB 30.3 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-notebook.a10-1-gpu",
+     "name": "ai-notebook.a10-1-gpu",
+     "hour": 82.386,
+     "hourFmt": "\u20b982.39",
+     "month": 60141.78,
+     "monthFmt": "~\u20b960,141.78",
+     "specs": {
+      "node": "a10-1-gpu",
+      "memory": "40 GB",
+      "vcore": "28",
+      "temporary-local-storage": "1536 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ampere A10 24 GiB 31.2 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-notebook.l40s-1-gpu",
+     "name": "ai-notebook.l40s-1-gpu",
+     "hour": 140.802,
+     "hourFmt": "\u20b9140.8",
+     "month": 102785.45999999999,
+     "monthFmt": "~\u20b91,02,785.46",
+     "specs": {
+      "node": "l40s-1-gpu",
+      "memory": "80 GB",
+      "vcore": "13",
+      "temporary-local-storage": "1536 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ada Lovelace L40S 48 GiB 91.6 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-notebook.a100-1-gpu",
+     "name": "ai-notebook.a100-1-gpu",
+     "hour": 275.25,
+     "hourFmt": "\u20b9275.25",
+     "month": 200932.5,
+     "monthFmt": "~\u20b92,00,932.5",
+     "specs": {
+      "node": "a100-1-gpu",
+      "memory": "160 GB",
+      "vcore": "13",
+      "temporary-local-storage": "80 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Ampere A100 80 GiB 19.5 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-notebook.h100-1-gpu",
+     "name": "ai-notebook.h100-1-gpu",
+     "hour": 281.604,
+     "hourFmt": "\u20b9281.6",
+     "month": 205570.91999999998,
+     "monthFmt": "~\u20b92,05,570.92",
+     "specs": {
+      "node": "h100-1-gpu",
+      "memory": "350 GB",
+      "vcore": "28",
+      "temporary-local-storage": "3072 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Hopper H100 80 GiB 51 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-notebook.h200-4-gpu",
+     "name": "ai-notebook.h200-4-gpu",
+     "hour": 2344.368,
+     "hourFmt": "\u20b92,344.37",
+     "month": 1711388.64,
+     "monthFmt": "~\u20b917,11,388.64",
+     "specs": {
+      "node": "h200-4-gpu",
+      "memory": "900 GB",
+      "vcore": "94",
+      "temporary-local-storage": "12500 GiB",
+      "public-network": "20 Gbit/s",
+      "gpu": "NVIDIA Hopper H200 nvlink 525 GiB 240 TFLOPS"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ai-training",
+   "title": "AI Training",
+   "desc": "Run training jobs on dedicated CPU/GPU without managing infrastructure.",
+   "items": [
+    {
+     "code": "ai-training.ai1-1-cpu",
+     "name": "ai-training.ai1-1-cpu",
+     "hour": 2.88,
+     "hourFmt": "\u20b92.88",
+     "month": 2102.4,
+     "monthFmt": "~\u20b92,102.4",
+     "specs": {
+      "node": "ai1-1-cpu",
+      "memory": "4 GB",
+      "vcore": "1",
+      "temporary-local-storage": "40 GiB",
+      "public-network": "500 Mbit/s"
+     }
+    },
+    {
+     "code": "ai-training.ai1-1-gpu",
+     "name": "ai-training.ai1-1-gpu",
+     "hour": 167.4,
+     "hourFmt": "\u20b9167.4",
+     "month": 122202.0,
+     "monthFmt": "~\u20b91,22,202",
+     "specs": {
+      "node": "ai1-1-gpu",
+      "memory": "40 GB",
+      "vcore": "13",
+      "temporary-local-storage": "750 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Tesla V100S 32 GiB 16.4 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-training.ai1-le-1-gpu",
+     "name": "ai-training.ai1-le-1-gpu",
+     "hour": 82.575,
+     "hourFmt": "\u20b982.58",
+     "month": 60279.75,
+     "monthFmt": "~\u20b960,279.75",
+     "specs": {
+      "node": "ai1-le-1-gpu",
+      "memory": "40 GB",
+      "vcore": "13",
+      "temporary-local-storage": "500 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Tesla V100S 32 GiB 16.4 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-training.l4-1-gpu",
+     "name": "ai-training.l4-1-gpu",
+     "hour": 75.3972,
+     "hourFmt": "\u20b975.4",
+     "month": 55039.956,
+     "monthFmt": "~\u20b955,039.96",
+     "specs": {
+      "node": "l4-1-gpu",
+      "memory": "80 GB",
+      "vcore": "20",
+      "temporary-local-storage": "500 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ada Lovelace L4 24 GiB 30.3 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-training.a10-1-gpu",
+     "name": "ai-training.a10-1-gpu",
+     "hour": 82.386,
+     "hourFmt": "\u20b982.39",
+     "month": 60141.78,
+     "monthFmt": "~\u20b960,141.78",
+     "specs": {
+      "node": "a10-1-gpu",
+      "memory": "40 GB",
+      "vcore": "28",
+      "temporary-local-storage": "1536 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ampere A10 24 GiB 31.2 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-training.l40s-1-gpu",
+     "name": "ai-training.l40s-1-gpu",
+     "hour": 140.802,
+     "hourFmt": "\u20b9140.8",
+     "month": 102785.45999999999,
+     "monthFmt": "~\u20b91,02,785.46",
+     "specs": {
+      "node": "l40s-1-gpu",
+      "memory": "80 GB",
+      "vcore": "13",
+      "temporary-local-storage": "1536 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ada Lovelace L40S 48 GiB 91.6 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-training.a100-1-gpu",
+     "name": "ai-training.a100-1-gpu",
+     "hour": 275.25,
+     "hourFmt": "\u20b9275.25",
+     "month": 200932.5,
+     "monthFmt": "~\u20b92,00,932.5",
+     "specs": {
+      "node": "a100-1-gpu",
+      "memory": "160 GB",
+      "vcore": "13",
+      "temporary-local-storage": "80 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Ampere A100 80 GiB 19.5 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-training.h100-1-gpu",
+     "name": "ai-training.h100-1-gpu",
+     "hour": 281.604,
+     "hourFmt": "\u20b9281.6",
+     "month": 205570.91999999998,
+     "monthFmt": "~\u20b92,05,570.92",
+     "specs": {
+      "node": "h100-1-gpu",
+      "memory": "350 GB",
+      "vcore": "28",
+      "temporary-local-storage": "3072 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Hopper H100 80 GiB 51 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-training.h200-4-gpu",
+     "name": "ai-training.h200-4-gpu",
+     "hour": 2344.368,
+     "hourFmt": "\u20b92,344.37",
+     "month": 1711388.64,
+     "monthFmt": "~\u20b917,11,388.64",
+     "specs": {
+      "node": "h200-4-gpu",
+      "memory": "900 GB",
+      "vcore": "94",
+      "temporary-local-storage": "12500 GiB",
+      "public-network": "20 Gbit/s",
+      "gpu": "NVIDIA Hopper H200 nvlink 525 GiB 240 TFLOPS"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ai-deploy",
+   "title": "AI Deploy",
+   "desc": "Deploy ML models as scalable API endpoints.",
+   "items": [
+    {
+     "code": "ai-app.lettria-emotion-analysis-cpu",
+     "name": "ai-app.lettria-emotion-analysis-cpu",
+     "hour": 134.085,
+     "hourFmt": "\u20b9134.09",
+     "month": 97882.05,
+     "monthFmt": "~\u20b997,882.05",
+     "specs": {
+      "node": "lettria-emotion-analysis-cpu",
+      "model": "Emotion Analysis",
+      "category": "NLP - Information extraction",
+      "resource-type": "CPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-app.lettria-emotion-analysis-gpu",
+     "name": "ai-app.lettria-emotion-analysis-gpu",
+     "hour": 223.47498,
+     "hourFmt": "\u20b9223.47",
+     "month": 163136.7354,
+     "monthFmt": "~\u20b91,63,136.74",
+     "specs": {
+      "node": "lettria-emotion-analysis-gpu",
+      "model": "Emotion Analysis",
+      "category": "NLP - Information extraction",
+      "resource-type": "GPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-app.lettria-named-entity-recognition-cpu",
+     "name": "ai-app.lettria-named-entity-recognition-cpu",
+     "hour": 134.085,
+     "hourFmt": "\u20b9134.09",
+     "month": 97882.05,
+     "monthFmt": "~\u20b997,882.05",
+     "specs": {
+      "node": "lettria-named-entity-recognition-cpu",
+      "model": "Named Entity Recognition",
+      "category": "NLP - Information extraction",
+      "resource-type": "CPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-app.lettria-named-entity-recognition-gpu",
+     "name": "ai-app.lettria-named-entity-recognition-gpu",
+     "hour": 223.47498,
+     "hourFmt": "\u20b9223.47",
+     "month": 163136.7354,
+     "monthFmt": "~\u20b91,63,136.74",
+     "specs": {
+      "node": "lettria-named-entity-recognition-gpu",
+      "model": "Named Entity Recognition",
+      "category": "NLP - Information extraction",
+      "resource-type": "GPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-app.lettria-sentiment-analysis-cpu",
+     "name": "ai-app.lettria-sentiment-analysis-cpu",
+     "hour": 134.085,
+     "hourFmt": "\u20b9134.09",
+     "month": 97882.05,
+     "monthFmt": "~\u20b997,882.05",
+     "specs": {
+      "node": "lettria-sentiment-analysis-cpu",
+      "model": "Sentiment Analysis",
+      "category": "NLP - Information extraction",
+      "resource-type": "CPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-app.lettria-sentiment-analysis-gpu",
+     "name": "ai-app.lettria-sentiment-analysis-gpu",
+     "hour": 223.47498,
+     "hourFmt": "\u20b9223.47",
+     "month": 163136.7354,
+     "monthFmt": "~\u20b91,63,136.74",
+     "specs": {
+      "node": "lettria-sentiment-analysis-gpu",
+      "model": "Sentiment Analysis",
+      "category": "NLP - Information extraction",
+      "resource-type": "GPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-app.ai1-1-cpu",
+     "name": "ai-app.ai1-1-cpu",
+     "hour": 2.88,
+     "hourFmt": "\u20b92.88",
+     "month": 2102.4,
+     "monthFmt": "~\u20b92,102.4",
+     "specs": {
+      "node": "ai1-1-cpu",
+      "memory": "4 GB",
+      "vcore": "1",
+      "temporary-local-storage": "40 GiB",
+      "public-network": "500 Mbit/s"
+     }
+    },
+    {
+     "code": "ai-app.ai1-1-gpu",
+     "name": "ai-app.ai1-1-gpu",
+     "hour": 167.4,
+     "hourFmt": "\u20b9167.4",
+     "month": 122202.0,
+     "monthFmt": "~\u20b91,22,202",
+     "specs": {
+      "node": "ai1-1-gpu",
+      "memory": "40 GB",
+      "vcore": "13",
+      "temporary-local-storage": "750 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Tesla V100S 32 GiB 16.4 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-app.ai1-le-1-gpu",
+     "name": "ai-app.ai1-le-1-gpu",
+     "hour": 82.575,
+     "hourFmt": "\u20b982.58",
+     "month": 60279.75,
+     "monthFmt": "~\u20b960,279.75",
+     "specs": {
+      "node": "ai1-le-1-gpu",
+      "memory": "40 GB",
+      "vcore": "13",
+      "temporary-local-storage": "500 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Tesla V100S 32 GiB 16.4 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-app.l4-1-gpu",
+     "name": "ai-app.l4-1-gpu",
+     "hour": 75.3972,
+     "hourFmt": "\u20b975.4",
+     "month": 55039.956,
+     "monthFmt": "~\u20b955,039.96",
+     "specs": {
+      "node": "l4-1-gpu",
+      "memory": "80 GB",
+      "vcore": "20",
+      "temporary-local-storage": "500 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ada Lovelace L4 24 GiB 30.3 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-app.a10-1-gpu",
+     "name": "ai-app.a10-1-gpu",
+     "hour": 82.386,
+     "hourFmt": "\u20b982.39",
+     "month": 60141.78,
+     "monthFmt": "~\u20b960,141.78",
+     "specs": {
+      "node": "a10-1-gpu",
+      "memory": "40 GB",
+      "vcore": "28",
+      "temporary-local-storage": "1536 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ampere A10 24 GiB 31.2 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-app.l40s-1-gpu",
+     "name": "ai-app.l40s-1-gpu",
+     "hour": 140.802,
+     "hourFmt": "\u20b9140.8",
+     "month": 102785.45999999999,
+     "monthFmt": "~\u20b91,02,785.46",
+     "specs": {
+      "node": "l40s-1-gpu",
+      "memory": "80 GB",
+      "vcore": "13",
+      "temporary-local-storage": "1536 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ada Lovelace L40S 48 GiB 91.6 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-app.a100-1-gpu",
+     "name": "ai-app.a100-1-gpu",
+     "hour": 275.25,
+     "hourFmt": "\u20b9275.25",
+     "month": 200932.5,
+     "monthFmt": "~\u20b92,00,932.5",
+     "specs": {
+      "node": "a100-1-gpu",
+      "memory": "160 GB",
+      "vcore": "13",
+      "temporary-local-storage": "80 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Ampere A100 80 GiB 19.5 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-app.h100-1-gpu",
+     "name": "ai-app.h100-1-gpu",
+     "hour": 281.604,
+     "hourFmt": "\u20b9281.6",
+     "month": 205570.91999999998,
+     "monthFmt": "~\u20b92,05,570.92",
+     "specs": {
+      "node": "h100-1-gpu",
+      "memory": "350 GB",
+      "vcore": "28",
+      "temporary-local-storage": "3072 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Hopper H100 80 GiB 51 TFLOPS"
+     }
+    },
+    {
+     "code": "ai-app.h200-4-gpu",
+     "name": "ai-app.h200-4-gpu",
+     "hour": 2344.368,
+     "hourFmt": "\u20b92,344.37",
+     "month": 1711388.64,
+     "monthFmt": "~\u20b917,11,388.64",
+     "specs": {
+      "node": "h200-4-gpu",
+      "memory": "900 GB",
+      "vcore": "94",
+      "temporary-local-storage": "12500 GiB",
+      "public-network": "20 Gbit/s",
+      "gpu": "NVIDIA Hopper H200 nvlink 525 GiB 240 TFLOPS"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ai-endpoints",
+   "title": "AI Endpoints",
+   "desc": "Serverless LLM/AI inference APIs \u2014 pay per token or per second.",
+   "items": [
+    {
+     "code": "ai-voxist.transcript-standard-cpu-bracket1",
+     "name": "ai-voxist.transcript-standard-cpu-bracket1",
+     "hour": 78.66320400000001,
+     "hourFmt": "\u20b978.66",
+     "month": 57424.138920000005,
+     "monthFmt": "~\u20b957,424.14",
+     "specs": {
+      "node": "cpu-bracket1",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 1 to 100000 minutes",
+      "resource-type": "CPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-gpu-bracket1",
+     "name": "ai-voxist.transcript-standard-gpu-bracket1",
+     "hour": 78.66320400000001,
+     "hourFmt": "\u20b978.66",
+     "month": 57424.138920000005,
+     "monthFmt": "~\u20b957,424.14",
+     "specs": {
+      "node": "gpu-bracket1",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 1 to 100000 minutes",
+      "resource-type": "GPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-endpoints.bge-multilingual-gemma2-input_tokens",
+     "name": "ai-endpoints.bge-multilingual-gemma2-input_tokens",
+     "hour": 9.2,
+     "hourFmt": "\u20b99.2E-7",
+     "month": 0.0006716,
+     "monthFmt": "~\u20b90.0006716",
+     "specs": {
+      "model": "bge-multilingual-gemma2",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-cpu-bracket2",
+     "name": "ai-voxist.transcript-standard-cpu-bracket2",
+     "hour": 59.891292,
+     "hourFmt": "\u20b959.89",
+     "month": 43720.64316,
+     "monthFmt": "~\u20b943,720.64",
+     "specs": {
+      "node": "cpu-bracket2",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 100001 to 500000 minutes",
+      "resource-type": "CPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-gpu-bracket2",
+     "name": "ai-voxist.transcript-standard-gpu-bracket2",
+     "hour": 59.891292,
+     "hourFmt": "\u20b959.89",
+     "month": 43720.64316,
+     "monthFmt": "~\u20b943,720.64",
+     "specs": {
+      "node": "gpu-bracket2",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 100001 to 500000 minutes",
+      "resource-type": "GPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-2-5-vl-72b-instruct-input_tokens",
+     "name": "ai-endpoints.qwen-2-5-vl-72b-instruct-input_tokens",
+     "hour": 8.33e-05,
+     "hourFmt": "\u20b90.0000833",
+     "month": 0.060809,
+     "monthFmt": "~\u20b90.060809",
+     "specs": {
+      "model": "Qwen2.5-VL-72B-Instruct",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-2-5-vl-72b-instruct-output_tokens",
+     "name": "ai-endpoints.qwen-2-5-vl-72b-instruct-output_tokens",
+     "hour": 8.33e-05,
+     "hourFmt": "\u20b90.0000833",
+     "month": 0.060809,
+     "monthFmt": "~\u20b90.060809",
+     "specs": {
+      "model": "Qwen2.5-VL-72B-Instruct",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.bge-m3-input_tokens",
+     "name": "ai-endpoints.bge-m3-input_tokens",
+     "hour": 9.2,
+     "hourFmt": "\u20b99.2E-7",
+     "month": 0.0006716,
+     "monthFmt": "~\u20b90.0006716",
+     "specs": {
+      "model": "bge-m3",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.whisper-large-v3-seconds",
+     "name": "ai-endpoints.whisper-large-v3-seconds",
+     "hour": 0.00373788,
+     "hourFmt": "\u20b90.00373788",
+     "month": 2.7286524,
+     "monthFmt": "~\u20b92.7286524",
+     "specs": {
+      "model": "whisper-large-v3",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.whisper-large-v3-turbo-seconds",
+     "name": "ai-endpoints.whisper-large-v3-turbo-seconds",
+     "hour": 0.00116968,
+     "hourFmt": "\u20b90.00116968",
+     "month": 0.8538664,
+     "monthFmt": "~\u20b90.8538664",
+     "specs": {
+      "model": "whisper-large-v3-turbo",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-cpu-bracket3",
+     "name": "ai-voxist.transcript-standard-cpu-bracket3",
+     "hour": 47.376684000000004,
+     "hourFmt": "\u20b947.38",
+     "month": 34584.979320000006,
+     "monthFmt": "~\u20b934,584.98",
+     "specs": {
+      "node": "cpu-bracket3",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 500001 to 1000000 minutes",
+      "resource-type": "CPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-gpu-bracket3",
+     "name": "ai-voxist.transcript-standard-gpu-bracket3",
+     "hour": 47.376684000000004,
+     "hourFmt": "\u20b947.38",
+     "month": 34584.979320000006,
+     "monthFmt": "~\u20b934,584.98",
+     "specs": {
+      "node": "gpu-bracket3",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 500001 to 1000000 minutes",
+      "resource-type": "GPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-endpoints.mistral-small-3-2-24b-instruct-2506-input_tokens",
+     "name": "ai-endpoints.mistral-small-3-2-24b-instruct-2506-input_tokens",
+     "hour": 8.24e-06,
+     "hourFmt": "\u20b90.00000824",
+     "month": 0.006015200000000001,
+     "monthFmt": "~\u20b90.0060152",
+     "specs": {
+      "model": "Mistral-Small-3.2-24B-Instruct-2506",
+      "quantification": "bf16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.mistral-small-3-2-24b-instruct-2506-output_tokens",
+     "name": "ai-endpoints.mistral-small-3-2-24b-instruct-2506-output_tokens",
+     "hour": 2.563e-05,
+     "hourFmt": "\u20b90.00002563",
+     "month": 0.0187099,
+     "monthFmt": "~\u20b90.0187099",
+     "specs": {
+      "model": "Mistral-Small-3.2-24B-Instruct-2506",
+      "quantification": "bf16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.llama-3-3-70b-instruct-input_tokens",
+     "name": "ai-endpoints.llama-3-3-70b-instruct-input_tokens",
+     "hour": 6.133e-05,
+     "hourFmt": "\u20b90.00006133",
+     "month": 0.044770899999999995,
+     "monthFmt": "~\u20b90.0447709",
+     "specs": {
+      "model": "Meta-Llama-3_3-70B-Instruct",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.llama-3-3-70b-instruct-output_tokens",
+     "name": "ai-endpoints.llama-3-3-70b-instruct-output_tokens",
+     "hour": 6.133e-05,
+     "hourFmt": "\u20b90.00006133",
+     "month": 0.044770899999999995,
+     "monthFmt": "~\u20b90.0447709",
+     "specs": {
+      "model": "Meta-Llama-3_3-70B-Instruct",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-5-9b-input_tokens",
+     "name": "ai-endpoints.qwen-3-5-9b-input_tokens",
+     "hour": 1.014e-05,
+     "hourFmt": "\u20b90.00001014",
+     "month": 0.007402199999999999,
+     "monthFmt": "~\u20b90.0074022",
+     "specs": {
+      "model": "Qwen3.5-9B",
+      "quantification": "bf16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-5-9b-output_tokens",
+     "name": "ai-endpoints.qwen-3-5-9b-output_tokens",
+     "hour": 1.521e-05,
+     "hourFmt": "\u20b90.00001521",
+     "month": 0.0111033,
+     "monthFmt": "~\u20b90.0111033",
+     "specs": {
+      "model": "Qwen3.5-9B",
+      "quantification": "bf16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-5-397b-input_tokens",
+     "name": "ai-endpoints.qwen-3-5-397b-input_tokens",
+     "hour": 6.084e-05,
+     "hourFmt": "\u20b90.00006084",
+     "month": 0.0444132,
+     "monthFmt": "~\u20b90.0444132",
+     "specs": {
+      "model": "Qwen3.5-397B-A17B",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-5-397b-output_tokens",
+     "name": "ai-endpoints.qwen-3-5-397b-output_tokens",
+     "hour": 0.00036504,
+     "hourFmt": "\u20b90.00036504",
+     "month": 0.2664792,
+     "monthFmt": "~\u20b90.2664792",
+     "specs": {
+      "model": "Qwen3.5-397B-A17B",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-6-27b-input_tokens",
+     "name": "ai-endpoints.qwen-3-6-27b-input_tokens",
+     "hour": 4.056e-05,
+     "hourFmt": "\u20b90.00004056",
+     "month": 0.029608799999999998,
+     "monthFmt": "~\u20b90.0296088",
+     "specs": {
+      "model": "Qwen3.6-27B",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-6-27b-output_tokens",
+     "name": "ai-endpoints.qwen-3-6-27b-output_tokens",
+     "hour": 0.00027378,
+     "hourFmt": "\u20b90.00027378",
+     "month": 0.1998594,
+     "monthFmt": "~\u20b90.1998594",
+     "specs": {
+      "model": "Qwen3.6-27B",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen3-embedding-8b-input_tokens",
+     "name": "ai-endpoints.qwen3-embedding-8b-input_tokens",
+     "hour": 1.014e-05,
+     "hourFmt": "\u20b90.00001014",
+     "month": 0.007402199999999999,
+     "monthFmt": "~\u20b90.0074022",
+     "specs": {
+      "model": "Qwen3-Embedding-8B",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-8-27b-input_tokens",
+     "name": "ai-endpoints.qwen-3-8-27b-input_tokens",
+     "hour": 4.056e-05,
+     "hourFmt": "\u20b90.00004056",
+     "month": 0.029608799999999998,
+     "monthFmt": "~\u20b90.0296088",
+     "specs": {
+      "model": "Qwen3.8-27B",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-8-27b-output_tokens",
+     "name": "ai-endpoints.qwen-3-8-27b-output_tokens",
+     "hour": 0.00027378,
+     "hourFmt": "\u20b90.00027378",
+     "month": 0.1998594,
+     "monthFmt": "~\u20b90.1998594",
+     "specs": {
+      "model": "Qwen3.8-27B",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-coder-30b-a3b-instruct-input_tokens",
+     "name": "ai-endpoints.qwen-3-coder-30b-a3b-instruct-input_tokens",
+     "hour": 6.08e-06,
+     "hourFmt": "\u20b90.00000608",
+     "month": 0.0044384,
+     "monthFmt": "~\u20b90.0044384",
+     "specs": {
+      "model": "Qwen3-Coder-30B-A3B-Instruct",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-coder-30b-a3b-instruct-output_tokens",
+     "name": "ai-endpoints.qwen-3-coder-30b-a3b-instruct-output_tokens",
+     "hour": 2.231e-05,
+     "hourFmt": "\u20b90.00002231",
+     "month": 0.0162863,
+     "monthFmt": "~\u20b90.0162863",
+     "specs": {
+      "model": "Qwen3-Coder-30B-A3B-Instruct",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-32b-input_tokens",
+     "name": "ai-endpoints.qwen-3-32b-input_tokens",
+     "hour": 7.32e-06,
+     "hourFmt": "\u20b90.00000732",
+     "month": 0.0053436,
+     "monthFmt": "~\u20b90.0053436",
+     "specs": {
+      "model": "Qwen3-32B",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-3-32b-output_tokens",
+     "name": "ai-endpoints.qwen-3-32b-output_tokens",
+     "hour": 2.105e-05,
+     "hourFmt": "\u20b90.00002105",
+     "month": 0.0153665,
+     "monthFmt": "~\u20b90.0153665",
+     "specs": {
+      "model": "Qwen3-32B",
+      "quantification": "fp8",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-cpu-bracket4",
+     "name": "ai-voxist.transcript-standard-cpu-bracket4",
+     "hour": 34.862111999999996,
+     "hourFmt": "\u20b934.86",
+     "month": 25449.341759999996,
+     "monthFmt": "~\u20b925,449.34",
+     "specs": {
+      "node": "cpu-bracket4",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 1000001 to 3000000 minutes",
+      "resource-type": "CPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-gpu-bracket4",
+     "name": "ai-voxist.transcript-standard-gpu-bracket4",
+     "hour": 34.862111999999996,
+     "hourFmt": "\u20b934.86",
+     "month": 25449.341759999996,
+     "monthFmt": "~\u20b925,449.34",
+     "specs": {
+      "node": "gpu-bracket4",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 1000001 to 3000000 minutes",
+      "resource-type": "GPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-cpu-bracket5",
+     "name": "ai-voxist.transcript-standard-cpu-bracket5",
+     "hour": 31.286483999999998,
+     "hourFmt": "\u20b931.29",
+     "month": 22839.133319999997,
+     "monthFmt": "~\u20b922,839.13",
+     "specs": {
+      "node": "cpu-bracket5",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 3000001 to 6000000 minutes",
+      "resource-type": "CPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-voxist.transcript-standard-gpu-bracket5",
+     "name": "ai-voxist.transcript-standard-gpu-bracket5",
+     "hour": 31.286483999999998,
+     "hourFmt": "\u20b931.29",
+     "month": 22839.133319999997,
+     "monthFmt": "~\u20b922,839.13",
+     "specs": {
+      "node": "gpu-bracket5",
+      "model": "Transcript Standard",
+      "category": "NLP - Speech Recognition",
+      "level": "From 3000001 to 6000000 minutes",
+      "resource-type": "GPU",
+      "api-calls": "Unlimited"
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-guard-gen-06b-input_tokens",
+     "name": "ai-endpoints.qwen-guard-gen-06b-input_tokens",
+     "hour": 7.32e-06,
+     "hourFmt": "\u20b90.00000732",
+     "month": 0.0053436,
+     "monthFmt": "~\u20b90.0053436",
+     "specs": {
+      "model": "Qwen3Guard-Gen-0.6B",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-guard-gen-06b-output_tokens",
+     "name": "ai-endpoints.qwen-guard-gen-06b-output_tokens",
+     "hour": 6.133e-05,
+     "hourFmt": "\u20b90.00006133",
+     "month": 0.044770899999999995,
+     "monthFmt": "~\u20b90.0447709",
+     "specs": {
+      "model": "Qwen3Guard-Gen-0.6B",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.mistral-7b-instruct-v0-3-input_tokens",
+     "name": "ai-endpoints.mistral-7b-instruct-v0-3-input_tokens",
+     "hour": 9.15e-06,
+     "hourFmt": "\u20b90.00000915",
+     "month": 0.0066795000000000005,
+     "monthFmt": "~\u20b90.0066795",
+     "specs": {
+      "model": "Mistral-7B-Instruct-v0.3",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.mistral-7b-instruct-v0-3-output_tokens",
+     "name": "ai-endpoints.mistral-7b-instruct-v0-3-output_tokens",
+     "hour": 9.15e-06,
+     "hourFmt": "\u20b90.00000915",
+     "month": 0.0066795000000000005,
+     "monthFmt": "~\u20b90.0066795",
+     "specs": {
+      "model": "Mistral-7B-Instruct-v0.3",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-guard-gen-8b-input_tokens",
+     "name": "ai-endpoints.qwen-guard-gen-8b-input_tokens",
+     "hour": 6.133e-05,
+     "hourFmt": "\u20b90.00006133",
+     "month": 0.044770899999999995,
+     "monthFmt": "~\u20b90.0447709",
+     "specs": {
+      "model": "Qwen3Guard-Gen-8B",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.qwen-guard-gen-8b-output_tokens",
+     "name": "ai-endpoints.qwen-guard-gen-8b-output_tokens",
+     "hour": 1.19e-05,
+     "hourFmt": "\u20b90.0000119",
+     "month": 0.008687,
+     "monthFmt": "~\u20b90.008687",
+     "specs": {
+      "model": "Qwen3Guard-Gen-8B",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.gpt-oss-20b-input_tokens",
+     "name": "ai-endpoints.gpt-oss-20b-input_tokens",
+     "hour": 4.06e-06,
+     "hourFmt": "\u20b90.00000406",
+     "month": 0.0029638,
+     "monthFmt": "~\u20b90.0029638",
+     "specs": {
+      "model": "gpt-oss-20b",
+      "quantification": "fp4",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.gpt-oss-20b-output_tokens",
+     "name": "ai-endpoints.gpt-oss-20b-output_tokens",
+     "hour": 1.521e-05,
+     "hourFmt": "\u20b90.00001521",
+     "month": 0.0111033,
+     "monthFmt": "~\u20b90.0111033",
+     "specs": {
+      "model": "gpt-oss-20b",
+      "quantification": "fp4",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.gpt-oss-120b-input_tokens",
+     "name": "ai-endpoints.gpt-oss-120b-input_tokens",
+     "hour": 8.11e-06,
+     "hourFmt": "\u20b90.00000811",
+     "month": 0.0059203,
+     "monthFmt": "~\u20b90.0059203",
+     "specs": {
+      "model": "gpt-oss-120b",
+      "quantification": "fp4",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.gpt-oss-120b-output_tokens",
+     "name": "ai-endpoints.gpt-oss-120b-output_tokens",
+     "hour": 4.056e-05,
+     "hourFmt": "\u20b90.00004056",
+     "month": 0.029608799999999998,
+     "monthFmt": "~\u20b90.0296088",
+     "specs": {
+      "model": "gpt-oss-120b",
+      "quantification": "fp4",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.mistral-nemo-instruct-2407-input_tokens",
+     "name": "ai-endpoints.mistral-nemo-instruct-2407-input_tokens",
+     "hour": 1.19e-05,
+     "hourFmt": "\u20b90.0000119",
+     "month": 0.008687,
+     "monthFmt": "~\u20b90.008687",
+     "specs": {
+      "model": "Mistral-Nemo-Instruct-2407",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    },
+    {
+     "code": "ai-endpoints.mistral-nemo-instruct-2407-output_tokens",
+     "name": "ai-endpoints.mistral-nemo-instruct-2407-output_tokens",
+     "hour": 1.19e-05,
+     "hourFmt": "\u20b90.0000119",
+     "month": 0.008687,
+     "monthFmt": "~\u20b90.008687",
+     "specs": {
+      "model": "Mistral-Nemo-Instruct-2407",
+      "quantification": "fp16",
+      "direction": ""
+     }
+    }
+   ]
+  }
+ ],
+ "quantum": [
+  {
+   "id": "q-notebooks",
+   "title": "Quantum Notebooks",
+   "desc": "Quantum emulators powered by AI Notebook infrastructure.",
+   "items": [
+    {
+     "code": "quantum-notebook.ai1-1-cpu",
+     "name": "quantum-notebook.ai1-1-cpu",
+     "hour": 2.88,
+     "hourFmt": "\u20b92.88",
+     "month": 2102.4,
+     "monthFmt": "~\u20b92,102.4",
+     "specs": {
+      "node": "ai1-1-cpu",
+      "memory": "4 GiB",
+      "vcore": "1",
+      "temporary-local-storage": "40 GiB",
+      "public-network": "500 Mbit/s"
+     }
+    },
+    {
+     "code": "quantum-notebook.ai1-1-gpu",
+     "name": "quantum-notebook.ai1-1-gpu",
+     "hour": 167.4,
+     "hourFmt": "\u20b9167.4",
+     "month": 122202.0,
+     "monthFmt": "~\u20b91,22,202",
+     "specs": {
+      "node": "ai1-1-gpu",
+      "memory": "40 GiB",
+      "vcore": "13",
+      "temporary-local-storage": "750 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Tesla V100S 32 GiB 16.4 TFLOPS"
+     }
+    },
+    {
+     "code": "quantum-notebook.ai1-le-1-gpu",
+     "name": "quantum-notebook.ai1-le-1-gpu",
+     "hour": 82.575,
+     "hourFmt": "\u20b982.58",
+     "month": 60279.75,
+     "monthFmt": "~\u20b960,279.75",
+     "specs": {
+      "node": "ai1-le-1-gpu",
+      "memory": "40 GiB",
+      "vcore": "13",
+      "temporary-local-storage": "500 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Tesla V100S 32 GiB 16.4 TFLOPS"
+     }
+    },
+    {
+     "code": "quantum-notebook.l4-1-gpu",
+     "name": "quantum-notebook.l4-1-gpu",
+     "hour": 75.3972,
+     "hourFmt": "\u20b975.4",
+     "month": 55039.956,
+     "monthFmt": "~\u20b955,039.96",
+     "specs": {
+      "node": "l4-1-gpu",
+      "memory": "80 GiB",
+      "vcore": "20",
+      "temporary-local-storage": "500 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ada Lovelace L4 24 GiB 30.3 TFLOPS"
+     }
+    },
+    {
+     "code": "quantum-notebook.a10-1-gpu",
+     "name": "quantum-notebook.a10-1-gpu",
+     "hour": 82.386,
+     "hourFmt": "\u20b982.39",
+     "month": 60141.78,
+     "monthFmt": "~\u20b960,141.78",
+     "specs": {
+      "node": "a10-1-gpu",
+      "memory": "40 GiB",
+      "vcore": "28",
+      "temporary-local-storage": "1536 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ampere A10 24 GiB 31.2 TFLOPS"
+     }
+    },
+    {
+     "code": "quantum-notebook.l40s-1-gpu",
+     "name": "quantum-notebook.l40s-1-gpu",
+     "hour": 140.802,
+     "hourFmt": "\u20b9140.8",
+     "month": 102785.45999999999,
+     "monthFmt": "~\u20b91,02,785.46",
+     "specs": {
+      "node": "l40s-1-gpu",
+      "memory": "80 GiB",
+      "vcore": "13",
+      "temporary-local-storage": "1536 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Ada Lovelace L40S 48 GiB 91.6 TFLOPS"
+     }
+    },
+    {
+     "code": "quantum-notebook.a100-1-gpu",
+     "name": "quantum-notebook.a100-1-gpu",
+     "hour": 275.25,
+     "hourFmt": "\u20b9275.25",
+     "month": 200932.5,
+     "monthFmt": "~\u20b92,00,932.5",
+     "specs": {
+      "node": "a100-1-gpu",
+      "memory": "160 GiB",
+      "vcore": "13",
+      "temporary-local-storage": "80 GiB",
+      "public-network": "1.5 Gbit/s",
+      "gpu": "NVIDIA Ampere A100 80 GiB 19.5 TFLOPS"
+     }
+    },
+    {
+     "code": "quantum-notebook.h100-1-gpu",
+     "name": "quantum-notebook.h100-1-gpu",
+     "hour": 281.604,
+     "hourFmt": "\u20b9281.6",
+     "month": 205570.91999999998,
+     "monthFmt": "~\u20b92,05,570.92",
+     "specs": {
+      "node": "h100-1-gpu",
+      "memory": "350 GiB",
+      "vcore": "28",
+      "temporary-local-storage": "3072 GiB",
+      "public-network": "5 Gbit/s",
+      "gpu": "NVIDIA Hopper H100 80 GiB 51 TFLOPS"
+     }
+    },
+    {
+     "code": "quantum-notebook.h200-4-gpu",
+     "name": "quantum-notebook.h200-4-gpu",
+     "hour": 2344.368,
+     "hourFmt": "\u20b92,344.37",
+     "month": 1711388.64,
+     "monthFmt": "~\u20b917,11,388.64",
+     "specs": {
+      "node": "h200-4-gpu",
+      "memory": "900 GiB",
+      "vcore": "94",
+      "temporary-local-storage": "12500 GiB",
+      "public-network": "20 Gbit/s",
+      "gpu": "NVIDIA Hopper H200 nvlink 525 GiB 240 TFLOPS"
+     }
+    }
+   ]
+  },
+  {
+   "id": "qpu",
+   "title": "Quantum Processing Units",
+   "desc": "Real QPU access \u2014 Belenos and Orion beta processors.",
+   "items": [
+    {
+     "code": "quantum-processing-unit.orion-beta",
+     "name": "quantum-processing-unit.orion-beta",
+     "hour": 304200.0,
+     "hourFmt": "\u20b93,04,200",
+     "month": 222066000.0,
+     "monthFmt": "~\u20b922,20,66,000",
+     "specs": {
+      "qpu-type": "orion-beta",
+      "model": "Orion Beta Europe",
+      "provider": "Pasqal",
+      "number-of-qubits": "100",
+      "paradigm": "analog"
+     }
+    },
+    {
+     "code": "quantum-processing-unit.belenos-12",
+     "name": "quantum-processing-unit.belenos-12",
+     "hour": 101376.0,
+     "hourFmt": "\u20b91,01,376",
+     "month": 74004480.0,
+     "monthFmt": "~\u20b97,40,04,480",
+     "specs": {
+      "qpu-type": "belenos-12",
+      "model": "Belenos",
+      "provider": "Quandela",
+      "number-of-qubits": "12",
+      "paradigm": "gate-based"
+     }
+    }
+   ]
+  }
+ ]
+}

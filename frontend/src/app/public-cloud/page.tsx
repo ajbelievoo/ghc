@@ -1,7 +1,7 @@
-import CategoryPage from "@/components/CategoryPage";
+import PublicCloudClient from "./PublicCloudClient";
 import { fetchPlans } from "@/lib/plans";
 
 export default async function PublicCloudPage() {
   const plans = await fetchPlans("PUBLIC_CLOUD");
-  return <CategoryPage categoryKey="PUBLIC_CLOUD" initialPlans={plans} />;
+  return <PublicCloudClient initialPlans={plans} />;
 }

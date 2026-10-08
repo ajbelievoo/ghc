@@ -1,88 +1,170 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
-import flavorsData from "@/data/cloudFlavors.json";
+import catalog from "@/data/cloudCatalog.json";
 import {
-  Check, Search, Cloud, Cpu, HardDrive, Network, Database,
-  Container, BarChart3, Brain, Boxes, Image as ImageIcon, Archive, Server, Zap,
+  Search, ChevronDown, Cpu, Zap, Network, HardDrive, Container, Database, Brain, Atom,
 } from "lucide-react";
 
-const MARGIN = 1.2; // public cloud resale margin
+const MARGIN = 1.2;
 
-interface Flavor {
-  code: string; hour?: number; month?: number;
-  memory?: string; vcore?: string; storage?: string;
-  "public-network"?: string; "private-network"?: string;
-  gpu?: string; "nvme-disks"?: string;
+interface PriceItem {
+  code: string; name: string; hour?: number | null; month?: number | null;
+  hourFmt?: string | null; monthFmt?: string | null; specs?: Record<string, string>;
 }
-interface Family { id: string; tag: string; name: string; desc: string; items: Flavor[] }
-const families = flavorsData as unknown as Family[];
+interface Family { id: string; tag: string; name: string; desc: string; items: PriceItem[] }
+interface Leaf {
+  id: string; title: string; desc: string;
+  families?: Family[]; items?: PriceItem[];
+  simpleRows?: { name: string; price: string; note?: string }[];
+}
+const catalogData = catalog as unknown as Record<string, Leaf[]>;
 
-const sections = [
-  { id: "overview", label: "Overview", icon: Cloud },
-  { id: "compute", label: "Virtual Machine Instances", icon: Cpu },
-  { id: "gpu", label: "Cloud GPU", icon: Zap },
-  { id: "metal", label: "Metal Instances", icon: Server, href: "/dedicated-servers" },
-  { id: "backup", label: "Instance Backup", icon: Archive },
-  { id: "images", label: "Image Catalogs", icon: ImageIcon },
-  { id: "network", label: "Network", icon: Network },
-  { id: "storage", label: "Storage", icon: HardDrive, href: "/dedicated-servers/storage" },
-  { id: "containers", label: "Containers & Orchestration", icon: Container },
-  { id: "databases", label: "Databases", icon: Database },
-  { id: "analytics", label: "Analytics & Data Platform", icon: BarChart3 },
-  { id: "ai", label: "AI & Machine Learning", icon: Brain },
+/* ── Sidebar tree (mirrors the public-cloud pricing IA) ── */
+interface TreeLeaf { label: string; leaf: string }
+interface TreeNode { label: string; leaf?: string; children?: TreeLeaf[] }
+const tree: TreeNode[] = [
+  { label: "Overview", leaf: "overview" },
+  {
+    label: "Compute",
+    children: [
+      { label: "Virtual Machine Instances", leaf: "vm" },
+      { label: "Cloud GPU", leaf: "gpu" },
+      { label: "Metal Instances", leaf: "metal" },
+      { label: "Instance Backup", leaf: "backup" },
+      { label: "Private Image Catalog", leaf: "private-images" },
+      { label: "Public Image Catalog", leaf: "public-images" },
+    ],
+  },
+  {
+    label: "Network",
+    children: [
+      { label: "Load Balancer", leaf: "loadbalancer" },
+      { label: "Floating IP", leaf: "floatingip" },
+      { label: "Gateway", leaf: "gateway" },
+      { label: "Private Network (vRack)", leaf: "vrack" },
+    ],
+  },
+  {
+    label: "Storage",
+    children: [
+      { label: "Block Storage", leaf: "block" },
+      { label: "File Storage", leaf: "file" },
+      { label: "Local Storage", leaf: "local" },
+      { label: "Object Storage", leaf: "object" },
+    ],
+  },
+  {
+    label: "Containers & Orchestration",
+    children: [
+      { label: "Managed Kubernetes", leaf: "k8s" },
+      { label: "Managed Private Registry", leaf: "registry" },
+      { label: "Managed Rancher", leaf: "rancher" },
+    ],
+  },
+  {
+    label: "Databases",
+    children: (catalogData["databases"] || []).map((s) => ({ label: s.title, leaf: s.id })),
+  },
+  { label: "Analytics", leaf: "analytics" },
+  {
+    label: "Data Platform",
+    children: [{ label: "Data Platform services", leaf: "dp" }],
+  },
+  {
+    label: "AI & Machine learning",
+    children: [
+      { label: "AI Notebooks", leaf: "ai-notebooks" },
+      { label: "AI Training", leaf: "ai-training" },
+      { label: "AI Deploy", leaf: "ai-deploy" },
+      { label: "AI Endpoints", leaf: "ai-endpoints" },
+    ],
+  },
+  {
+    label: "Quantum computing",
+    children: [
+      { label: "Quantum Notebooks", leaf: "q-notebooks" },
+      { label: "Quantum Processing Units", leaf: "qpu" },
+    ],
+  },
+  { label: "Pricing model", leaf: "pricing" },
 ];
 
-const extraServices = [
-  { icon: HardDrive, title: "Object Storage", desc: "S3-compatible object storage, billed per GB stored per hour.", price: "₹0.023/GB-hr" },
-  { icon: Database, title: "Block Storage", desc: "High-performance and classic block volumes, attachable to any instance.", price: "₹0.09/GB-mo" },
-  { icon: Network, title: "Load Balancer", desc: "L4/L7 load balancing with health checks and anycast entry points.", price: "₹14.40/hr" },
-  { icon: Boxes, title: "Private Network", desc: "vRack private networking between instances — unlimited internal traffic.", price: "Included" },
-  { icon: Container, title: "Managed Kubernetes", desc: "Managed control plane — free; pay only for worker node instances.", price: "Free control plane" },
-  { icon: Database, title: "Managed Databases", desc: "PostgreSQL, MySQL, Redis, MongoDB, Kafka and OpenSearch as a service.", price: "From ₹11/hr" },
-];
+const leafSection: Record<string, string> = {};
+const leafTitle: Record<string, string> = {};
+tree.forEach((n) => {
+  if (n.leaf) {
+    const group = Object.keys(catalogData).find((g) => (catalogData[g] || []).some((s) => s.id === n.leaf));
+    if (group) leafSection[n.leaf] = group;
+    leafTitle[n.leaf] = n.label;
+  }
+  (n.children || []).forEach((c) => {
+    const group = Object.keys(catalogData).find((g) => (catalogData[g] || []).some((s) => s.id === c.leaf));
+    if (group) leafSection[c.leaf] = group;
+    leafTitle[c.leaf] = c.label;
+  });
+});
 
 export default function PublicCloudClient({ initialPlans }: { initialPlans?: any[] }) {
   const { currency } = useCurrency();
-  const [section, setSection] = useState("compute");
+  const [active, setActive] = useState("vm");
+  const [open, setOpen] = useState<Record<string, boolean>>({ Compute: true });
   const [os, setOs] = useState<"linux" | "windows">("linux");
   const [search, setSearch] = useState("");
 
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get("s");
+    if (s) select(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const select = (leaf: string) => {
+    setActive(leaf);
+    const parent = tree.find((n) => (n.children || []).some((c) => c.leaf === leaf));
+    if (parent) setOpen((o) => ({ ...o, [parent.label]: true }));
+    window.history.replaceState(null, "", `?s=${leaf}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const cur = (currency || "INR").toUpperCase();
   const sym = getCurrencySymbol(cur);
-  // Flavor data is published in INR; convert roughly for display when USD selected
   const rate = cur === "INR" ? 1 : cur === "USD" ? 1 / 83.5 : cur === "EUR" ? 1 / 90 : 1;
-  const fmt = (v?: number, per = "") =>
-    typeof v === "number"
-      ? `${sym}${(v * MARGIN * rate).toLocaleString("en-IN", { maximumFractionDigits: v * rate < 10 ? 2 : 0 })}${per}`
-      : "—";
 
-  const computeFamilies = families.filter((f) => ["d2", "b3", "c3", "r3", "i1"].includes(f.id));
-  const gpuFamilies = families.filter((f) => !["d2", "b3", "c3", "r3", "i1"].includes(f.id));
+  const fmt = (v?: number | null) => {
+    if (typeof v !== "number") return "—";
+    const p = v * MARGIN * rate;
+    const dec = p >= 100 ? 0 : p >= 1 ? 2 : p >= 0.01 ? 4 : 6;
+    return `${sym}${p.toLocaleString("en-IN", { maximumFractionDigits: dec })}`;
+  };
 
-  const renderTable = (fam: Family) => {
-    const items = fam.items.filter((i) => !search || i.code.includes(search.toLowerCase()));
+  const matchSearch = (i: PriceItem) =>
+    !search || i.code.toLowerCase().includes(search.toLowerCase()) || (i.name || "").toLowerCase().includes(search.toLowerCase());
+
+  const renderFamilyTable = (fam: Family) => {
+    const items = fam.items.filter(matchSearch);
     if (!items.length) return null;
+    const hasGpu = items.some((i) => i.specs?.gpu);
     return (
       <div key={fam.id} className="mb-10">
         <h3 className="text-xl font-black text-[#0f172a] mb-1">{fam.name}</h3>
         <p className="text-sm text-slate-500 mb-4 max-w-3xl">{fam.desc}</p>
         <div className="overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full text-left min-w-[860px]">
+          <table className="w-full text-left min-w-[900px]">
             <thead>
               <tr className="border-b border-slate-200 bg-[#f8faff]">
                 <th className="px-4 py-3 text-xs font-bold text-slate-500">Name</th>
                 <th className="px-4 py-3 text-xs font-bold text-slate-500">Memory</th>
                 <th className="px-4 py-3 text-xs font-bold text-slate-500">vCore</th>
                 <th className="px-4 py-3 text-xs font-bold text-slate-500">Storage</th>
-                {fam.items.some((i) => i.gpu) && <th className="px-4 py-3 text-xs font-bold text-slate-500">GPU</th>}
+                {hasGpu && <th className="px-4 py-3 text-xs font-bold text-slate-500">GPU</th>}
                 <th className="px-4 py-3 text-xs font-bold text-slate-500">Public network</th>
-                <th className="px-4 py-3 text-xs font-bold text-slate-500">Price / hour</th>
-                <th className="px-4 py-3 text-xs font-bold text-slate-500">Price / month</th>
+                <th className="px-4 py-3 text-xs font-bold text-slate-500">Private network</th>
+                <th className="px-4 py-3 text-xs font-bold text-slate-500">Price<br /><span className="font-medium">(excl. tax/hour)</span></th>
+                <th className="px-4 py-3 text-xs font-bold text-slate-500">Price<br /><span className="font-medium">(excl. tax/month)</span></th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -90,16 +172,15 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
               {items.map((i) => (
                 <tr key={i.code} className="border-b border-slate-100 hover:bg-[#f8faff] transition">
                   <td className="px-4 py-3 text-sm font-bold text-[#00b7ff]">{i.code}</td>
-                  <td className="px-4 py-3 text-sm text-[#0f172a]">{i.memory}</td>
-                  <td className="px-4 py-3 text-sm text-[#0f172a]">{i.vcore}</td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{i.storage}{i["nvme-disks"] ? ` + ${i["nvme-disks"]} NVMe` : ""}</td>
-                  {fam.items.some((x) => x.gpu) && <td className="px-4 py-3 text-xs text-[#0f172a]">{i.gpu || "—"}</td>}
-                  <td className="px-4 py-3 text-xs text-slate-500">{i["public-network"]}</td>
-                  <td className="px-4 py-3 text-sm font-bold text-[#0f172a]">{fmt(i.hour)}/hr</td>
-                  <td className="px-4 py-3 text-sm text-slate-500">~{fmt(i.month)}/mo</td>
-                  <td className="px-4 py-3">
-                    <Link href="/register" className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700]">Launch</Link>
-                  </td>
+                  <td className="px-4 py-3 text-sm text-[#0f172a]">{i.specs?.memory || "—"}</td>
+                  <td className="px-4 py-3 text-sm text-[#0f172a]">{i.specs?.vcore || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{i.specs?.storage || "—"}{i.specs?.["nvme-disks"] ? ` + ${i.specs["nvme-disks"]} NVMe` : ""}</td>
+                  {hasGpu && <td className="px-4 py-3 text-xs text-[#0f172a]">{i.specs?.gpu || "—"}</td>}
+                  <td className="px-4 py-3 text-xs text-slate-500">{i.specs?.["public-network"] || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{i.specs?.["private-network"] || "—"}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-[#0f172a]">{fmt(i.hour)}</td>
+                  <td className="px-4 py-3 text-sm text-slate-500">~{fmt(i.month)}</td>
+                  <td className="px-4 py-3"><Link href="/register" className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Launch</Link></td>
                 </tr>
               ))}
             </tbody>
@@ -109,106 +190,159 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
     );
   };
 
+  const renderItemTable = (sec: Leaf) => {
+    const items = (sec.items || []).filter(matchSearch);
+    return (
+      <div className="overflow-x-auto rounded-lg border border-slate-200">
+        <table className="w-full text-left min-w-[600px]">
+          <thead>
+            <tr className="border-b border-slate-200 bg-[#f8faff]">
+              <th className="px-4 py-3 text-xs font-bold text-slate-500">Name</th>
+              <th className="px-4 py-3 text-xs font-bold text-slate-500">Price / hour</th>
+              <th className="px-4 py-3 text-xs font-bold text-slate-500">~Price / month</th>
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((i) => (
+              <tr key={i.code} className="border-b border-slate-100 hover:bg-[#f8faff] transition">
+                <td className="px-4 py-3 text-sm font-bold text-[#00b7ff]">{i.name !== i.code ? i.name : i.code}</td>
+                <td className="px-4 py-3 text-sm font-bold text-[#0f172a]">{i.hourFmt ? fmt(i.hour) : "—"}</td>
+                <td className="px-4 py-3 text-sm text-slate-500">{i.monthFmt ? `~${fmt(i.month)}` : "—"}</td>
+                <td className="px-4 py-3"><Link href="/dashboard" className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Enable</Link></td>
+              </tr>
+            ))}
+            {items.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">No items found.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderSimple = (sec: Leaf) => (
+    <div className="overflow-x-auto rounded-lg border border-slate-200">
+      <table className="w-full text-left min-w-[500px]">
+        <thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className="px-4 py-3 text-xs font-bold text-slate-500">Name</th><th className="px-4 py-3 text-xs font-bold text-slate-500">Price</th><th className="px-4 py-3 text-xs font-bold text-slate-500">Notes</th></tr></thead>
+        <tbody>
+          {(sec.simpleRows || []).map((r) => (
+            <tr key={r.name} className="border-b border-slate-100"><td className="px-4 py-3 text-sm font-bold text-[#00b7ff]">{r.name}</td><td className="px-4 py-3 text-sm text-[#0f172a]">{r.price}</td><td className="px-4 py-3 text-xs text-slate-500">{r.note}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const findLeaf = (id: string): Leaf | undefined =>
+    Object.values(catalogData).flat().find((s) => s.id === id);
+
+  const leaf = findLeaf(active);
+
   return (
     <div className="min-h-screen bg-white text-[#0f172a]">
       <Navbar />
 
       {/* Promo banner */}
-      <div className="bg-gradient-to-r from-[#fff200] via-[#ffe] to-[#9ff] border-b border-slate-200">
+      <div className="bg-gradient-to-r from-[#fff200] via-[#efffb0] to-[#9ff5e8] border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-6 py-3 flex flex-wrap items-center justify-center gap-3 text-center">
-          <p className="text-sm font-bold text-[#0f172a]">Public Cloud: launch your first project today — pay only for what you use, per hour.</p>
-          <Link href="/dashboard" className="rounded bg-[#00b7ff] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#009fe0]">Get started</Link>
+          <p className="text-sm font-bold text-[#0f172a]">Public Cloud free trial: launch your first project today — instances are billed per hour.</p>
+          <Link href="/register" className="rounded bg-[#00b7ff] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#009fe0]">Get started</Link>
         </div>
       </div>
 
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white">
-        <div className="mx-auto max-w-7xl px-6 py-12 md:py-16">
-          <p className="text-xs font-bold text-slate-300 mb-2">Public Cloud ▸ Prices</p>
-          <h1 className="max-w-3xl text-3xl font-black leading-tight md:text-5xl">Simple, predictable pricing — billed per hour</h1>
-          <p className="mt-4 max-w-2xl text-base text-slate-200">Create your project for free, then launch instances in seconds. Hourly billing, no commitment, unlimited traffic.</p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            {[
-              { t: "Free project", d: "Create a project at no cost — instances billed per hour only while running." },
-              { t: "Unbeatable TCO", d: "Consistent performance with transparent pricing and no hidden fees." },
-              { t: "Clear pricing", d: "Hourly rates shown below include compute, storage and public bandwidth." },
-            ].map((c) => (
-              <div key={c.t} className="rounded-lg bg-white/10 backdrop-blur p-4">
-                <p className="text-sm font-bold flex items-center gap-2"><Check className="h-4 w-4 text-[#00ff88]" />{c.t}</p>
-                <p className="mt-1 text-xs text-slate-300">{c.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="mx-auto max-w-7xl px-6 py-10 md:grid md:grid-cols-[240px_1fr] md:gap-10">
-        {/* Section nav */}
+      <div className="mx-auto max-w-[1400px] px-6 py-8 md:grid md:grid-cols-[260px_1fr] md:gap-10">
+        {/* Tree sidebar */}
         <aside className="hidden md:block">
-          <div className="sticky top-24 space-y-1">
-            <div className="relative mb-4">
+          <div className="sticky top-24">
+            <div className="relative mb-5">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search" className="w-full rounded border border-slate-200 pl-9 pr-3 py-2 text-sm outline-none focus:border-[#00b7ff]" />
             </div>
-            {sections.map((s) => (
-              s.href ? (
-                <Link key={s.id} href={s.href} className="block rounded px-3 py-2 text-sm text-slate-600 hover:bg-[#f8faff] hover:text-[#00b7ff] transition">{s.label}</Link>
-              ) : (
-                <button key={s.id} onClick={() => setSection(s.id)} className={`block w-full rounded px-3 py-2 text-left text-sm transition ${section === s.id ? "bg-[#e8f6ff] text-[#00b7ff] font-bold border-l-2 border-[#00b7ff]" : "text-slate-600 hover:bg-[#f8faff]"}`}>{s.label}</button>
-              )
-            ))}
+            <nav className="space-y-0.5 text-[15px]">
+              {tree.map((n) =>
+                n.children ? (
+                  <div key={n.label}>
+                    <button onClick={() => setOpen((o) => ({ ...o, [n.label]: !o[n.label] }))} className="flex w-full items-center justify-between rounded px-2 py-2 font-medium text-slate-700 hover:bg-[#f8faff] transition">
+                      {n.label}
+                      <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${open[n.label] ? "rotate-180" : ""}`} />
+                    </button>
+                    {open[n.label] && (
+                      <div className="ml-3 border-l border-slate-200 pl-3 mb-1">
+                        {n.children.map((c) => (
+                          <button key={c.leaf} onClick={() => select(c.leaf)} className={`block w-full rounded px-3 py-1.5 text-left text-sm transition ${active === c.leaf ? "bg-[#e8f6ff] text-[#00b7ff] font-bold" : "text-slate-600 hover:bg-[#f8faff] hover:text-[#00b7ff]"}`}>{c.label}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button key={n.label} onClick={() => select(n.leaf!)} className={`block w-full rounded px-2 py-2 text-left transition ${active === n.leaf ? "bg-[#e8f6ff] text-[#00b7ff] font-bold" : "text-slate-700 hover:bg-[#f8faff]"}`}>{n.label}</button>
+                )
+              )}
+            </nav>
           </div>
         </aside>
 
         {/* Content */}
-        <div>
-          {section === "overview" && (
+        <div className="min-w-0">
+          {/* Filters row */}
+          <div className="mb-6 flex flex-wrap items-center gap-4 text-xs border-b border-slate-100 pb-4">
+            <span className="flex items-center gap-1.5 text-slate-500"><span className="font-bold uppercase">Locations</span><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">All regions ▾</span></span>
+            <span className="flex items-center gap-1.5 text-slate-500"><span className="font-bold uppercase">Savings Plan</span><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">None ▾</span></span>
+            <span className="flex items-center gap-2 text-slate-500"><span className="font-bold uppercase">Operating system</span>
+              <label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={os === "linux"} onChange={() => setOs("linux")} className="accent-[#00b7ff]" />Linux</label>
+              <label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={os === "windows"} onChange={() => setOs("windows")} className="accent-[#00b7ff]" />Windows</label>
+              {os === "windows" && <span className="text-slate-400">Windows licence billed additionally per hour.</span>}
+            </span>
+          </div>
+
+          {active === "overview" && (
             <div>
-              <h2 className="text-2xl font-black mb-4">Public Cloud — pay as you go</h2>
+              <h1 className="text-3xl font-black mb-2">Public Cloud — pay as you go</h1>
+              <p className="text-slate-500 mb-8 max-w-2xl">Create a project for free and launch resources on demand. Transparent hourly pricing across compute, storage, network, databases and AI.</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                {extraServices.map((s) => (
-                  <div key={s.title} className="rounded-xl border border-slate-200 p-5 hover:border-[#00b7ff] hover:shadow-md transition">
-                    <s.icon className="h-6 w-6 text-[#00b7ff] mb-2" />
-                    <p className="font-bold text-[#0f172a]">{s.title}</p>
-                    <p className="mt-1 text-xs text-slate-500">{s.desc}</p>
-                    <p className="mt-2 text-xs font-bold text-[#00b7ff]">{s.price}</p>
-                  </div>
+                {[
+                  { icon: Cpu, t: "Virtual Machine Instances", d: "B3, C3, R3, D2, I1 flavors — per-hour billing.", leaf: "vm" },
+                  { icon: Zap, t: "Cloud GPU", d: "V100, L4, A10, L40S, A100, H100, H200 GPUs.", leaf: "gpu" },
+                  { icon: HardDrive, t: "Storage", d: "Block, file, local and S3-compatible object storage.", leaf: "object" },
+                  { icon: Network, t: "Network", d: "Load balancer, floating IPs, gateway and vRack.", leaf: "loadbalancer" },
+                  { icon: Container, t: "Containers", d: "Managed Kubernetes (free control plane), registry, Rancher.", leaf: "k8s" },
+                  { icon: Database, t: "Databases", d: "MySQL, PostgreSQL, MongoDB, Redis, Kafka, OpenSearch…", leaf: "db-mysql" },
+                  { icon: Brain, t: "AI & ML", d: "Notebooks, training jobs, model deployment, AI endpoints.", leaf: "ai-notebooks" },
+                  { icon: Atom, t: "Quantum", d: "Quantum notebooks and real QPU access.", leaf: "q-notebooks" },
+                ].map((c) => (
+                  <button key={c.t} onClick={() => select(c.leaf)} className="text-left rounded-xl border border-slate-200 p-5 hover:border-[#00b7ff] hover:shadow-md transition">
+                    <c.icon className="h-6 w-6 text-[#00b7ff] mb-2" />
+                    <p className="font-bold text-[#0f172a]">{c.t}</p>
+                    <p className="mt-1 text-xs text-slate-500">{c.d}</p>
+                  </button>
                 ))}
               </div>
               <div className="mt-8 rounded-xl bg-[#e8f6ff] border border-[#00b7ff]/30 p-6 text-center">
-                <p className="font-bold text-[#0f172a]">Get up to 30% off your instances with 12 &amp; 24-month Savings Plans.</p>
+                <p className="font-bold text-[#0f172a]">Get up to 30% off your instances and managed services with 12 &amp; 24-month Savings Plans.</p>
                 <Link href="/support" className="mt-3 inline-block rounded bg-[#00b7ff] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#009fe0]">Discover Savings Plans</Link>
               </div>
             </div>
           )}
 
-          {section === "compute" && (
-            <div>
-              <div className="mb-6 flex flex-wrap items-center gap-3 text-xs">
-                <span className="font-bold text-slate-500 uppercase">Location:</span>
-                <span className="rounded-full bg-slate-100 px-3 py-1">All regions</span>
-                <span className="font-bold text-slate-500 uppercase ml-4">Operating system:</span>
-                <button onClick={() => setOs("linux")} className={`rounded-full px-3 py-1 ${os === "linux" ? "bg-[#00b7ff] text-white font-bold" : "bg-slate-100 text-slate-600"}`}>Linux</button>
-                <button onClick={() => setOs("windows")} className={`rounded-full px-3 py-1 ${os === "windows" ? "bg-[#00b7ff] text-white font-bold" : "bg-slate-100 text-slate-600"}`}>Windows</button>
-                {os === "windows" && <span className="text-slate-400">Windows licence is billed additionally per hour.</span>}
+          {active === "pricing" && (
+            <div className="max-w-3xl">
+              <h1 className="text-3xl font-black mb-4">Pricing model</h1>
+              <div className="space-y-4 text-sm text-slate-600 leading-6">
+                <p><b className="text-[#0f172a]">Pay-as-you-go.</b> Instances and managed services are billed per hour (or per second for AI workloads) and only while running. You can stop a resource at any time to stop its billing.</p>
+                <p><b className="text-[#0f172a]">Free project.</b> Creating a Public Cloud project is free. You only pay for the resources you launch inside it.</p>
+                <p><b className="text-[#0f172a]">Monthly cap.</b> Hourly-billed resources are capped at the monthly price shown — you never pay more than the monthly rate.</p>
+                <p><b className="text-[#0f172a]">Savings Plans.</b> Commit to 12 or 24 months of usage and save up to 30% on instances and managed services.</p>
+                <p><b className="text-[#0f172a]">No hidden fees.</b> Inbound traffic and private network (vRack) traffic are free. Public outbound traffic is billed per GB where applicable.</p>
+                <p><b className="text-[#0f172a]">Taxes.</b> All prices shown exclude VAT/GST, which is applied at checkout based on your billing country.</p>
               </div>
-              {computeFamilies.map(renderTable)}
             </div>
           )}
 
-          {section === "gpu" && <div>{gpuFamilies.map(renderTable)}</div>}
-
-          {["backup", "images", "network", "containers", "databases", "analytics", "ai"].includes(section) && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {extraServices.map((s) => (
-                <div key={s.title} className="rounded-xl border border-slate-200 p-5">
-                  <s.icon className="h-6 w-6 text-[#00b7ff] mb-2" />
-                  <p className="font-bold text-[#0f172a]">{s.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{s.desc}</p>
-                  <p className="mt-2 text-xs font-bold text-[#00b7ff]">{s.price}</p>
-                  <Link href="/dashboard" className="mt-3 inline-block text-xs font-bold text-[#00b7ff] hover:underline">Open in console →</Link>
-                </div>
-              ))}
+          {leaf && active !== "overview" && active !== "pricing" && (
+            <div>
+              <p className="text-xs text-slate-400 mb-1">Public Cloud ▸ {leafSection[active] ? leafSection[active][0].toUpperCase() + leafSection[active].slice(1).replace("-", " ") : ""} ▸ {leafTitle[active]}</p>
+              <h1 className="text-3xl font-black mb-2">{leaf.title}</h1>
+              <p className="text-slate-500 mb-6 max-w-3xl">{leaf.desc}</p>
+              {leaf.families ? leaf.families.map(renderFamilyTable) : leaf.items ? renderItemTable(leaf) : renderSimple(leaf)}
             </div>
           )}
         </div>
