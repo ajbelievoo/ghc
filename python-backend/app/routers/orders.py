@@ -25,6 +25,7 @@ def create_order(
             duration_label=payload.duration_label,
             config=payload.configuration,
             display_name=payload.display_name,
+            coupon_code=payload.coupon_code,
         )
         return order
     except ValueError as e:

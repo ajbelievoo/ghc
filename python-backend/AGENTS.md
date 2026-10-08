@@ -78,3 +78,19 @@
 - Cooldown and idempotency prevent duplicate events within the configured cooldown window.
 - The policy loop is started in `app/main.py` lifespan.
 - API access is restricted to admin JWT or the `X-Service-Key` configured in `admin_configs` (`ghc_admin_service_key`).
+
+## ⚠️ CRITICAL — Production OVH account: READ-ONLY service operations
+
+The OVH account **ajaykumarsinghup24@gmail.com** hosts the MAIN production server for ALL
+company websites and applications. **NEVER** perform mutating operations on its existing
+services — no reinstall, terminate, suspend, IPMI/netboot, rDNS changes, IP moves, firewall
+changes, volume changes, or contact/nichandle changes. A single destructive call can take
+every site offline permanently.
+
+- Safe: `GET` reads (catalogs, service info, `/me`, balance), catalog sync, local DB work.
+- Safe: editing GHC/believoo code and its own databases.
+- **Forbidden without explicit written user approval:** any POST/PUT/DELETE on `/vps/*`,
+  `/dedicated/server/*`, `/ip/*`, `/ipLoadBalancing/*`, `/cloud/*` on the real account, and
+  any `/order/cart/*/checkout` that would spend real account balance.
+- Order/cart creation and real payment/provisioning tests require the user to confirm in
+  the conversation first — always.

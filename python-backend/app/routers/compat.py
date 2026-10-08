@@ -1,6 +1,7 @@
 import io
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.security import create_access_token, get_current_admin, get_current_user
+from app.core.security import create_access_token, get_current_admin, get_current_user, rate_limit
 from app.models.models import (
     AdminConfig,
     CustomerOrder,
@@ -55,7 +56,7 @@ from app.services.order_service import (
     pay_order_with_wallet,
     _resolve_plan_code,
 )
-from app.services.ovh_client import get_ovh_client_from_db
+from app.services.ovh_client import get_ovh_client_from_db, apply_margin
 from app.services.subscription_service import (
     add_vps_secondary_dns,
     change_vps_ip_geolocation,
@@ -876,6 +877,30 @@ def public_status(db: Session = Depends(get_db)):
     }
 
 
+@router.post("/public/abuse-report", dependencies=[Depends(rate_limit(3, 3600, "abuse-report"))])
+def public_abuse_report(body: dict, request: Request, db: Session = Depends(get_db)):
+    """Public abuse/DMCA report intake — emails the abuse desk. Rate-limited per IP."""
+    name = (body.get("name") or "").strip()[:200]
+    email = (body.get("email") or "").strip()[:200]
+    target = (body.get("target") or "").strip()[:500]
+    rtype = (body.get("type") or "abuse").strip()[:50]
+    details = (body.get("details") or "").strip()[:5000]
+    if not email or "@" not in email or not target or not details:
+        raise HTTPException(status_code=400, detail="email, target and details are required")
+    if rtype not in ("spam", "phishing", "malware", "copyright", "network", "content", "other"):
+        rtype = "other"
+    from app.services.email_service import send_email
+    html = (
+        f"<h3>Abuse report — {rtype}</h3>"
+        f"<p><b>Reporter:</b> {name or 'Anonymous'} &lt;{email}&gt;</p>"
+        f"<p><b>Target:</b> {target}</p>"
+        f"<p><b>IP:</b> {request.client.host if request.client else 'unknown'}</p>"
+        f"<hr><pre style='white-space:pre-wrap'>{details}</pre>"
+    )
+    ok = send_email(db, "abuse@believoo.com", f"[Abuse:{rtype}] {target[:80]}", html, f"{rtype} report on {target}\n\n{details}\n\nFrom: {name} <{email}>")
+    return {"success": True, "emailed": ok}
+
+
 @router.post("/ai/assistant")
 def ai_assistant(body: dict, user: User = Depends(get_current_user)):
     q = (body.get("message") or "").lower()
@@ -1070,6 +1095,115 @@ def server_reverse_dns(server_id: str, body: dict, db: Session = Depends(get_db)
 
 # ---------- Billing ----------
 
+@router.post("/coupons/validate")
+def validate_coupon_endpoint(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Validate a coupon against a plan+duration and return the discounted price."""
+    from app.services.coupon_service import get_coupon, validate_coupon, compute_discount
+    from app.services.order_service import _resolve_plan_code
+    from app.models.models import PlanDuration
+    from app.services.catalog_service import get_margin_for_category
+    from app.services.currency_service import convert
+
+    code = (body.get("code") or "").strip()
+    if not code:
+        raise HTTPException(status_code=400, detail="code is required")
+    coupon = get_coupon(db, code)
+    if not coupon:
+        raise HTTPException(status_code=400, detail="Invalid coupon code")
+
+    plan = _resolve_plan_code(db, body.get("planCode") or "")
+    if not plan:
+        raise HTTPException(status_code=400, detail="Plan not found")
+    duration = db.query(PlanDuration).filter(
+        PlanDuration.plan_code == plan.plan_code,
+        PlanDuration.duration_label == body.get("durationLabel"),
+    ).first()
+    if not duration:
+        raise HTTPException(status_code=400, detail="Duration not available")
+
+    final_price = float(apply_margin(Decimal(str(duration.raw_price)), get_margin_for_category(db, plan.category)))
+    if plan.override_price is not None:
+        final_price = float(plan.override_price)
+    elif plan.override_margin is not None:
+        final_price = float(apply_margin(Decimal(str(duration.raw_price)), Decimal(str(plan.override_margin))))
+    target_currency = (body.get("currency") or duration.currency or "USD").upper()
+    rate = convert(db, 1.0, duration.currency or "INR", target_currency)
+    price = final_price * rate
+
+    ok, reason = validate_coupon(db, coupon, user.id, price, plan.category.value if hasattr(plan.category, "value") else plan.category)
+    if not ok:
+        raise HTTPException(status_code=400, detail=reason)
+    discount = compute_discount(coupon, price)
+    return {
+        "valid": True,
+        "code": coupon.code,
+        "discountType": coupon.discount_type,
+        "discountValue": coupon.value,
+        "discount": discount,
+        "subtotal": round(price, 2),
+        "final": round(price - discount, 2),
+        "currency": target_currency,
+    }
+
+
+@router.get("/admin/coupons")
+def admin_list_coupons(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import Coupon
+    rows = db.query(Coupon).order_by(Coupon.created_at.desc()).all()
+    return [{
+        "id": c.id, "code": c.code, "discountType": c.discount_type, "value": c.value,
+        "maxUses": c.max_uses, "usedCount": c.used_count, "perUserLimit": c.per_user_limit,
+        "minOrderAmount": c.min_order_amount, "appliesToCategory": c.applies_to_category,
+        "expiresAt": c.expires_at.isoformat() if c.expires_at else None, "isActive": c.is_active,
+    } for c in rows]
+
+
+@router.post("/admin/coupons")
+def admin_upsert_coupon(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import Coupon
+    code = (body.get("code") or "").strip().upper()
+    if not code or len(code) < 3:
+        raise HTTPException(status_code=400, detail="code must be at least 3 characters")
+    dtype = body.get("discountType") or "percent"
+    if dtype not in ("percent", "fixed"):
+        raise HTTPException(status_code=400, detail="discountType must be percent or fixed")
+    value = float(body.get("value") or 0)
+    if value <= 0 or (dtype == "percent" and value > 100):
+        raise HTTPException(status_code=400, detail="invalid value")
+    coupon = db.query(Coupon).filter(Coupon.code == code).first()
+    if not coupon:
+        coupon = Coupon(code=code)
+        db.add(coupon)
+    coupon.discount_type = dtype
+    coupon.value = value
+    if "maxUses" in body:
+        coupon.max_uses = body.get("maxUses")
+    if "perUserLimit" in body:
+        coupon.per_user_limit = int(body.get("perUserLimit") or 1)
+    if "minOrderAmount" in body:
+        coupon.min_order_amount = body.get("minOrderAmount")
+    if "appliesToCategory" in body:
+        coupon.applies_to_category = (body.get("appliesToCategory") or "").upper() or None
+    if "expiresAt" in body:
+        exp = body.get("expiresAt")
+        coupon.expires_at = datetime.fromisoformat(exp) if exp else None
+    if "isActive" in body:
+        coupon.is_active = bool(body.get("isActive"))
+    db.commit()
+    return {"success": True, "code": coupon.code}
+
+
+@router.delete("/admin/coupons/{coupon_id}")
+def admin_delete_coupon(coupon_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import Coupon
+    c = db.query(Coupon).filter(Coupon.id == coupon_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="not found")
+    db.delete(c)
+    db.commit()
+    return {"success": True}
+
+
 @router.post("/billing/order")
 def billing_create_order(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:
@@ -1080,6 +1214,7 @@ def billing_create_order(body: dict, db: Session = Depends(get_db), user: User =
             duration_label=body.get("durationLabel"),
             config=body.get("configuration"),
             currency=body.get("currency"),
+            coupon_code=body.get("couponCode") or body.get("coupon_code"),
         )
         return {
             "id": order.id,
@@ -1106,6 +1241,7 @@ def billing_wallet_pay(body: dict, db: Session = Depends(get_db), user: User = D
             duration_label=body.get("durationLabel"),
             config=body.get("configuration"),
             currency=body.get("currency"),
+            coupon_code=body.get("couponCode") or body.get("coupon_code"),
         )
         order = pay_order_with_wallet(db, user.id, order.id)
         # Auto-provision
@@ -1241,6 +1377,7 @@ def payments_checkout(body: dict, db: Session = Depends(get_db), user: User = De
             duration_label=body.get("durationLabel"),
             config=body.get("configuration"),
             currency=body.get("currency"),
+            coupon_code=body.get("couponCode") or body.get("coupon_code"),
         )
         order_id = order.id
         amount = float(order.customer_amount)

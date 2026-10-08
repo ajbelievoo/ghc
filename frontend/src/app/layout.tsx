@@ -7,6 +7,7 @@ import GhcFx from "@/components/GhcFx";
 import GhcHead from "@/components/GhcHead";
 import BrandStyle from "@/components/BrandStyle";
 import AiAssistant from "@/components/AiAssistant";
+import CookieConsent from "@/components/CookieConsent";
 import { LanguageProvider } from "@/components/LanguageProvider";
 
 const inter = Inter({
@@ -91,6 +92,7 @@ export default function RootLayout({
           </CurrencyProvider>
         </LanguageProvider>
         <AiAssistant />
+        <CookieConsent />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

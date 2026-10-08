@@ -14,7 +14,7 @@ import {
   CloudCog, Tag, Ban, RotateCcw, XCircle, Percent, Clock
 } from "lucide-react";
 
-type Tab = "overview" | "users" | "credentials" | "brand" | "settings" | "margins" | "catalog" | "subscriptions" | "domain-tlds" | "customer-domains" | "logs" | "orders" | "support" | "invoices";
+type Tab = "overview" | "users" | "credentials" | "brand" | "settings" | "margins" | "coupons" | "catalog" | "subscriptions" | "domain-tlds" | "customer-domains" | "logs" | "orders" | "support" | "invoices";
 
 interface LogEntry { id: string; type: string; message: string; createdAt: string; details?: any; }
 interface SubEntry { id: string; name: string; providerResourceId: string | null; category: string; status: string; userId: string; user?: { name: string; email: string }; planCode: string | null; billingCycle: string; nextBillDate: string; priceAmount: number; currency: string; autoRenew: boolean; createdAt: string; }
@@ -58,6 +58,8 @@ export default function AdminPage() {
   const [brand, setBrand] = useState({ siteName: "GHC", companyName: "Believoo Pvt Ltd", logoUrl: "", faviconUrl: "", primaryColor: "#00f0ff", accentColor: "#b500ff", customCss: "" });
   const [syncing, setSyncing] = useState(false);
   const [margins, setMargins] = useState<Record<string, number>>({});
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponForm, setCouponForm] = useState({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
   const [catalogPlans, setCatalogPlans] = useState<PlanEntry[]>([]);
   const [catalogCategory, setCatalogCategory] = useState("ALL");
   const [catalogSearch, setCatalogSearch] = useState("");
@@ -112,6 +114,7 @@ export default function AdminPage() {
       if (t === "credentials") { const c = await api.admin.getCredentials(); setProvider({ provider_app_key: c.credentials.provider_app_key || "", provider_app_secret: c.credentials.provider_app_secret || "", provider_consumer_key: c.credentials.provider_consumer_key || "", provider_endpoint: c.credentials.provider_endpoint || "", provider_subsidiary: c.credentials.provider_subsidiary || "" }); setGoogleCreds({ google_client_id: c.credentials.google_client_id || "", google_client_secret: c.credentials.google_client_secret || "" }); setSmtp({ smtp_host: c.credentials.smtp_host || "", smtp_port: c.credentials.smtp_port || "", smtp_user: c.credentials.smtp_user || "", smtp_pass: c.credentials.smtp_pass || "" }); const gws: Record<string, any> = {}; (c.gateways || []).forEach((g: any) => { gws[g.name] = { ...(g.config || {}), isActive: g.isActive }; }); setGwInputs(gws); }
       if (t === "brand") { const b = await api.admin.getBrand(); setBrand(b); }
       if (t === "margins") { const m = await api.admin.getMargins(); const map: Record<string, number> = {}; m.forEach((x: any) => map[x.category] = x.percent); setMargins(map); }
+      if (t === "coupons") { const c = await api.admin.getCoupons(); setCoupons(c || []); }
       if (t === "catalog") { setCatalogLoading(true); const params: any = { search: catalogSearch || undefined }; if (catalogCategory !== "ALL") params.category = catalogCategory; const p = await api.admin.getCatalog(params); setCatalogPlans(p || []); setCatalogLoading(false); }
       if (t === "subscriptions") { const params: any = {}; if (subFilter !== "ALL") params.status = subFilter; if (subCategory !== "ALL") params.category = subCategory; const subs = await api.admin.getSubscriptions(params); setSubscriptions(subs || []); }
       if (t === "domain-tlds") { const tlds = await api.admin.getDomainTlds(); setDomainTlds(tlds || []); }
@@ -182,6 +185,7 @@ export default function AdminPage() {
           {navItem("brand", "Brand", <Palette className="w-4 h-4" />)}
           {navItem("settings", "Controls", <Settings className="w-4 h-4" />)}
           {navItem("margins", "Margins", <DollarSign className="w-4 h-4" />)}
+          {navItem("coupons", "Coupons", <Tag className="w-4 h-4" />)}
           {navItem("catalog", "Catalog", <Package className="w-4 h-4" />)}
           {navItem("subscriptions", "Subscriptions", <Server className="w-4 h-4" />)}
           {navItem("domain-tlds", "Domain TLDs", <Globe className="w-4 h-4" />)}
@@ -545,6 +549,70 @@ export default function AdminPage() {
                   <p className="text-xs text-slate-500 mt-3">Applied to all {cat.replace("_", " ").toLowerCase()} plans on next sync.</p>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ===== COUPONS ===== */}
+        {tab === "coupons" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-[#0f172a]">Discount Coupons</h2>
+              <button onClick={() => loadTabData("coupons")} className="flex items-center gap-2 rounded-lg bg-slate-100/50 border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100/80 transition-all"><RefreshCw className="w-4 h-4" />Refresh</button>
+            </div>
+            {panel("Create / Update coupon", <Tag className="w-5 h-5 text-[#00b7ff]" />,
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <input placeholder="CODE (e.g. LAUNCH20)" value={couponForm.code} onChange={(e) => setCouponForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2.5 text-sm uppercase outline-none" />
+                <select value={couponForm.discountType} onChange={(e) => setCouponForm((f) => ({ ...f, discountType: e.target.value }))} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2.5 text-sm outline-none">
+                  <option value="percent">Percent %</option>
+                  <option value="fixed">Fixed amount</option>
+                </select>
+                <input type="number" placeholder={couponForm.discountType === "percent" ? "Value (%)" : "Value (amount)"} value={couponForm.value} onChange={(e) => setCouponForm((f) => ({ ...f, value: e.target.value }))} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2.5 text-sm outline-none" />
+                <input type="number" placeholder="Max uses (blank=∞)" value={couponForm.maxUses} onChange={(e) => setCouponForm((f) => ({ ...f, maxUses: e.target.value }))} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2.5 text-sm outline-none" />
+                <input type="number" placeholder="Per-user limit" value={couponForm.perUserLimit} onChange={(e) => setCouponForm((f) => ({ ...f, perUserLimit: e.target.value }))} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2.5 text-sm outline-none" />
+                <input type="number" placeholder="Min order (blank=any)" value={couponForm.minOrderAmount} onChange={(e) => setCouponForm((f) => ({ ...f, minOrderAmount: e.target.value }))} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2.5 text-sm outline-none" />
+                <select value={couponForm.appliesToCategory} onChange={(e) => setCouponForm((f) => ({ ...f, appliesToCategory: e.target.value }))} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2.5 text-sm outline-none">
+                  <option value="">All categories</option>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input type="date" value={couponForm.expiresAt} onChange={(e) => setCouponForm((f) => ({ ...f, expiresAt: e.target.value }))} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2.5 text-sm outline-none" />
+              </div>
+            )}
+            <div className="flex justify-end -mt-2">
+              <button onClick={async () => {
+                try {
+                  await api.admin.upsertCoupon({ code: couponForm.code, discountType: couponForm.discountType, value: parseFloat(couponForm.value), maxUses: couponForm.maxUses ? parseInt(couponForm.maxUses) : null, perUserLimit: parseInt(couponForm.perUserLimit) || 1, minOrderAmount: couponForm.minOrderAmount ? parseFloat(couponForm.minOrderAmount) : null, appliesToCategory: couponForm.appliesToCategory || null, expiresAt: couponForm.expiresAt || null, isActive: couponForm.isActive });
+                  showToast("Coupon saved", "success");
+                  setCouponForm({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
+                  loadTabData("coupons");
+                } catch (e: any) { showToast(e.message, "error"); }
+              }} className="flex items-center gap-2 rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-5 py-2.5 text-sm font-medium text-[#00b7ff] hover:bg-[#00b7ff]/20"><Save className="w-4 h-4" />Save coupon</button>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-100/80 text-left text-xs font-bold uppercase text-slate-500">
+                  <tr><th className="px-4 py-3">Code</th><th className="px-4 py-3">Discount</th><th className="px-4 py-3">Uses</th><th className="px-4 py-3">Min order</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Expires</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"></th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {coupons.map((c) => (
+                    <tr key={c.id} className="bg-white/60">
+                      <td className="px-4 py-3 font-mono font-bold text-[#0f172a]">{c.code}</td>
+                      <td className="px-4 py-3">{c.discountType === "percent" ? `${c.value}%` : c.value}</td>
+                      <td className="px-4 py-3">{c.usedCount}{c.maxUses ? `/${c.maxUses}` : ""} ({c.perUserLimit}/user)</td>
+                      <td className="px-4 py-3">{c.minOrderAmount || "—"}</td>
+                      <td className="px-4 py-3">{c.appliesToCategory || "All"}</td>
+                      <td className="px-4 py-3">{c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : "—"}</td>
+                      <td className="px-4 py-3">
+                        <button onClick={async () => { await api.admin.upsertCoupon({ code: c.code, discountType: c.discountType, value: c.value, isActive: !c.isActive }); loadTabData("coupons"); }} className={`text-xs font-bold ${c.isActive ? "text-emerald-600" : "text-slate-400"}`}>{c.isActive ? "ACTIVE" : "OFF"}</button>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button onClick={async () => { if (confirm(`Delete ${c.code}?`)) { await api.admin.deleteCoupon(c.id); loadTabData("coupons"); } }} className="text-xs font-bold text-red-500 hover:underline">Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {coupons.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-slate-500">No coupons yet — create one above.</td></tr>}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

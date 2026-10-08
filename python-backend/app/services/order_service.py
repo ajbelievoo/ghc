@@ -128,6 +128,7 @@ def create_customer_order(
     config: Optional[Dict[str, Any]] = None,
     display_name: Optional[str] = None,
     currency: Optional[str] = None,
+    coupon_code: Optional[str] = None,
 ) -> CustomerOrder:
     plan = _resolve_plan_code(db, plan_code)
     if not plan:
@@ -158,9 +159,23 @@ def create_customer_order(
     final_price_converted = float(final_price * rate)
     ovh_base_amount = float(duration.raw_price) * rate
     commission_amount = final_price_converted - ovh_base_amount
+
+    discount_amount = 0.0
+    coupon_obj = None
+    if coupon_code:
+        from app.services.coupon_service import get_coupon, validate_coupon, compute_discount
+        coupon_obj = get_coupon(db, coupon_code)
+        if not coupon_obj:
+            raise ValueError("Invalid coupon code")
+        ok, reason = validate_coupon(db, coupon_obj, user_id, final_price_converted, plan.category.value if hasattr(plan.category, "value") else plan.category)
+        if not ok:
+            raise ValueError(reason)
+        discount_amount = compute_discount(coupon_obj, final_price_converted)
+
+    taxable = max(0.0, final_price_converted - discount_amount)
     tax_rate = get_settings().tax_rate_percent / 100.0
-    tax_amount = round(final_price_converted * tax_rate, 2)
-    customer_amount = round(final_price_converted + tax_amount, 2)
+    tax_amount = round(taxable * tax_rate, 2)
+    customer_amount = round(taxable + tax_amount, 2)
 
     order = CustomerOrder(
         user_id=user_id,
@@ -175,10 +190,15 @@ def create_customer_order(
         currency=target_currency,
         status=OrderStatus.PENDING,
         configuration_payload=config or {},
+        coupon_code=coupon_obj.code if coupon_obj else None,
+        discount_amount=discount_amount,
     )
     db.add(order)
     db.commit()
     db.refresh(order)
+    if coupon_obj and discount_amount > 0:
+        from app.services.coupon_service import redeem_coupon
+        redeem_coupon(db, coupon_obj, user_id, order.id, discount_amount)
     return order
 
 

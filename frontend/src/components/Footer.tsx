@@ -52,6 +52,11 @@ export default function Footer() {
               <Link href="/refund" className="block hover:text-white">Refund Policy</Link>
               <Link href="/acceptable-use" className="block hover:text-white">Acceptable Use</Link>
               <Link href="/sla" className="block hover:text-white">SLA</Link>
+              <Link href="/grievance" className="block hover:text-white">Grievance Officer</Link>
+              <Link href="/dmca" className="block hover:text-white">Copyright / DMCA</Link>
+              <Link href="/cookies" className="block hover:text-white">Cookie Policy</Link>
+              <Link href="/domain-dispute" className="block hover:text-white">Domain Disputes</Link>
+              <Link href="/abuse" className="block hover:text-white">Report Abuse</Link>
             </div>
           </div>
           <div>

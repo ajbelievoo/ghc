@@ -143,6 +143,10 @@ function ConfigurePageContent() {
   const [configLoading, setConfigLoading] = useState(false);
   const [imageTab, setImageTab] = useState<"dist" | "app">("dist");
   const [selectedApp, setSelectedApp] = useState<string>("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponResult, setCouponResult] = useState<any>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -177,9 +181,11 @@ function ConfigurePageContent() {
   const selectedDuration = durations.find((d: any) => d.durationLabel === durationLabel) || durations[0] || { durationLabel: "1_month", finalPrice: 0, originalPrice: 0 };
   const optionsTotal = 0;
   const subtotal = parseFloat((((selectedDuration?.finalPrice || 0) + optionsTotal) * quantity).toFixed(2));
+  const discount = couponResult ? parseFloat((couponResult.discount || 0).toFixed(2)) : 0;
+  const taxable = Math.max(0, subtotal - discount);
   const taxRate = 0.18;
-  const tax = parseFloat((subtotal * taxRate).toFixed(2));
-  const total = parseFloat((subtotal + tax).toFixed(2));
+  const tax = parseFloat((taxable * taxRate).toFixed(2));
+  const total = parseFloat((taxable + tax).toFixed(2));
   const requiredConfigs = providerConfig?.requiredConfiguration || providerConfig?.configurations || [];
   const findConfigValues = (names: string[]) => {
     const entry = requiredConfigs.find((cfg: any) =>
@@ -264,6 +270,7 @@ function ConfigurePageContent() {
           durationLabel: selectedDuration.durationLabel,
           category: plan.category || category,
           configuration,
+          couponCode: couponResult?.code,
         });
         if (res.subscription) {
           window.location.href = "/dashboard";
@@ -282,6 +289,7 @@ function ConfigurePageContent() {
         durationLabel: selectedDuration.durationLabel,
         category: plan.category || category,
         configuration,
+        couponCode: couponResult?.code,
       });
       if (res.checkoutUrl) window.location.href = res.checkoutUrl;
       else if (res.manual) setManualPayment({ id: res.id, amount: res.amount, currency: res.currency, instructions: res.instructions });
@@ -576,7 +584,38 @@ function ConfigurePageContent() {
               </div>
               <div className="mt-2 space-y-1 border-t border-dashed border-slate-200 pt-2 text-xs text-slate-600">
                 <div className="flex justify-between"><span>Subtotal</span><span>{fmtCurrency(subtotal, planCurrency)}</span></div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-semibold"><span>Coupon {couponResult?.code} ({couponResult?.discountType === "percent" ? `${couponResult?.discountValue}%` : "fixed"} off)</span><span>-{fmtCurrency(discount, planCurrency)}</span></div>
+                )}
                 <div className="flex justify-between"><span>GST ({(taxRate*100).toFixed(0)}%)</span><span>{fmtCurrency(tax, planCurrency)}</span></div>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={couponCode}
+                    onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(""); }}
+                    placeholder="Coupon code"
+                    className="flex-1 rounded border border-slate-200 bg-white px-3 py-1.5 text-xs uppercase outline-none focus:border-[#00b7ff]"
+                  />
+                  {couponResult ? (
+                    <button type="button" onClick={() => { setCouponResult(null); setCouponCode(""); }} className="rounded border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-100">Remove</button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={couponLoading || !couponCode.trim()}
+                      onClick={async () => {
+                        setCouponLoading(true); setCouponError("");
+                        try {
+                          const r = await api.coupons.validate({ code: couponCode.trim(), planCode: plan.planCode, durationLabel: selectedDuration.durationLabel });
+                          setCouponResult(r);
+                          showToast(`Coupon applied — ${r.discountType === "percent" ? r.discountValue + "%" : "₹" + r.discount} off`, "success");
+                        } catch (e: any) { setCouponError(e.message || "Invalid coupon"); }
+                        finally { setCouponLoading(false); }
+                      }}
+                      className="rounded bg-[#0f0c29] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#1e3a8a] disabled:opacity-50"
+                    >{couponLoading ? "…" : "Apply"}</button>
+                  )}
+                </div>
+                {couponError && <p className="text-[11px] font-semibold text-red-500">{couponError}</p>}
               </div>
               {!user && <p className="mt-3 rounded bg-[#fff4ef] p-2 text-[10px] font-bold text-[#ff3d00]">Sign in or create account before payment.</p>}
               <button onClick={startPayment} disabled={paying || !providerConfig?.available || (providerDatacenters.length > 0 && !datacenter)} className="mt-4 flex w-full items-center justify-center gap-2 rounded bg-[#0f0c29] px-5 py-3 text-sm font-bold text-white hover:bg-[#302b63] disabled:opacity-50">

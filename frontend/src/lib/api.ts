@@ -88,6 +88,10 @@ export const api = {
       request("/admin/brand", { method: "POST", body: JSON.stringify(body) }),
     // Provider catalog sync
     syncProviderPlans: () => request("/admin/sync-provider-plans", { method: "POST" }),
+    // Coupons
+    getCoupons: () => request("/admin/coupons"),
+    upsertCoupon: (body: object) => request("/admin/coupons", { method: "POST", body: JSON.stringify(body) }),
+    deleteCoupon: (id: string) => request(`/admin/coupons/${id}`, { method: "DELETE" }),
     // Margins
     getMargins: () => request("/admin/margins"),
     updateMargin: (body: { category: string; percent: number }) =>
@@ -239,12 +243,16 @@ export const api = {
     wallet: () => request("/billing/wallet"),
     walletTransactions: () => request("/wallet/transactions"),
     payInvoice: (id: string, gateway: string) => request(`/billing/invoices/${id}/pay`, { method: "POST", body: JSON.stringify({ gateway }) }),
-    payWithWallet: (body: { planCode: string; durationLabel: string; category: string; configuration?: object; currency?: string }) =>
+    payWithWallet: (body: { planCode: string; durationLabel: string; category: string; configuration?: object; currency?: string; couponCode?: string }) =>
       request("/billing/wallet/pay", { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
   },
   public: {
     announcements: () => request("/public/announcements"),
     status: () => request("/public/status"),
+  },
+  coupons: {
+    validate: (body: { code: string; planCode?: string; durationLabel?: string; currency?: string }) =>
+      request("/coupons/validate", { method: "POST", body: JSON.stringify(body) }),
   },
   ai: {
     ask: (message: string) => request("/ai/assistant", { method: "POST", body: JSON.stringify({ message }) }),
@@ -290,7 +298,7 @@ export const api = {
     provision: (id: string) => request(`/orders/${id}/provision`, { method: "POST" }),
   },
   payments: {
-    createCheckoutSession: (body: { type: string; amount?: number; gateway: string; orderId?: string; planCode?: string; durationLabel?: string; category?: string; configuration?: object; domainName?: string; tld?: string; years?: number; subscriptionId?: string; price?: number; domainId?: string; ipId?: string; currency?: string }) =>
+    createCheckoutSession: (body: { type: string; amount?: number; gateway: string; orderId?: string; planCode?: string; durationLabel?: string; category?: string; configuration?: object; domainName?: string; tld?: string; years?: number; subscriptionId?: string; price?: number; domainId?: string; ipId?: string; currency?: string; couponCode?: string }) =>
       request("/payments/checkout", { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
     getSession: (sessionId: string) => request(`/payments/session/${sessionId}`),
     fulfillSession: (sessionId: string) => request(`/payments/session/${sessionId}/fulfill`, { method: "POST" }),

@@ -18,6 +18,7 @@ class OrderCreate(BaseModel):
     category: ServiceCategory
     display_name: str | None = None
     configuration: dict[str, Any] | None = None
+    coupon_code: str | None = None
 
 
 class OrderResponse(BaseModel):

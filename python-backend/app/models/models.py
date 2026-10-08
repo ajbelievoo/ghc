@@ -224,6 +224,8 @@ class CustomerOrder(Base):
     ovh_payment_mean = Column(String(100), nullable=True)
     error_message = Column(Text, nullable=True)
     configuration_payload = Column(JSON, nullable=True)
+    coupon_code = Column(String(64), nullable=True)
+    discount_amount = Column(Float, default=0.0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -811,3 +813,34 @@ class CloudFloatingIp(Base):
 
     user = relationship("User")
     project = relationship("CloudProject")
+
+
+class Coupon(Base):
+    __tablename__ = "coupons"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    code = Column(String(64), unique=True, nullable=False, index=True)
+    discount_type = Column(String(10), nullable=False, default="percent")  # percent | fixed
+    value = Column(Float, nullable=False)  # percent 0-100 or fixed amount
+    max_uses = Column(Integer, nullable=True)  # null = unlimited
+    used_count = Column(Integer, default=0, nullable=False)
+    per_user_limit = Column(Integer, default=1, nullable=False)
+    min_order_amount = Column(Float, nullable=True)  # minimum pre-discount amount
+    applies_to_category = Column(String(50), nullable=True)  # null = all
+    expires_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class CouponRedemption(Base):
+    __tablename__ = "coupon_redemptions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    coupon_id = Column(String(36), ForeignKey("coupons.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    order_id = Column(String(36), ForeignKey("customer_orders.id", ondelete="SET NULL"), nullable=True)
+    discount_amount = Column(Float, default=0.0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    coupon = relationship("Coupon")
+    user = relationship("User")
