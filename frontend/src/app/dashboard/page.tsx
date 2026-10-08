@@ -81,6 +81,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [activeView, setActiveView] = useState<string | null>(null);
+  const [launchParam, setLaunchParam] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [servers, setServers] = useState<ServerInstance[]>([]);
@@ -166,6 +167,10 @@ export default function DashboardPage() {
         const requestedCategory = params.get("category");
         const requestedPlan = params.get("plan");
         const requestedFamily = params.get("family");
+        const requestedView = params.get("view");
+        const requestedLaunch = params.get("launch");
+        if (requestedView) setActiveView(requestedView);
+        if (requestedLaunch) setLaunchParam(requestedLaunch);
         if (requestedTab && ["overview", "servers", "domains", "invoices", "wallet", "support", "security", "profile"].includes(requestedTab)) setTab(requestedTab);
         const requestedDomain = params.get("domain");
         if (requestedDomain) {
@@ -812,6 +817,7 @@ export default function DashboardPage() {
             onTab={(t) => { setActiveView(null); setTab(t as Tab); }}
             onSelectView={(v) => { setActiveView(v); }}
             setSelectedServer={(id) => { setActiveView(null); if (id) { setTab("servers"); setSelectedServer(id); }}}
+            launch={launchParam}
           />
         )}
 

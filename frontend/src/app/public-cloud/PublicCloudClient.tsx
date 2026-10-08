@@ -5,7 +5,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
-import catalog from "@/data/cloudCatalog.json";
+import { getCloudCatalog, FALLBACK_CATALOG } from "@/lib/cloudLive";
 import {
   Search, ChevronDown, Cpu, Zap, Network, HardDrive, Container, Database, Brain, Atom,
 } from "lucide-react";
@@ -22,12 +22,10 @@ interface Leaf {
   families?: Family[]; items?: PriceItem[];
   simpleRows?: { name: string; price: string; note?: string }[];
 }
-const catalogData = catalog as unknown as Record<string, Leaf[]>;
-
 /* ── Sidebar tree (mirrors the public-cloud pricing IA) ── */
 interface TreeLeaf { label: string; leaf: string }
 interface TreeNode { label: string; leaf?: string; children?: TreeLeaf[] }
-const tree: TreeNode[] = [
+const buildTree = (cd: Record<string, Leaf[]>): TreeNode[] => [
   { label: "Overview", leaf: "overview" },
   {
     label: "Compute",
@@ -68,7 +66,7 @@ const tree: TreeNode[] = [
   },
   {
     label: "Databases",
-    children: (catalogData["databases"] || []).map((s) => ({ label: s.title, leaf: s.id })),
+    children: (cd["databases"] || []).map((s) => ({ label: s.title, leaf: s.id })),
   },
   { label: "Analytics", leaf: "analytics" },
   {
@@ -94,27 +92,35 @@ const tree: TreeNode[] = [
   { label: "Pricing model", leaf: "pricing" },
 ];
 
-const leafSection: Record<string, string> = {};
-const leafTitle: Record<string, string> = {};
-tree.forEach((n) => {
-  if (n.leaf) {
-    const group = Object.keys(catalogData).find((g) => (catalogData[g] || []).some((s) => s.id === n.leaf));
-    if (group) leafSection[n.leaf] = group;
-    leafTitle[n.leaf] = n.label;
-  }
-  (n.children || []).forEach((c) => {
-    const group = Object.keys(catalogData).find((g) => (catalogData[g] || []).some((s) => s.id === c.leaf));
-    if (group) leafSection[c.leaf] = group;
-    leafTitle[c.leaf] = c.label;
-  });
-});
-
 export default function PublicCloudClient({ initialPlans }: { initialPlans?: any[] }) {
   const { currency } = useCurrency();
+  const [catalogData, setCatalogData] = useState<Record<string, Leaf[]>>(FALLBACK_CATALOG);
+  const [live, setLive] = useState(false);
   const [active, setActive] = useState("vm");
   const [open, setOpen] = useState<Record<string, boolean>>({ Compute: true });
   const [os, setOs] = useState<"linux" | "windows">("linux");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let on = true;
+    getCloudCatalog().then((d) => { if (on) { setCatalogData(d); setLive(true); } });
+    return () => { on = false; };
+  }, []);
+
+  const tree = useMemo(() => buildTree(catalogData), [catalogData]);
+  const { leafSection, leafTitle } = useMemo(() => {
+    const sec: Record<string, string> = {};
+    const ttl: Record<string, string> = {};
+    tree.forEach((n) => {
+      const leaves = [...(n.leaf ? [{ label: n.label, leaf: n.leaf }] : []), ...(n.children || [])];
+      leaves.forEach((c) => {
+        const group = Object.keys(catalogData).find((g) => (catalogData[g] || []).some((s) => s.id === c.leaf));
+        if (group) sec[c.leaf] = group;
+        ttl[c.leaf] = c.label;
+      });
+    });
+    return { leafSection: sec, leafTitle: ttl };
+  }, [tree, catalogData]);
 
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get("s");
@@ -180,7 +186,7 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
                   <td className="px-4 py-3 text-xs text-slate-500">{i.specs?.["private-network"] || "—"}</td>
                   <td className="px-4 py-3 text-sm font-bold text-[#0f172a]">{fmt(i.hour)}</td>
                   <td className="px-4 py-3 text-sm text-slate-500">~{fmt(i.month)}</td>
-                  <td className="px-4 py-3"><Link href="/register" className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Launch</Link></td>
+                  <td className="px-4 py-3"><Link href={`/dashboard?view=public-cloud&launch=${i.code}`} className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Launch</Link></td>
                 </tr>
               ))}
             </tbody>
@@ -209,7 +215,7 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
                 <td className="px-4 py-3 text-sm font-bold text-[#00b7ff]">{i.name !== i.code ? i.name : i.code}</td>
                 <td className="px-4 py-3 text-sm font-bold text-[#0f172a]">{i.hourFmt ? fmt(i.hour) : "—"}</td>
                 <td className="px-4 py-3 text-sm text-slate-500">{i.monthFmt ? `~${fmt(i.month)}` : "—"}</td>
-                <td className="px-4 py-3"><Link href="/dashboard" className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Enable</Link></td>
+                <td className="px-4 py-3"><Link href={`/dashboard?view=public-cloud&launch=svc-${sec.id}`} className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Enable</Link></td>
               </tr>
             ))}
             {items.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">No items found.</td></tr>}
@@ -354,7 +360,7 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
           <h2 className="text-2xl font-black md:text-3xl">Create a Public Cloud project</h2>
           <p className="mt-3 text-sm text-slate-500 max-w-xl mx-auto">A project is free to create. Add a payment method, launch instances and pay only for what you use — per hour.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href="/dashboard" className="rounded bg-[#ff3d00] px-8 py-3 text-sm font-bold text-white hover:bg-[#e63700]">Create your project — free</Link>
+            <Link href="/dashboard?view=public-cloud" className="rounded bg-[#ff3d00] px-8 py-3 text-sm font-bold text-white hover:bg-[#e63700]">Create your project — free</Link>
             <Link href="/support" className="rounded border border-slate-300 bg-white px-8 py-3 text-sm font-bold text-[#0f172a] hover:border-[#00b7ff]">Contact Sales</Link>
           </div>
         </div>

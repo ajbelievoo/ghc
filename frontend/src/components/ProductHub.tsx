@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
 import { useToast } from "@/components/ToastProvider";
 import NetworkHub from "@/components/NetworkHub";
+import PublicCloudPanel from "@/components/PublicCloudPanel";
 import RoadmapHub from "@/components/RoadmapHub";
 import OrderHub from "@/components/OrderHub";
 import DomainHub from "@/components/DomainHub";
@@ -22,6 +23,7 @@ interface ProductHubProps {
   onTab?: (tab: string) => void;
   onSelectView?: (view: string) => void;
   setSelectedServer?: (id: string | null) => void;
+  launch?: string | null;
 }
 
 const statusColor: Record<string, string> = {
@@ -32,7 +34,7 @@ const statusColor: Record<string, string> = {
   CANCELLED: "bg-slate-100 text-slate-500",
 };
 
-export default function ProductHub({ view, servers, myDomains, invoices, wallet, user, onBack, onTab, onSelectView, setSelectedServer }: ProductHubProps) {
+export default function ProductHub({ view, servers, myDomains, invoices, wallet, user, onBack, onTab, onSelectView, setSelectedServer, launch }: ProductHubProps) {
   const router = useRouter();
   const { currency } = useCurrency();
   const { showToast } = useToast();
@@ -243,32 +245,7 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
       )}
 
       {view === "public-cloud" && (
-        <div className="space-y-6">
-          {/* Project card */}
-          <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold text-[#0f172a]">Your Public Cloud project</h3>
-              {filteredServers.length > 0 ? (
-                <p className="text-sm text-slate-500 mt-1">{filteredServers.length} project{filteredServers.length > 1 ? "s" : ""} active. Instances are billed per hour — launch them below.</p>
-              ) : (
-                <p className="text-sm text-slate-500 mt-1">No project yet. Create one for free — instances are billed per hour only while running.</p>
-              )}
-            </div>
-            <button onClick={onOrder} className="rounded-lg bg-[#00b7ff] text-[#0f172a] px-6 py-3 font-semibold hover:bg-[#33c4ff] transition-all flex items-center gap-2 shrink-0"><Plus className="w-4 h-4" /> Create a project — free</button>
-          </div>
-
-          {/* Instances */}
-          {renderTable(filteredServers, [])}
-
-          {/* Hourly pricing note */}
-          <div className="rounded-2xl border border-[#00b7ff]/30 bg-[#e8f6ff] p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold text-[#0f172a]">Pay-as-you-go instances</p>
-              <p className="text-xs text-slate-600 mt-0.5">B3/C3/R3/D2/I1 flavors and GPU instances (V100, A10, A100, L40S, H100) launch inside your project and bill per hour. Browse the full price list on the public page.</p>
-            </div>
-            <button onClick={() => router.push("/public-cloud")} className="rounded-lg border border-[#00b7ff]/40 text-[#00b7ff] px-4 py-2 text-xs font-semibold hover:bg-[#00b7ff]/10 transition-all shrink-0">View instance pricing →</button>
-          </div>
-        </div>
+        <PublicCloudPanel wallet={wallet} user={user} onTab={onTab} launch={launch} />
       )}
 
       {view === "network" && (

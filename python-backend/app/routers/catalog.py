@@ -40,6 +40,17 @@ def get_plan(plan_code: str, db: Session = Depends(get_db)):
     return plan
 
 
+@router.get("/cloud-live")
+def live_cloud_catalog(db: Session = Depends(get_db)):
+    """Real-time Public Cloud catalog — fetched from the upstream catalog API,
+    margin applied, cached 30 min. No auth required (public pricing page)."""
+    from app.services.cloud_live_service import get_live_cloud_catalog
+    try:
+        return get_live_cloud_catalog(db)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Live catalog unavailable: {e}")
+
+
 @router.get("/margins", response_model=list[MarginSettingResponse])
 def list_margins(db: Session = Depends(get_db)):
     from app.models.models import MarginSetting
