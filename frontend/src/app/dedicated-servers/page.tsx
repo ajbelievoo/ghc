@@ -1,7 +1,7 @@
-import CategoryPage from "@/components/CategoryPage";
+import DedicatedServersClient from "./DedicatedServersClient";
 import { fetchPlans } from "@/lib/plans";
 
 export default async function DedicatedServersPage() {
   const plans = await fetchPlans("DEDICATED");
-  return <CategoryPage categoryKey="DEDICATED" initialPlans={plans} />;
+  return <DedicatedServersClient initialPlans={plans} />;
 }
