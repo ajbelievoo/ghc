@@ -267,15 +267,33 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
       )}
 
       {view === "licenses" && (
-        <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between"><h3 className="font-semibold text-[#0f172a]">Manage my licences</h3><button onClick={() => requestQuote("SPLA / cPanel / Plesk / Windows License")} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-semibold hover:bg-[#009fe0] transition-all">Order</button></div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead><tr className="border-b border-slate-200 bg-slate-100/50"><th className="px-5 py-3 text-xs font-semibold text-slate-500">Name</th><th className="px-5 py-3 text-xs font-semibold text-slate-500">Licence ID</th><th className="px-5 py-3 text-xs font-semibold text-slate-500">IP</th><th className="px-5 py-3 text-xs font-semibold text-slate-500">Service</th><th className="px-5 py-3 text-xs font-semibold text-slate-500">Renewal</th></tr></thead>
-              <tbody>
-                <tr><td colSpan={5} className="px-5 py-12 text-center text-sm text-slate-500">No licences yet. Contact support to add SPLA, cPanel, Plesk, Windows or Veeam licences.</td></tr>
-              </tbody>
-            </table>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { title: "cPanel VPS", desc: "VPS with cPanel & WHM pre-installed", href: "/vps/cpanel" },
+              { title: "Plesk VPS", desc: "VPS with Plesk Obsidian pre-installed", href: "/vps/plesk" },
+              { title: "WordPress VPS", desc: "VPS with WordPress pre-installed", href: "/vps/wordpress" },
+              { title: "Windows Server", desc: "Windows Server 2025 licence on VPS/dedicated", href: null },
+            ].map((l) => (
+              <div key={l.title} className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5 flex flex-col">
+                <h3 className="text-sm font-semibold text-[#0f172a] mb-1">{l.title}</h3>
+                <p className="text-xs text-slate-500 mb-4 flex-1">{l.desc}</p>
+                {l.href
+                  ? <button onClick={() => router.push(l.href!)} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-xs font-semibold hover:bg-[#009fe0] transition-all self-start">Order</button>
+                  : <button onClick={() => requestQuote(l.title)} className="rounded-lg border border-[#00b7ff]/40 text-[#00b7ff] px-4 py-2 text-xs font-semibold hover:bg-[#00b7ff]/10 transition-all self-start">Request</button>}
+              </div>
+            ))}
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between"><h3 className="font-semibold text-[#0f172a]">Manage my licences</h3><button onClick={() => requestQuote("SPLA / cPanel / Plesk / Windows License")} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-semibold hover:bg-[#009fe0] transition-all">Order</button></div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-slate-200 bg-slate-100/50"><th className="px-5 py-3 text-xs font-semibold text-slate-500">Name</th><th className="px-5 py-3 text-xs font-semibold text-slate-500">Licence ID</th><th className="px-5 py-3 text-xs font-semibold text-slate-500">IP</th><th className="px-5 py-3 text-xs font-semibold text-slate-500">Service</th><th className="px-5 py-3 text-xs font-semibold text-slate-500">Renewal</th></tr></thead>
+                <tbody>
+                  <tr><td colSpan={5} className="px-5 py-12 text-center text-sm text-slate-500">No licences yet. Order a licensed VPS above or contact support for SPLA / Windows / Veeam licences.</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

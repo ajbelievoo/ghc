@@ -13,17 +13,27 @@ import { Language } from "@/lib/i18n";
 const megaMenu = [
   {
     label: "Public Cloud",
-    href: "/vps",
+    href: "/public-cloud",
     columns: [
-      { title: "Compute", items: [{ label: "Compute Instances", href: "/vps", desc: "Scalable cloud VMs" }, { label: "GPU Instances", href: "/dedicated-servers", desc: "AI/ML workloads" }] },
-      { title: "Storage", items: [{ label: "Object Storage", href: "/web-hosting", desc: "S3-compatible" }, { label: "Block Storage", href: "/web-hosting", desc: "High-performance disks" }] },
+      { title: "Compute", items: [
+        { label: "Compute Instances", href: "/vps", desc: "Scalable cloud VMs" },
+        { label: "GPU Instances", href: "/dedicated-servers/scale", desc: "AI/ML workloads" },
+      ]},
+      { title: "Storage", items: [
+        { label: "Object Storage", href: "/dedicated-servers/storage", desc: "High-capacity storage" },
+        { label: "Block Storage", href: "/dedicated-servers/storage", desc: "High-performance disks" },
+      ]},
     ],
   },
   {
     label: "Private Cloud",
-    href: "/dedicated-servers",
+    href: "/private-cloud",
     columns: [
-      { title: "Hosted Private Cloud", items: [{ label: "VMware on GHC", href: "/dedicated-servers", desc: "Managed VMware" }, { label: "Nutanix on GHC", href: "/dedicated-servers", desc: "Hyperconverged" }] },
+      { title: "Hosted Private Cloud", items: [
+        { label: "VMware on GHC", href: "/private-cloud", desc: "Managed VMware" },
+        { label: "Nutanix on GHC", href: "/dedicated-servers/high-grade", desc: "Hyperconverged hosts" },
+        { label: "Dedicated Hypervisor", href: "/private-cloud", desc: "Dedicated cloud infra" },
+      ]},
     ],
   },
   {
@@ -33,12 +43,12 @@ const megaMenu = [
       { title: "VPS & Dedicated", items: [
         { label: "Dedicated servers", href: "/dedicated-servers", desc: "Bare metal power" },
         { label: "VPS", href: "/vps", desc: "Virtual private servers" },
-        { label: "Distributions & Licenses", href: "/vps", desc: "OS and control panels" },
+        { label: "Distributions & Licenses", href: "/apps", desc: "OS and control panels" },
       ]},
       { title: "Bare Metal Foundations", items: [
-        { label: "Network", href: "/dedicated-servers", desc: "Secure connectivity" },
-        { label: "Storage & Backup", href: "/web-hosting", desc: "Business continuity" },
-        { label: "Security & Identity", href: "/dedicated-servers", desc: "Access control" },
+        { label: "Network", href: "/network", desc: "Secure connectivity" },
+        { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Business continuity" },
+        { label: "Security & Identity", href: "/security", desc: "Access control" },
       ]},
     ],
   },
@@ -47,12 +57,13 @@ const megaMenu = [
     href: "/domain",
     columns: [
       { title: "Web Hosting", items: [
-        { label: "Agencies", href: "/web-hosting", desc: "Designed for web agencies" },
-        { label: "Business", href: "/web-hosting", desc: "For professionals" },
-        { label: "Eco", href: "/web-hosting", desc: "Accessible prices" },
+        { label: "Agencies", href: "/web-hosting?range=Agency", desc: "Designed for web agencies" },
+        { label: "Business", href: "/web-hosting?range=Business", desc: "For professionals" },
+        { label: "Eco", href: "/web-hosting?range=Eco", desc: "Accessible prices" },
       ]},
       { title: "Domains and Emails", items: [
         { label: "Domain name", href: "/domain", desc: "Assert your identity" },
+        { label: "Email hosting", href: "/web-hosting", desc: "Professional mailboxes" },
       ]},
     ],
   },

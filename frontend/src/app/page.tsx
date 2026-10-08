@@ -502,19 +502,19 @@ export default function Home() {
           <div className="grid gap-6 md:grid-cols-2">
             {[
               { title: "Choose an infrastructure", icon: Server, links: [
-                { label: "Versatile dedicated servers for SMEs", href: "/dedicated-servers" },
-                { label: "Dedicated servers for building clusters", href: "/dedicated-servers" },
-                { label: "Premium customisable dedicated servers", href: "/dedicated-servers" },
+                { label: "Versatile dedicated servers for SMEs", href: "/dedicated-servers/advance" },
+                { label: "Dedicated servers for building clusters", href: "/dedicated-servers/scale" },
+                { label: "Premium customisable dedicated servers", href: "/dedicated-servers/high-grade" },
                 { label: "Virtual private servers at a competitive price", href: "/vps" },
               ]},
               { title: "Opt for an Enterprise solution", icon: Shield, links: [
-                { label: "Private Cloud", href: "/dedicated-servers" },
-                { label: "Disaster recovery plans", href: "/dedicated-servers" },
-                { label: "Migrating from your datacentre to the cloud", href: "/dedicated-servers" },
-                { label: "Certified solutions for hosting sensitive data", href: "/dedicated-servers" },
+                { label: "Private Cloud", href: "/private-cloud" },
+                { label: "Disaster recovery plans", href: "/dedicated-servers/storage" },
+                { label: "Migrating from your datacentre to the cloud", href: "/dedicated-servers/high-grade" },
+                { label: "Certified solutions for hosting sensitive data", href: "/security" },
               ]},
               { title: "Start your cloud project", icon: Cloud, links: [
-                { label: "Public Cloud", href: "/vps" },
+                { label: "Public Cloud", href: "/public-cloud" },
                 { label: "Managed Kubernetes Service", href: "/vps" },
                 { label: "Managed Databases", href: "/vps" },
                 { label: "Data Analytics", href: "/vps" },
@@ -522,8 +522,8 @@ export default function Home() {
               { title: "Manage your online presence", icon: Globe, links: [
                 { label: "Web Hosting", href: "/web-hosting" },
                 { label: "Domain Names", href: "/domain" },
-                { label: "CDN & Security", href: "/web-hosting" },
-                { label: "1-click CMS install", href: "/web-hosting" },
+                { label: "CDN & Security", href: "/security" },
+                { label: "1-click CMS install", href: "/apps" },
               ]},
             ].map((card) => (
               <div key={card.title} className="ghc-reveal flex gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">

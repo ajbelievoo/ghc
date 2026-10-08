@@ -451,20 +451,23 @@ def _extract_service_credentials(ovh: OvhClient, category: ServiceCategory, serv
     return result
 
 
+def _duration_to_cycle(duration_label: str):
+    """Map an order duration label to (renewal days, BillingCycle)."""
+    mapping = {
+        "3_month": (90, BillingCycle.QUARTERLY),
+        "6_month": (180, BillingCycle.HALF_YEARLY),
+        "12_month": (365, BillingCycle.YEARLY),
+        "24_month": (730, BillingCycle.YEARLY),
+        "48_month": (1460, BillingCycle.YEARLY),
+    }
+    return mapping.get(duration_label, (30, BillingCycle.MONTHLY))
+
+
 def _ensure_invoice_and_subscription(db: Session, order: CustomerOrder):
     """Create a paid invoice and a PENDING subscription if checkout failed after payment."""
     if not order.invoice:
         from app.models.models import Invoice, InvoiceStatus, Subscription, SubscriptionStatus, BillingCycle
-        cycle_days = 30
-        if order.duration_label == "12_month":
-            cycle_days = 365
-        elif order.duration_label == "3_month":
-            cycle_days = 90
-        billing_cycle = BillingCycle.MONTHLY
-        if order.duration_label == "12_month":
-            billing_cycle = BillingCycle.YEARLY
-        elif order.duration_label == "3_month":
-            billing_cycle = BillingCycle.QUARTERLY
+        cycle_days, billing_cycle = _duration_to_cycle(order.duration_label)
         tax_type, hsn_code, place = gst_fields_for_user(db, order.user_id)
         invoice = Invoice(
             order_id=order.id,
@@ -624,17 +627,7 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         service_name = _poll_for_service_name(ovh, plan.category, int(ovh_order_id))
         creds = _extract_service_credentials(ovh, plan.category, service_name) if service_name else {}
 
-        cycle_days = 30
-        if order.duration_label == "12_month":
-            cycle_days = 365
-        elif order.duration_label == "3_month":
-            cycle_days = 90
-
-        billing_cycle = BillingCycle.MONTHLY
-        if order.duration_label == "12_month":
-            billing_cycle = BillingCycle.YEARLY
-        elif order.duration_label == "3_month":
-            billing_cycle = BillingCycle.QUARTERLY
+        cycle_days, billing_cycle = _duration_to_cycle(order.duration_label)
 
         subscription = Subscription(
             order_id=order.id,

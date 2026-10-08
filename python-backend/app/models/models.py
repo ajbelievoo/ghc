@@ -37,6 +37,7 @@ class SubscriptionStatus(str, PyEnum):
 class BillingCycle(str, PyEnum):
     MONTHLY = "MONTHLY"
     QUARTERLY = "QUARTERLY"
+    HALF_YEARLY = "HALF_YEARLY"
     YEARLY = "YEARLY"
 
 

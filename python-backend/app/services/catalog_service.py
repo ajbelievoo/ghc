@@ -1,12 +1,13 @@
+import json
 import logging
 import re
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models.models import MarginSetting, PlanCatalog, PlanDuration, ServiceCategory
+from app.models.models import AdminConfig, MarginSetting, PlanCatalog, PlanDuration, ServiceCategory
 from app.services.ovh_client import OvhClient, apply_margin, ovh_price_to_decimal
 
 logger = logging.getLogger(__name__)
@@ -200,6 +201,67 @@ def get_margin_for_category(db: Session, category: ServiceCategory) -> Decimal:
     return Decimal("20.0")
 
 
+COMMITMENT_MONTHS = (3, 6, 12)
+DEFAULT_COMMITMENT_DISCOUNTS = {"3_month": 0.0, "6_month": 5.0, "12_month": 10.0}
+
+
+def _commitment_discounts(db: Session) -> Dict[str, float]:
+    """Commitment discounts (% off the monthly rate) per duration label.
+
+    Overridable via admin_configs key `commitment_discounts` (JSON object).
+    """
+    try:
+        row = db.query(AdminConfig).filter(AdminConfig.key == "commitment_discounts").first()
+        if row and row.value:
+            data = json.loads(row.value)
+            return {**DEFAULT_COMMITMENT_DISCOUNTS, **{k: float(v) for k, v in data.items()}}
+    except Exception:
+        pass
+    return dict(DEFAULT_COMMITMENT_DISCOUNTS)
+
+
+def _derive_commitment_durations(db: Session, plan_code: str, provided_labels: set, discounts: Dict[str, float]) -> None:
+    """Create/update multi-month commitment durations OVH doesn't offer natively.
+
+    Several catalog plans (e.g. the VPS 2027 range) only expose P1M pricing
+    upstream. Customers can still prepay for 3/6/12 months — OVH is billed
+    monthly upstream — so these rows are derived from the monthly price.
+    """
+    monthly = db.query(PlanDuration).filter(
+        PlanDuration.plan_code == plan_code,
+        PlanDuration.duration_label == "1_month",
+    ).first()
+    if not monthly or not monthly.final_price:
+        return
+    for months in COMMITMENT_MONTHS:
+        label = f"{months}_month"
+        if label in provided_labels:
+            continue
+        discount = Decimal(str(discounts.get(label, 0))) / Decimal("100")
+        raw_price = (Decimal(str(monthly.raw_price)) * months).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        final_price = (Decimal(str(monthly.final_price)) * months * (1 - discount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        duration = db.query(PlanDuration).filter(
+            PlanDuration.plan_code == plan_code,
+            PlanDuration.duration_label == label,
+        ).first()
+        if duration:
+            duration.raw_price = float(raw_price)
+            duration.final_price = float(final_price)
+            duration.interval = months
+            duration.interval_unit = "month"
+            duration.currency = monthly.currency
+        else:
+            db.add(PlanDuration(
+                plan_code=plan_code,
+                duration_label=label,
+                interval=months,
+                interval_unit="month",
+                raw_price=float(raw_price),
+                final_price=float(final_price),
+                currency=monthly.currency,
+            ))
+
+
 def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tuple[int, int, Optional[str]]:
     category = registry["category"]
     endpoint = registry["endpoint"]
@@ -209,6 +271,7 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
 
     settings = get_settings()
     margin = get_margin_for_category(db, category)
+    discounts = _commitment_discounts(db)
     synced = 0
     errors = 0
 
@@ -342,6 +405,7 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
                         final_price=float(final_price),
                         currency=currency,
                     ))
+            _derive_commitment_durations(db, plan_code, seen_durations, discounts)
             db.flush()
             synced += 1
         except Exception as e:

@@ -41,6 +41,12 @@ const subCategoryHero: Record<string, { title: string; subtitle: string; bullets
   "n8n": { title: "VPS n8n: a solution for your workflow automations", subtitle: "Transform your business operations with n8n, the flexible workflow automation tool. Seamlessly connect integrations and streamline complex processes with ease.", bullets: ["n8n pre-installed and ready to use","Automate workflows without coding","Connect 400+ integrations"] },
   "cpanel": { title: "Discover our cPanel-compatible VPSs", subtitle: "Centralised multi-site management, reliable, scalable web hosting, and transparent and predictable pricing.", bullets: ["cPanel & WHM pre-installed","Manage multiple websites easily","Automatic SSL and backups"] },
   "wordpress": { title: "Explore GHC VPS servers, compatible with WordPress", subtitle: "Performance at a competitive price. A customisable and scalable VPS, compatible with WordPress. Up to 3 Gbps unlimited bandwidth and traffic.", bullets: ["WordPress pre-installed","Scalable resources as you grow","Up to 3 Gbps unlimited bandwidth"] },
+  "comfort": { title: "VPS Comfort Range", subtitle: "Balanced performance and storage for growing projects", bullets: ["More RAM and storage","Unlimited traffic","Anti-DDoS included"] },
+  "advance": { title: "Advance Dedicated Servers", subtitle: "Versatile bare-metal servers for SMEs, agencies and developers", bullets: ["Latest AMD EPYC platforms","NVMe SSD storage","Anti-DDoS included"] },
+  "game": { title: "Game Dedicated Servers", subtitle: "High-frequency Ryzen servers built for gaming and low-latency workloads", bullets: ["AMD Ryzen 9000 series","Game DDoS protection","1 Gbps guaranteed bandwidth"] },
+  "scale": { title: "Scale & GPU Dedicated Servers", subtitle: "High-density servers and GPU-accelerated bare metal for production at scale", bullets: ["Up to 10 Gbps network","GPU options for AI/ML","Enterprise-grade hardware"] },
+  "high-grade": { title: "High Grade Dedicated Servers", subtitle: "Mission-critical infrastructure for HCI, SAP, storage and AI workloads", bullets: ["Dual 10 Gbps networking","Massive NVMe capacity","SAP and VMware certified"] },
+  "storage": { title: "Storage & Backup Servers", subtitle: "High-capacity storage servers for backups, archives and data-intensive workloads", bullets: ["Up to 12 disk bays","SAS / SATA / NVMe options","Anti-DDoS included"] },
 };
 
 
@@ -126,15 +132,15 @@ function planRange(p: Plan, category: string): string | null {
     if (p.planCode.startsWith("sql_included")) return null;
     if (p.planCode.includes("2014") || name.includes("2014 offer")) return null;
     if (p.planCode.startsWith("hosting-")) {
-      const base = p.planCode.replace(/^hosting-/, "").replace(/-\d+$/, "");
+      const base = p.planCode.replace(/^hosting-/, "").replace(/-\d+$/, "").replace(/-ovh$/, "");
       const parts = base.split("-").filter(Boolean);
-      const labels: Record<string, string> = {
-        starter: "Starter", perso: "Perso", pro: "Pro", startup: "Startup",
-        performance: "Performance", agency: "Agency",
-        "agency-plus": "Agency Plus", "agency-max": "Agency Max",
+      const tiers: Record<string, string> = {
+        starter: "Eco", perso: "Eco",
+        pro: "Business", startup: "Business", performance: "Business",
+        agency: "Agency", "agency-plus": "Agency", "agency-max": "Agency",
       };
       const key = parts.join("-");
-      return labels[key] || parts.map((x) => x.charAt(0).toUpperCase() + x.slice(1)).join(" ");
+      return tiers[key] || parts.map((x) => x.charAt(0).toUpperCase() + x.slice(1)).join(" ");
     }
     return name.split(" ")[0];
   }
@@ -153,6 +159,7 @@ function planRange(p: Plan, category: string): string | null {
     if (m) {
       const key = m[1];
       const lk = key.toLowerCase();
+      if (lk.includes("stor")) return "Storage";
       // map HGR-* generically
       if (lk.startsWith("hgr-")) {
         const sub = key.split("-")[1];
@@ -279,12 +286,13 @@ interface SubTab {
   label: string;
 }
 
-export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubTabChange, initialPlans }: { categoryKey: string; subCategory?: string; subTabs?: SubTab[]; onSubTabChange?: (key: string) => void; initialPlans?: Plan[] }) {
+export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubTabChange, initialPlans, ranges }: { categoryKey: string; subCategory?: string; subTabs?: SubTab[]; onSubTabChange?: (key: string) => void; initialPlans?: Plan[]; ranges?: string[] }) {
   const cat = categoryMap[categoryKey] || categoryMap.VPS;
   const isDedicated = categoryKey === "DEDICATED";
 
   const cleanPlans = (list: Plan[]) => {
-    const filtered = list.filter((p) => planRange(p, categoryKey) !== null);
+    let filtered = list.filter((p) => planRange(p, categoryKey) !== null);
+    if (ranges && ranges.length) filtered = filtered.filter((p) => ranges.includes(planRange(p, categoryKey) || ""));
     // Deduplicate by invoiceName, preferring base planCode without region suffix
     const map = new Map<string, Plan>();
     filtered.forEach((p) => {
@@ -323,6 +331,14 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
   const [filterMinPrice, setFilterMinPrice] = useState("");
   const [filterMaxPrice, setFilterMaxPrice] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const r = sp.get("range");
+    const q = sp.get("q");
+    if (r) setFilterRange(r);
+    if (q) setSearchQuery(q);
+  }, []);
 
   useEffect(() => {
     if (initialPlans) {

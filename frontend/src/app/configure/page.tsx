@@ -190,8 +190,12 @@ function ConfigurePageContent() {
   };
   const providerDatacenters = findConfigValues(["datacenter", "location", "zone", "region", "district", "country"]);
   const providerImages = findConfigValues(["image", "os", "template", "distribution"]);
-  const durationText = durationLabel.replace("_", " ");
-  const commitmentDiscount = durationLabel.startsWith("12_") ? "Save 15% per month" : durationLabel.startsWith("6_") ? "Save 5% per month" : "";
+  const durationTitle = (l: string) => l === "1_month" ? "No commitment" : `${parseInt(l)} months`;
+  const durationText = durationLabel === "1_month" ? "1 month" : `${parseInt(durationLabel)} months`;
+  const monthlyBase = durations.find((d: any) => d.durationLabel === "1_month")?.monthlyPrice || 0;
+  const savePct = (d: any) => (monthlyBase && d.monthlyPrice && d.monthlyPrice < monthlyBase)
+    ? Math.round((1 - d.monthlyPrice / monthlyBase) * 100) : 0;
+  const commitmentDiscount = savePct(selectedDuration) > 0 ? `Save ${savePct(selectedDuration)}% per month` : "";
   // Show all provider locations; fallback to raw code if no friendly meta exists
   const displayedLocations = providerDatacenters;
 
@@ -346,14 +350,14 @@ function ConfigurePageContent() {
             <div className="grid gap-3 md:grid-cols-3">
               {durations.map((d: any) => {
                 const active = durationLabel === d.durationLabel;
-                const save = d.durationLabel.startsWith("12_") ? "Save 16% per month" : d.durationLabel.startsWith("6_") ? "Save 6% per month" : "";
+                const save = savePct(d) > 0 ? `Save ${savePct(d)}% per month` : "";
                 return (
                   <label key={d.durationLabel} onClick={() => setDurationLabel(d.durationLabel)} className={`flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition ${active ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
                     <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${active ? "border-[#00b7ff]" : "border-slate-400"}`}>
                       {active && <span className="h-2 w-2 rounded-full bg-[#00b7ff]" />}
                     </span>
                     <div className="flex-1 text-left">
-                      <p className="text-sm font-bold text-[#0f172a]">{d.durationLabel === "1_month" ? "No commitment" : d.durationLabel.replace("_", " ")}</p>
+                      <p className="text-sm font-bold text-[#0f172a]">{durationTitle(d.durationLabel)}</p>
                       <p className="mt-1 text-sm font-black text-[#0f172a]">{fmtCurrency(d.monthlyPrice, planCurrency)}</p>
                       <p className="text-[10px] text-slate-400">/month</p>
                       {save && <p className="mt-1 flex items-center gap-1 text-xs font-bold text-[#e0006d]"><span className="text-[10px]">🏷️</span>{save}</p>}
