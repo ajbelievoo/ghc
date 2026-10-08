@@ -746,7 +746,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0f1c] flex">
+      <div className="ghc-dash-shell min-h-screen bg-[#0a0f1c] flex">
         <aside className="ghc-dash-sidebar w-72 border-r border-white/10 bg-[#0a0f1c] hidden lg:flex" />
         <main className="ghc-dash-main flex-1 bg-[#f4f6fb] p-6 space-y-6">
           <div className="h-16 rounded-2xl bg-slate-200 animate-pulse" />
@@ -768,7 +768,7 @@ export default function DashboardPage() {
 
   return (
     <ErrorBoundary>
-    <div className="min-h-screen bg-[#0a0f1c] flex relative">
+    <div className="ghc-dash-shell min-h-screen bg-[#0a0f1c] flex relative">
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
       {/* Sidebar */}
       <DashboardSidebar

@@ -14,15 +14,12 @@ import {
   LifeBuoy,
   Map,
   Cpu,
-  Layers,
   Activity,
   User,
-  ChevronRight,
   ChevronDown,
   Plus,
   LayoutDashboard,
   Wallet,
-  Headphones,
   HelpCircle,
   LogOut,
   X,
@@ -165,7 +162,7 @@ export default function DashboardSidebar({ activeView, setActiveView, tab, setTa
   };
 
   return (
-    <aside className={`ghc-dash-sidebar lg:w-72 lg:static lg:translate-x-0 fixed top-0 left-0 z-50 h-screen bg-[#0a0f1c] text-slate-300 flex flex-col border-r border-white/10 transition-transform duration-300 ${mobileOpen ? "w-72 translate-x-0" : "w-72 -translate-x-full"} overflow-hidden`}>
+    <aside className={`ghc-dash-sidebar lg:w-72 lg:sticky lg:top-0 lg:self-start lg:translate-x-0 fixed top-0 left-0 z-50 h-screen bg-[#0a0f1c] text-slate-300 flex flex-col border-r border-white/10 transition-transform duration-300 ${mobileOpen ? "w-72 translate-x-0" : "w-72 -translate-x-full"} overflow-hidden`}>
       {/* subtle aurora background */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-20 -left-20 w-64 h-64 bg-[#00b7ff]/10 rounded-full blur-3xl" />
@@ -194,48 +191,48 @@ export default function DashboardSidebar({ activeView, setActiveView, tab, setTa
         </button>
       </div>
 
-      <div className="relative z-10 flex-1 overflow-y-auto py-3 px-3 space-y-2">
+      <div className="relative z-10 flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
         {MENU.map((cat) => {
           const Icon = cat.icon;
           const isOpen = expanded.includes(cat.id) || cat.defaultOpen;
           return (
-            <div key={cat.id} className="rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-              <button onClick={() => toggle(cat.id)} className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors">
+            <div key={cat.id}>
+              <button onClick={() => toggle(cat.id)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                    <Icon className="w-4 h-4 text-[#00f0ff]" />
-                  </div>
-                  <span className="text-sm font-medium text-slate-200">{cat.label}</span>
+                  <Icon className="w-[18px] h-[18px] text-[#00f0ff]" />
+                  <span className="text-[13.5px] font-semibold text-slate-200">{cat.label}</span>
                 </div>
-                {isOpen ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
               </button>
-              {isOpen && (
-                <div className="pb-2 px-2">
-                  {cat.items.map((it) => (
-                    <button key={it.label} onClick={() => handleItem(it)} className={`w-full text-left pl-12 pr-3 py-2 text-sm rounded-lg transition-all ${isActiveItem(it) ? "bg-gradient-to-r from-[#00b7ff]/20 to-transparent text-white border-l-2 border-[#00f0ff]" : "text-slate-400 hover:text-white hover:bg-white/5"}`}>
-                      {it.label}
-                    </button>
-                  ))}
+              <div className={`grid transition-all duration-200 ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                <div className="overflow-hidden">
+                  <div className="ml-[26px] pl-3 border-l border-white/10 space-y-0.5 py-1">
+                    {cat.items.map((it) => (
+                      <button key={it.label} onClick={() => handleItem(it)} className={`w-full text-left px-3 py-[7px] text-[13px] rounded-lg transition-all ${isActiveItem(it) ? "bg-[#00b7ff]/15 text-white font-medium" : "text-slate-400 hover:text-white hover:bg-white/5"}`}>
+                        {it.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
 
         {user?.role === "ADMIN" && (
-          <a href="https://believoo.com/admin/ghc" target="_blank" rel="noreferrer" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">
-            <Shield className="w-5 h-5" />
-            <span className="text-sm font-medium">Admin Panel</span>
+          <a href="https://believoo.com/admin/ghc" target="_blank" rel="noreferrer" className="mt-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#00ff88] hover:bg-white/5 transition-colors">
+            <Shield className="w-[18px] h-[18px]" />
+            <span className="text-[13.5px] font-semibold">Admin Panel</span>
           </a>
         )}
       </div>
 
-      <div className="relative z-10 border-t border-white/10 p-3 space-y-1 bg-[#0a0f1c]/80 backdrop-blur-sm">
+      <div className="relative z-10 border-t border-white/10 p-3 space-y-0.5 bg-[#0a0f1c]/80 backdrop-blur-sm">
         {FOOTER.map((f) => {
           const Icon = f.icon;
           return (
-            <button key={f.label} onClick={() => handleItem(f)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${isActiveItem(f) ? "bg-white/10 text-white" : "text-slate-400 hover:text-white hover:bg-white/5"}`}>
-              <Icon className="w-4 h-4" />
+            <button key={f.label} onClick={() => handleItem(f)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] transition-all ${isActiveItem(f) ? "bg-[#00b7ff]/15 text-white font-medium" : "text-slate-400 hover:text-white hover:bg-white/5"}`}>
+              <Icon className="w-[18px] h-[18px]" />
               {f.label}
             </button>
           );

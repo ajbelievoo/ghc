@@ -303,6 +303,8 @@ html.dark input::placeholder,
 html.dark textarea::placeholder { color: #64748b !important; }
 
 /* ===== Dashboard ambient glow (both themes) ===== */
+html.light .ghc-dash-shell { background-color: #f4f6fb !important; }
+html.dark .ghc-dash-shell { background-color: #050608 !important; }
 .ghc-dash-main {
   background:
     radial-gradient(1100px 560px at 88% -12%, rgba(0, 183, 255, 0.08), transparent 60%),
