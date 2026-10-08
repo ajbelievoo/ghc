@@ -332,7 +332,7 @@ body { transition: background-color 0.35s ease, color 0.35s ease; }
   box-shadow: 0 16px 40px -18px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.05);
 }
 html.dark .ghc-dash-content .rounded-2xl:hover {
-  box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 183, 255, 0.10);
+  box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 183, 255, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Glowing status dots */
@@ -347,6 +347,20 @@ html.dark .ghc-dash-content .rounded-2xl:hover {
 /* Icon tiles inside stat cards get a faint inner glow */
 .ghc-dash-content .border-\[\#00b7ff\]\/30 { box-shadow: inset 0 0 14px rgba(0, 183, 255, 0.08); }
 html.dark .ghc-dash-content .border-\[\#00b7ff\]\/30 { box-shadow: inset 0 0 14px rgba(0, 183, 255, 0.12), 0 0 12px rgba(0, 183, 255, 0.08); }
+
+/* Slow-drifting aurora orbs */
+@keyframes ghc-orb { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(18px,-22px) scale(1.07); } }
+.ghc-orb { animation: ghc-orb 9s ease-in-out infinite; will-change: transform; }
+.ghc-orb-2 { animation-duration: 13s; animation-delay: -5s; animation-direction: reverse; }
+
+/* Dashboard entrance + glass edge highlight */
+@keyframes ghc-fadeup { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.ghc-dash-content { animation: ghc-fadeup .45s cubic-bezier(.2,.8,.25,1) both; }
+html.dark .ghc-dash-content .rounded-2xl { box-shadow: inset 0 1px 0 rgba(255,255,255,.045); }
+
+/* Sidebar nav rows — subtle slide on hover */
+.ghc-dash-sidebar .hover\:bg-white\/5:hover { transform: translateX(2px); }
+.ghc-dash-sidebar button { transition: all .2s ease; }
 
 /* ===== Dashboard ambient glow (both themes) ===== */
 html.light .ghc-dash-shell { background-color: #f4f6fb !important; }

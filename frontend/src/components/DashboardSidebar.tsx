@@ -165,8 +165,8 @@ export default function DashboardSidebar({ activeView, setActiveView, tab, setTa
     <aside className={`ghc-dash-sidebar lg:w-72 lg:sticky lg:top-0 lg:self-start lg:translate-x-0 fixed top-0 left-0 z-50 h-screen bg-[#0a0f1c] text-slate-300 flex flex-col border-r border-white/10 transition-transform duration-300 ${mobileOpen ? "w-72 translate-x-0" : "w-72 -translate-x-full"} overflow-hidden`}>
       {/* subtle aurora background */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-20 -left-20 w-64 h-64 bg-[#00b7ff]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-72 h-72 bg-[#b500ff]/10 rounded-full blur-3xl" />
+        <div className="ghc-orb absolute -top-20 -left-20 w-64 h-64 bg-[#00b7ff]/10 rounded-full blur-3xl" />
+        <div className="ghc-orb ghc-orb-2 absolute bottom-0 right-0 w-72 h-72 bg-[#b500ff]/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10 p-5 border-b border-white/10">

@@ -261,8 +261,8 @@ export default function Home() {
       {/* Hero — premium GHC */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-20 right-[5%] h-96 w-96 rounded-full bg-[#00b7ff]/10 blur-3xl" />
-          <div className="absolute bottom-0 left-[10%] h-80 w-80 rounded-full bg-[#00b7ff]/20 blur-3xl" />
+          <div className="ghc-orb absolute -top-20 right-[5%] h-96 w-96 rounded-full bg-[#00b7ff]/10 blur-3xl" />
+          <div className="ghc-orb ghc-orb-2 absolute bottom-0 left-[10%] h-80 w-80 rounded-full bg-[#00b7ff]/20 blur-3xl" />
         </div>
 
         <div className="relative mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-[1.1fr_0.9fr] md:py-24">
