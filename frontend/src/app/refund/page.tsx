@@ -14,13 +14,18 @@ export default function RefundPage() {
         <h1 className="text-3xl font-black text-[#0f172a] md:text-4xl">Refund & Cancellation Policy</h1>
         <p className="mt-2 text-sm text-slate-500">Last updated: {new Date().toLocaleDateString()}</p>
         <div className="mt-8 space-y-6 text-sm leading-relaxed text-slate-700">
-          <p>Believoo Pvt Ltd wants you to be satisfied with GHC services. This policy explains when refunds and cancellations are available.</p>
-          <h2 className="text-lg font-bold text-[#0f172a]">1. Money-Back Guarantee</h2>
-          <p>VPS and web hosting plans include a 7-day money-back guarantee from the date of first service activation, provided the service has not been abused or used for prohibited activities. Dedicated servers and domain registrations are non-refundable once ordered.</p>
-          <h2 className="text-lg font-bold text-[#0f172a]">2. Refund Eligibility</h2>
-          <p>Refunds are issued to the original payment method or wallet when a qualifying request is made. Setup fees, domain fees, SSL certificates, and add-on IPs are non-refundable. Refunds exclude taxes already remitted to authorities.</p>
+          <p>Believoo Pvt Ltd wants you to be satisfied with GHC services. This policy explains when refunds and cancellations are available. GHC services are provisioned on upstream provider infrastructure (OVHcloud); our refund terms therefore follow the upstream provider's terms so that we can continue offering services at low margin-based prices.</p>
+          <h2 className="text-lg font-bold text-[#0f172a]">1. Refund Eligibility</h2>
+          <p>Refunds are issued only in these cases:</p>
+          <ul className="ml-5 list-disc space-y-1">
+            <li><strong>Provisioning failure:</strong> if a paid service cannot be provisioned or activated, the payment is refunded in full.</li>
+            <li><strong>Duplicate or incorrect charges:</strong> accidental double payments or billing errors are refunded in full.</li>
+            <li><strong>Pre-provisioning cancellation:</strong> if you cancel before the service is provisioned at the upstream provider, a full refund applies.</li>
+          </ul>
+          <h2 className="text-lg font-bold text-[#0f172a]">2. Non-Refundable Services</h2>
+          <p>Once provisioned or activated, the following are strictly non-refundable because the upstream provider does not refund them to us: VPS, dedicated servers, cloud instances, web hosting plans, domain registrations/transfers/renewals, SSL certificates, licenses, add-on IPs, and setup fees. Upstream provider (OVHcloud) terms apply to service delivery, suspension, and termination.</p>
           <h2 className="text-lg font-bold text-[#0f172a]">3. Cancellation</h2>
-          <p>You may cancel recurring services from the client dashboard. Cancellations take effect at the end of the current billing cycle. No partial-month credits are given for mid-cycle cancellations unless required by law.</p>
+          <p>You may cancel recurring services from the client dashboard. Cancellations take effect at the end of the current billing cycle. No partial-period credits are given for mid-cycle cancellations unless required by law. Turning off auto-renewal before the renewal date avoids further charges.</p>
           <h2 className="text-lg font-bold text-[#0f172a]">4. Overpayments and Duplicate Payments</h2>
           <p>Overpayments or duplicate payments caused by technical errors will be refunded in full to the original payment source or added to your wallet, at your choice.</p>
           <h2 className="text-lg font-bold text-[#0f172a]">5. Wallet Withdrawals</h2>

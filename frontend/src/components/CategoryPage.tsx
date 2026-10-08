@@ -489,9 +489,42 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
     );
   };
 
+  const getRegions = (plan: Plan): string[] => {
+    const cfgs = plan?.metadata?.configurations || [];
+    for (const c of cfgs) {
+      const name = `${c?.name || ""}`.toLowerCase();
+      if (name.includes("datacenter") || name === "region") {
+        const vals = Array.isArray(c?.values) ? c.values : [];
+        if (vals.length) return vals;
+      }
+    }
+    return [];
+  };
+
+  // Cheapest plan within each identical-spec group earns a "Best value" tag
+  const bestValueCodes = useMemo(() => {
+    const groups = new Map<string, Plan[]>();
+    plans.forEach(p => {
+      const key = [p.cpuCores, p.ramGb, p.diskGb, p.bandwidthMbps].join("-");
+      groups.set(key, [...(groups.get(key) || []), p]);
+    });
+    const best = new Set<string>();
+    groups.forEach(group => {
+      if (group.length < 2) return;
+      const min = Math.min(...group.map(p => Math.min(...(p.durations || []).map((d: any) => d.monthlyPrice || Infinity))));
+      // tie-break: more regions wins, then more OS options
+      const richer = group
+        .filter(p => Math.min(...(p.durations || []).map((d: any) => d.monthlyPrice || Infinity)) === min)
+        .sort((a, b) => getRegions(b).length - getRegions(a).length)[0];
+      if (richer && isFinite(min)) best.add(richer.planCode);
+    });
+    return best;
+  }, [plans]);
+
   const renderTableRow = (plan: Plan) => {
     const cheapest = (plan.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
     const isExpanded = expandedPlan === plan.planCode;
+    const regions = getRegions(plan);
     return (
       <>
         <tr className="border-b border-slate-200 hover:bg-[#f8faff] transition">
@@ -501,19 +534,21 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
                 {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               <span className="font-bold text-sm text-[#0f172a]">{plan.invoiceName || plan.planCode}</span>
+              {bestValueCodes.has(plan.planCode) && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 uppercase">Best value</span>}
             </div>
           </td>
           <td className="px-3 py-3 text-sm text-[#0f172a]">{getCpuInfo(plan.invoiceName, plan.cpuCores)}</td>
           <td className="px-3 py-3 text-sm text-[#0f172a]">{getRamInfo(plan)}</td>
           <td className="px-3 py-3 text-sm text-[#0f172a]">{getStorageInfo(plan)}</td>
           <td className="px-3 py-3 text-sm text-[#0f172a]">{getBandwidthInfo(plan)}</td>
+          <td className="px-3 py-3 text-xs text-slate-500" title={regions.join(", ")}>{regions.length ? `${regions.length} region${regions.length > 1 ? "s" : ""}` : "-"}</td>
           <td className="px-3 py-3"><div><p className="text-base font-black text-[#00b7ff]">{money(cheapest?.monthlyPrice, cheapest?.currency)}</p><p className="text-[10px] text-slate-500">ex. taxes/month</p></div></td>
           <td className="px-3 py-3 text-center"><input type="checkbox" className="h-4 w-4 rounded border-slate-200 accent-[#00b7ff]" checked={compareCodes.includes(plan.planCode)} onChange={() => toggleCompare(plan.planCode)} /></td>
           <td className="px-3 py-3"><button onClick={() => configurePlan(plan.planCode)} className="rounded bg-[#0f0c29] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#302b63]">Configure</button></td>
         </tr>
         {isExpanded && (
           <tr className="bg-[#f8faff]">
-            <td colSpan={8} className="px-6 py-5">
+            <td colSpan={9} className="px-6 py-5">
               <div className="grid gap-4 md:grid-cols-3 text-sm">
                 <div className="rounded border border-slate-200 bg-white p-4">
                   <p className="text-xs font-bold text-slate-500 uppercase mb-2">Processor</p>
@@ -539,6 +574,14 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
                   <p className="text-xs font-bold text-slate-500 uppercase mb-2">Family</p>
                   <p className="font-semibold text-[#0f172a]">{plan.family || cat.label}</p>
                 </div>
+                {regions.length > 0 && (
+                  <div className="rounded border border-slate-200 bg-white p-4 md:col-span-3">
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Available regions ({regions.length})</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {regions.map(r => <span key={r} className="rounded bg-[#f0f9ff] border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-[#0f172a]">{r}</span>)}
+                    </div>
+                  </div>
+                )}
               </div>
               {(plan.durations || []).length > 0 && (
                 <div className="mt-4 rounded border border-slate-200 bg-white p-4">
@@ -780,6 +823,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
                         <th className="px-3 py-3 font-bold text-[#0f172a]">RAM</th>
                         <th className="px-3 py-3 font-bold text-[#0f172a]">Storage</th>
                         <th className="px-3 py-3 font-bold text-[#0f172a]">Bandwidth</th>
+                        <th className="px-3 py-3 font-bold text-[#0f172a]">Regions</th>
                         <th className="px-3 py-3 font-bold text-[#0f172a]">Price ex. taxes/month</th>
                         <th className="px-3 py-3 font-bold text-[#0f172a] text-center">Compare</th>
                         <th className="px-3 py-3 font-bold text-[#0f172a]"></th>
@@ -857,6 +901,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
                   ["Storage", (p: Plan) => getStorageInfo(p)],
                   ["Bandwidth", (p: Plan) => getBandwidthInfo(p)],
                   ["Family", (p: Plan) => p.family || "-"],
+                  ["Regions", (p: Plan) => { const r = getRegions(p); return r.length ? `${r.length} (${r.slice(0, 5).join(", ")}${r.length > 5 ? "…" : ""})` : "-"; }],
                   ["Plan code", (p: Plan) => p.planCode],
                   ["Billing periods", (p: Plan) => (p.durations || []).map(d => d.durationLabel).join(", ") || "-"],
                 ] as [string, (p: Plan) => string][]).map(([label, fn], i) => (
