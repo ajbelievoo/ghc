@@ -791,7 +791,7 @@ export default function DashboardPage() {
           onSearch={(q) => setSearchQuery(q)}
         />
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="ghc-dash-content p-4 sm:p-6 lg:p-8">
         {paymentMessage && (
           <div className={`mb-6 rounded-xl border px-6 py-4 text-sm font-medium ${paymentMessage.includes("cancelled") || paymentMessage.includes("failed") ? "border-red-500/30 bg-red-500/10 text-red-600" : "border-[#00ff88]/30 bg-[#00ff88]/10 text-[#00ff88]"}`}>
             {paymentMessage}

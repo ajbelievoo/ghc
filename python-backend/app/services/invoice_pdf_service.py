@@ -5,6 +5,33 @@ from fpdf import FPDF
 from app.services.tax_service import format_invoice_tax, generate_invoice_number
 
 
+def _seller_info() -> dict:
+    """Seller company details for the invoice header (GST-legal)."""
+    info = {
+        "name": "Believoo Private Limited",
+        "cin": "U63119UP2026PTC252696",
+        "gstin": "09AAPCB1563P1ZZ",
+        "pan": "AAPCB1563P",
+        "address": "Plot No. 152, Rajpur, Swaroppur, Bisauli, Budaun - 243633, Uttar Pradesh, India",
+    }
+    try:
+        from app.core.database import SessionLocal
+        from app.models.models import AdminConfig
+        db = SessionLocal()
+        try:
+            for row in db.query(AdminConfig).filter(AdminConfig.key.like("company_%")).all():
+                key = row.key.replace("company_", "")
+                if key == "legal_name":
+                    info["name"] = row.value
+                elif key in ("cin", "gstin", "pan", "address"):
+                    info[key] = row.value
+        finally:
+            db.close()
+    except Exception:
+        pass
+    return info
+
+
 def _format_category(category: str) -> str:
     mapping = {
         "VPS": "Cloud VPS",
@@ -92,6 +119,18 @@ def generate_invoice_pdf(invoice: object, user: object, order: object = None) ->
         pdf.cell(95, 7, f"HSN/SAC: {invoice.hsn_code}", ln=0)
     if invoice.place_of_supply:
         pdf.cell(0, 7, f"Place of Supply: {invoice.place_of_supply}", ln=1, align="R")
+    pdf.ln(8)
+
+    # Seller (legal entity) — required on Indian tax invoices
+    seller = _seller_info()
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_text_color(0, 24, 90)
+    pdf.cell(0, 8, "From", ln=True)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(15, 23, 42)
+    pdf.cell(0, 6, seller["name"], ln=True)
+    pdf.cell(0, 6, seller["address"], ln=True)
+    pdf.cell(0, 6, f"CIN: {seller['cin']}  |  GSTIN: {seller['gstin']}  |  PAN: {seller['pan']}", ln=True)
     pdf.ln(8)
 
     # Billed to

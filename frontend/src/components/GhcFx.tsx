@@ -130,7 +130,7 @@ export default function GhcFx() {
       {/* Preloader */}
       <div id="ghc-preloader" aria-hidden="true">
         <div className="ghc-pre-inner">
-          <div className="ghc-pre-logo">GHC</div>
+          <img src="/images/ghc-mark.png" alt="GHC" className="ghc-pre-logo-img" />
           <div className="ghc-pre-bar"><span /></div>
         </div>
       </div>
