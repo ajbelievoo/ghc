@@ -16,13 +16,16 @@ from app.models.models import (
     PlanCatalog,
     PlanDuration,
     Subscription,
+    SubscriptionStatus,
     SystemLog,
+    LogType,
     User,
+    UserRole,
     Wallet,
 )
 from app.schemas.admin import AdminConfigResponse, AdminStats, ConfigUpdate, OvhCredentialUpdate, OvhProxyRequest
 from app.services.domain_service import create_dns_record, delete_dns_record, list_dns_records, refresh_dns_zone, update_dns_record
-from app.services.email_service import send_email, send_invoice_email
+from app.services.email_service import get_admin_flag, send_email, send_invoice_email
 from app.services.invoice_pdf_service import generate_invoice_pdf
 from app.services.tax_service import tax_report
 from app.services.usage_service import bill_usage, monthly_usage_summary, record_usage
@@ -121,6 +124,27 @@ def stats(db: Session = Depends(get_db), admin: User = Depends(get_current_admin
     wallet_balance_sum = db.query(func.sum(Wallet.balance)).scalar() or 0.0
     pending_orders = db.query(CustomerOrder).filter(CustomerOrder.status == "PENDING").count()
     failed_orders = db.query(CustomerOrder).filter(CustomerOrder.status == "FAILED").count()
+
+    from datetime import datetime, timedelta
+
+    from app.models.models import BillingCycle, DomainRegistration, DomainStatus, SupportTicket, TicketStatus
+
+    # Monthly-recurring revenue: normalize each active sub to a monthly price
+    cycle_divisor = {"MONTHLY": 1, "QUARTERLY": 3, "HALF_YEARLY": 6, "YEARLY": 12}
+    mrr = 0.0
+    for s in db.query(Subscription).filter(Subscription.status == SubscriptionStatus.ACTIVE).all():
+        mrr += (s.price_amount or 0) / cycle_divisor.get(getattr(s.billing_cycle, "value", s.billing_cycle), 1)
+    overdue_invoices = db.query(Invoice).filter(
+        Invoice.status == InvoiceStatus.UNPAID,
+        Invoice.due_date.isnot(None),
+        Invoice.due_date < datetime.utcnow(),
+    ).count()
+    open_tickets = db.query(SupportTicket).filter(SupportTicket.status.in_([TicketStatus.OPEN, TicketStatus.IN_PROGRESS])).count()
+    expiring_domains = db.query(DomainRegistration).filter(
+        DomainRegistration.status == DomainStatus.ACTIVE,
+        DomainRegistration.expires_at.isnot(None),
+        DomainRegistration.expires_at <= datetime.utcnow() + timedelta(days=30),
+    ).count()
     return AdminStats(
         total_users=total_users,
         total_orders=total_orders,
@@ -130,6 +154,10 @@ def stats(db: Session = Depends(get_db), admin: User = Depends(get_current_admin
         wallet_balance_sum=float(wallet_balance_sum),
         pending_orders=pending_orders,
         failed_orders=failed_orders,
+        mrr=round(mrr, 2),
+        overdue_invoices=overdue_invoices,
+        open_tickets=open_tickets,
+        expiring_domains_30d=expiring_domains,
     )
 
 
@@ -158,6 +186,168 @@ def admin_tax_report(
     start_dt = datetime.fromisoformat(start) if start else None
     end_dt = datetime.fromisoformat(end) if end else None
     return tax_report(db, start_dt, end_dt)
+
+
+@router.get("/suspension-queue")
+def admin_suspension_queue(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Subscriptions past their bill date (candidates for suspension) + overdue unpaid invoices."""
+    from datetime import datetime
+
+    now = datetime.utcnow()
+    overdue_subs = db.query(Subscription).filter(
+        Subscription.status == SubscriptionStatus.ACTIVE,
+        Subscription.next_bill_date.isnot(None),
+        Subscription.next_bill_date < now,
+    ).order_by(Subscription.next_bill_date.asc()).all()
+    overdue_invoices = db.query(Invoice).filter(
+        Invoice.status == InvoiceStatus.UNPAID,
+        Invoice.due_date.isnot(None),
+        Invoice.due_date < now,
+    ).order_by(Invoice.due_date.asc()).all()
+    return {
+        "autoSuspendEnabled": get_admin_flag(db, "auto_suspend_enabled", False),
+        "overdueSubscriptions": [
+            {
+                "id": s.id,
+                "user": {"id": s.user_id, "email": s.user.email if s.user else None, "name": s.user.name if s.user else None},
+                "service": s.display_name or s.service_name or s.plan_code,
+                "planCode": s.plan_code,
+                "amount": s.price_amount,
+                "currency": s.currency,
+                "dueDate": s.next_bill_date.isoformat() if s.next_bill_date else None,
+                "daysOverdue": (now - s.next_bill_date).days if s.next_bill_date else 0,
+                "protected": _is_protected_subscription(s),
+            }
+            for s in overdue_subs
+        ],
+        "overdueInvoices": [
+            {
+                "id": i.id,
+                "number": i.invoice_number or i.id[:8].upper(),
+                "user": {"id": i.user_id, "email": i.user.email if i.user else None},
+                "amount": i.amount,
+                "currency": i.currency,
+                "dueDate": i.due_date.isoformat() if i.due_date else None,
+                "daysOverdue": (now - i.due_date).days if i.due_date else 0,
+            }
+            for i in overdue_invoices
+        ],
+    }
+
+
+@router.get("/reports/sales.csv")
+def admin_sales_report(
+    start: str | None = None,
+    end: str | None = None,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    """CSV export of paid invoices for a date range (ISO-8601)."""
+    import csv
+    from datetime import datetime
+
+    q = db.query(Invoice).filter(Invoice.status == InvoiceStatus.PAID)
+    if start:
+        q = q.filter(Invoice.created_at >= datetime.fromisoformat(start))
+    if end:
+        q = q.filter(Invoice.created_at <= datetime.fromisoformat(end))
+    rows = q.order_by(Invoice.created_at.asc()).all()
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["invoice_number", "date", "customer_email", "taxable", "tax", "total", "currency", "tax_type", "hsn", "place_of_supply"])
+    for i in rows:
+        w.writerow([
+            i.invoice_number or i.id[:8].upper(),
+            i.created_at.strftime("%Y-%m-%d") if i.created_at else "",
+            i.user.email if i.user else "",
+            round(i.amount - (i.tax_amount or 0), 2),
+            i.tax_amount or 0,
+            i.amount,
+            i.currency,
+            i.tax_type,
+            i.hsn_code,
+            i.place_of_supply or "",
+        ])
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=ghc-sales-report.csv"},
+    )
+
+
+# Owner accounts whose upstream services must NEVER be mutated (see AGENTS.md).
+PROTECTED_OWNER_EMAILS = {"ajaykumarsinghup24@gmail.com"}
+
+
+def _is_protected_subscription(sub: Subscription) -> bool:
+    email = (sub.user.email if sub.user else "") or ""
+    return email.strip().lower() in PROTECTED_OWNER_EMAILS
+
+
+@router.post("/subscriptions/{subscription_id}/suspend")
+def admin_suspend_subscription(subscription_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Suspend a subscription (e.g. overdue). Refuses protected owner accounts."""
+    from app.services.ovh_client import get_ovh_client_from_db
+    from app.services.subscription_service import lifecycle_action
+
+    sub = db.query(Subscription).filter(Subscription.id == subscription_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    if _is_protected_subscription(sub):
+        raise HTTPException(status_code=403, detail="Protected account — upstream mutation not allowed")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        sub = lifecycle_action(db, ovh, sub, "suspend")
+        db.add(SystemLog(type=LogType.INFO, message=f"Admin {admin.email} suspended subscription {sub.id}", details={"admin_id": admin.id, "subscription_id": sub.id}))
+        db.commit()
+        return {"success": True, "status": sub.status.value if hasattr(sub.status, "value") else str(sub.status)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/subscriptions/{subscription_id}/unsuspend")
+def admin_unsuspend_subscription(subscription_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Unsuspend a subscription. Refuses protected owner accounts."""
+    from app.services.ovh_client import get_ovh_client_from_db
+    from app.services.subscription_service import lifecycle_action
+
+    sub = db.query(Subscription).filter(Subscription.id == subscription_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    if _is_protected_subscription(sub):
+        raise HTTPException(status_code=403, detail="Protected account — upstream mutation not allowed")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        sub = lifecycle_action(db, ovh, sub, "unsuspend")
+        db.add(SystemLog(type=LogType.INFO, message=f"Admin {admin.email} unsuspended subscription {sub.id}", details={"admin_id": admin.id, "subscription_id": sub.id}))
+        db.commit()
+        return {"success": True, "status": sub.status.value if hasattr(sub.status, "value") else str(sub.status)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/users/{user_id}/impersonate")
+def admin_impersonate_user(user_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Mint a short-lived access token to log in as a customer (support). Logged."""
+    from datetime import timedelta
+
+    from app.core.security import create_access_token
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.role == UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Cannot impersonate another admin")
+    token = create_access_token({"sub": target.id, "imp": admin.id}, expires_delta=timedelta(minutes=60))
+    db.add(SystemLog(type=LogType.INFO, message=f"Admin {admin.email} impersonated user {target.email}", details={"admin_id": admin.id, "user_id": target.id}))
+    db.commit()
+    return {"token": token, "user": {"id": target.id, "email": target.email, "name": target.name, "role": target.role.value}}
 
 
 @router.get("/usage-summary")

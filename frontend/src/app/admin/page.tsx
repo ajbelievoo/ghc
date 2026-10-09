@@ -14,7 +14,7 @@ import {
   CloudCog, Tag, Ban, RotateCcw, XCircle, Percent, Clock
 } from "lucide-react";
 
-type Tab = "overview" | "users" | "credentials" | "brand" | "settings" | "margins" | "coupons" | "catalog" | "subscriptions" | "domain-tlds" | "customer-domains" | "logs" | "orders" | "support" | "invoices";
+type Tab = "overview" | "users" | "credentials" | "brand" | "settings" | "margins" | "coupons" | "catalog" | "subscriptions" | "suspensions" | "domain-tlds" | "customer-domains" | "logs" | "orders" | "support" | "invoices";
 
 interface LogEntry { id: string; type: string; message: string; createdAt: string; details?: any; }
 interface SubEntry { id: string; name: string; providerResourceId: string | null; category: string; status: string; userId: string; user?: { name: string; email: string }; planCode: string | null; billingCycle: string; nextBillDate: string; priceAmount: number; currency: string; autoRenew: boolean; createdAt: string; }
@@ -75,6 +75,7 @@ export default function AdminPage() {
   const [ordersPage, setOrdersPage] = useState(1);
   const [ordersFilter, setOrdersFilter] = useState("ALL");
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [suspensionQueue, setSuspensionQueue] = useState<any>(null);
   const [invoicesFilter, setInvoicesFilter] = useState("ALL");
   const [viewingServer, setViewingServer] = useState<string | null>(null);
   const [sendingInvoice, setSendingInvoice] = useState<string | null>(null);
@@ -120,6 +121,7 @@ export default function AdminPage() {
       if (t === "domain-tlds") { const tlds = await api.admin.getDomainTlds(); setDomainTlds(tlds || []); }
       if (t === "orders") { const o = await api.admin.getOrders({ status: ordersFilter !== "ALL" ? ordersFilter : undefined, page: ordersPage, limit: 20 }); setOrders(o.orders || []); setOrdersTotal(o.total || 0); }
       if (t === "invoices") { const inv = await api.admin.getInvoices({ status: invoicesFilter !== "ALL" ? invoicesFilter : undefined }); setInvoices(inv || []); }
+      if (t === "suspensions") { const q = await api.admin.suspensionQueue(); setSuspensionQueue(q); }
       if (t === "support") { const params: any = {}; if (supportFilter !== "ALL") params.status = supportFilter; const st = await api.support.getTickets(params); setSupportTickets(st.tickets || []); }
     } catch (e: any) { console.error(e); setPageError(e.message || "Failed to load data"); } finally { setLoading(false); }
   };
@@ -128,6 +130,7 @@ export default function AdminPage() {
   useEffect(() => { if (tab === "logs") loadTabData("logs"); }, [logFilter, tab]);
   useEffect(() => { if (tab === "catalog") loadTabData("catalog"); }, [catalogCategory, catalogSearch, tab]);
   useEffect(() => { if (tab === "subscriptions") loadTabData("subscriptions"); }, [subFilter, subCategory, tab]);
+  useEffect(() => { if (tab === "suspensions") loadTabData("suspensions"); }, [tab]);
   useEffect(() => { if (tab === "support") loadTabData("support"); }, [supportFilter, tab]);
   useEffect(() => { if (tab === "orders") loadTabData("orders"); }, [ordersFilter, ordersPage, tab]);
   useEffect(() => { if (tab === "invoices") loadTabData("invoices"); }, [invoicesFilter, tab]);
@@ -137,6 +140,34 @@ export default function AdminPage() {
   const toggleSetting = async (key: string, currentValue: string) => { const newValue = currentValue === "true" ? "false" : "true"; try { await api.admin.updateSetting({ key, value: newValue }); setSettings((p) => p.map((s) => s.key === key ? { ...s, value: newValue } : s)); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const toggleGateway = async (name: string, currentActive: boolean) => { try { await api.admin.updateGateway({ name, isActive: !currentActive }); setGateways((p) => p.map((g) => g.name === name ? { ...g, isActive: !currentActive } : g)); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleUpdateUser = async (userId: string, data: any) => { try { await api.admin.updateUser(userId, data); loadTabData("users"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+
+  const handleImpersonate = async (u: any) => {
+    if (!confirm(`Log in as ${u.name} (${u.email})? Your admin session is restored via the exit banner.`)) return;
+    try {
+      const res = await api.admin.impersonate(u.id);
+      const adminToken = localStorage.getItem("token");
+      if (adminToken) localStorage.setItem("ghc-admin-token", adminToken);
+      localStorage.setItem("ghc-impersonating", u.email);
+      localStorage.setItem("token", res.token);
+      localStorage.setItem("user", JSON.stringify(res.user));
+      window.location.href = "/dashboard";
+    } catch (e: any) { showToast(e.message || "Impersonation failed", "error"); }
+  };
+
+  const handleExportSales = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "/api"}${api.admin.salesReportUrl}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `ghc-sales-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e: any) { showToast(e.message || "Export failed", "error"); }
+  };
   const handleSaveCredentials = async (e: FormEvent) => { e.preventDefault(); try { const gatewayList = Object.entries(gwInputs).map(([name, cfg]) => ({ name, config: { keyId: cfg.keyId, keySecret: cfg.keySecret, merchantId: cfg.merchantId, webhookSecret: cfg.webhookSecret, env: cfg.env }, isActive: cfg.isActive })); await api.admin.updateCredentials({ provider, google: googleCreds, smtp, gateways: gatewayList }); showToast("Credentials saved successfully", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleSaveBrand = async (e: FormEvent) => { e.preventDefault(); try { await api.admin.updateBrand(brand); showToast("Brand settings saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const getSettingValue = (key: string) => { const s = settings.find((x) => x.key === key); return s?.value || "false"; };
@@ -188,6 +219,7 @@ export default function AdminPage() {
           {navItem("coupons", "Coupons", <Tag className="w-4 h-4" />)}
           {navItem("catalog", "Catalog", <Package className="w-4 h-4" />)}
           {navItem("subscriptions", "Subscriptions", <Server className="w-4 h-4" />)}
+          {navItem("suspensions", "Suspension Queue", <AlertTriangle className="w-4 h-4" />)}
           {navItem("domain-tlds", "Domain TLDs", <Globe className="w-4 h-4" />)}
           {navItem("customer-domains", "Customer Domains", <Globe className="w-4 h-4" />)}
           {navItem("orders", "Orders", <FileText className="w-4 h-4" />)}
@@ -234,8 +266,12 @@ export default function AdminPage() {
                 { label: "Total Users", value: stats.totalUsers || 0, icon: Users, color: "#b500ff" },
                 { label: "Total Admins", value: stats.totalAdmins || 0, icon: Shield, color: "#ff007f" },
                 { label: "Total Revenue", value: `$${(stats.totalRevenue || 0).toFixed(2)}`, icon: DollarSign, color: "#00f0ff" },
+                { label: "Est. MRR", value: `~₹${(stats.mrr || 0).toFixed(0)}/mo`, icon: Activity, color: "#00ff88" },
                 { label: "Pending Orders", value: stats.pendingOrders || 0, icon: Package, color: "#ffaa00" },
                 { label: "Total Orders", value: stats.totalOrders || 0, icon: CheckCircle, color: "#00ff88" },
+                { label: "Overdue Invoices", value: stats.overdueInvoices || 0, icon: AlertTriangle, color: "#ff3d00" },
+                { label: "Open Tickets", value: stats.openTickets || 0, icon: Mail, color: "#ffaa00" },
+                { label: "Domains expiring 30d", value: stats.expiringDomains || 0, icon: Globe, color: "#b500ff" },
                 { label: "24h Logs", value: stats.recentLogs || 0, icon: FileText, color: "#b500ff" },
               ].map((card) => (
                 <div key={card.label} className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6 hover:border-slate-200 transition-all">
@@ -307,6 +343,7 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2">
                             <button onClick={() => handleUpdateUser(u.id, { role: u.role === "ADMIN" ? "CLIENT" : "ADMIN" })} className="rounded-lg bg-slate-100/50 border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100/80 transition-all">{u.role === "ADMIN" ? "Demote" : "Promote"}</button>
                             <button onClick={() => handleUpdateUser(u.id, { isSuspended: !u.isSuspended })} className={`rounded-lg border px-3 py-1.5 text-xs transition-all ${u.isSuspended ? "bg-[#00ff88]/10 border-[#00ff88]/20 text-[#00ff88] hover:bg-[#00ff88]/20" : "bg-yellow-500/10 border-yellow-500/20 text-yellow-700 hover:bg-yellow-500/20"}`}>{u.isSuspended ? "Activate" : "Suspend"}</button>
+                            {u.role !== "ADMIN" && <button onClick={() => handleImpersonate(u)} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all">Login as</button>}
                           </div>
                         </td>
                       </tr>
@@ -817,6 +854,81 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ===== SUSPENSION QUEUE ===== */}
+        {tab === "suspensions" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-2xl font-bold text-[#0f172a]">Suspension Queue</h2>
+                <p className="text-xs text-slate-500 mt-1">Subscriptions past their bill date {suspensionQueue?.autoSuspendEnabled ? "(auto-suspend is ON — these suspend ~12h overdue)" : "(auto-suspend is OFF — review manually)"}</p>
+              </div>
+              <button onClick={() => loadTabData("suspensions")} className="flex items-center gap-2 rounded-lg bg-slate-100/50 border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100/80 transition-all"><RefreshCw className="w-4 h-4" />Refresh</button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-100/50"><h3 className="font-bold text-[#0f172a]">Overdue subscriptions ({suspensionQueue?.overdueSubscriptions?.length ?? 0})</h3></div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead><tr className="border-b border-slate-200">
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Customer</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Service</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Amount</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Due</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Overdue</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Actions</th>
+                  </tr></thead>
+                  <tbody>
+                    {(suspensionQueue?.overdueSubscriptions || []).map((s: any) => (
+                      <tr key={s.id} className="border-b border-white/5 hover:bg-slate-100/50">
+                        <td className="px-6 py-3 text-xs text-[#0f172a]">{s.user?.name || "—"}<br/><span className="text-slate-500">{s.user?.email}</span></td>
+                        <td className="px-6 py-3 text-xs text-[#0f172a]">{s.service}<br/><span className="text-slate-500 font-mono">{s.planCode}</span></td>
+                        <td className="px-6 py-3 text-xs text-[#0f172a]">{s.currency} {Number(s.amount).toFixed(2)}</td>
+                        <td className="px-6 py-3 text-xs text-slate-500">{s.dueDate ? new Date(s.dueDate).toLocaleDateString() : "—"}</td>
+                        <td className="px-6 py-3"><span className="rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-600">{s.daysOverdue}d</span></td>
+                        <td className="px-6 py-3">
+                          {s.protected ? (
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase">Protected</span>
+                          ) : (
+                            <button onClick={async () => { if (!confirm(`Suspend ${s.service} for ${s.user?.email}?`)) return; try { await api.admin.suspendSubscription(s.id); showToast("Suspended", "success"); loadTabData("suspensions"); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded-lg bg-red-500/10 border border-red-500/30 px-3 py-1.5 text-xs text-red-600 hover:bg-red-500/20 transition-all">Suspend</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {(!suspensionQueue || suspensionQueue.overdueSubscriptions?.length === 0) && <tr><td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-500">Queue is clear — nothing overdue.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-100/50"><h3 className="font-bold text-[#0f172a]">Overdue unpaid invoices ({suspensionQueue?.overdueInvoices?.length ?? 0})</h3></div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead><tr className="border-b border-slate-200">
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Invoice</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Customer</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Amount</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Due</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Overdue</th>
+                  </tr></thead>
+                  <tbody>
+                    {(suspensionQueue?.overdueInvoices || []).map((i: any) => (
+                      <tr key={i.id} className="border-b border-white/5 hover:bg-slate-100/50">
+                        <td className="px-6 py-3 text-xs font-mono text-[#0f172a]">{i.number}</td>
+                        <td className="px-6 py-3 text-xs text-slate-500">{i.user?.email}</td>
+                        <td className="px-6 py-3 text-xs text-[#0f172a]">{i.currency} {Number(i.amount).toFixed(2)}</td>
+                        <td className="px-6 py-3 text-xs text-slate-500">{i.dueDate ? new Date(i.dueDate).toLocaleDateString() : "—"}</td>
+                        <td className="px-6 py-3"><span className="rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-600">{i.daysOverdue}d</span></td>
+                      </tr>
+                    ))}
+                    {(!suspensionQueue || suspensionQueue.overdueInvoices?.length === 0) && <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">No overdue invoices.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ===== ORDERS ===== */}
         {tab === "orders" && (
           <div className="space-y-6">
@@ -882,6 +994,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h2 className="text-2xl font-bold text-[#0f172a]">Billing & Invoices</h2>
               <div className="flex items-center gap-2">
+                <button onClick={handleExportSales} className="rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/30 px-3 py-2 text-xs font-medium text-[#00a86b] hover:bg-[#00ff88]/20 transition-all">Export Sales CSV</button>
                 <select value={invoicesFilter} onChange={(e) => setInvoicesFilter(e.target.value)} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none">
                   <option value="ALL">All Status</option>
                   <option value="PAID">Paid</option>

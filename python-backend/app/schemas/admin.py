@@ -12,6 +12,10 @@ class AdminStats(BaseModel):
     wallet_balance_sum: float
     pending_orders: int
     failed_orders: int
+    mrr: float = 0.0
+    overdue_invoices: int = 0
+    open_tickets: int = 0
+    expiring_domains_30d: int = 0
 
 
 class ConfigUpdate(BaseModel):

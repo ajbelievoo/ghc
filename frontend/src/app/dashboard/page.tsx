@@ -829,6 +829,24 @@ export default function DashboardPage() {
         />
 
         <div className="ghc-dash-content p-4 sm:p-6 lg:p-8">
+        {typeof window !== "undefined" && localStorage.getItem("ghc-impersonating") && (
+          <div className="mb-6 rounded-xl border border-[#ffaa00]/40 bg-[#ffaa00]/10 px-6 py-3 flex items-center justify-between">
+            <p className="text-sm font-medium text-amber-700">You are impersonating <strong>{localStorage.getItem("ghc-impersonating")}</strong> (support mode)</p>
+            <button
+              onClick={() => {
+                const adminToken = localStorage.getItem("ghc-admin-token");
+                if (adminToken) localStorage.setItem("token", adminToken);
+                localStorage.removeItem("ghc-admin-token");
+                localStorage.removeItem("ghc-impersonating");
+                localStorage.removeItem("user");
+                window.location.href = "/admin";
+              }}
+              className="rounded-lg bg-[#ffaa00]/20 border border-[#ffaa00]/40 px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-[#ffaa00]/30"
+            >
+              Exit impersonation
+            </button>
+          </div>
+        )}
         {paymentMessage && (
           <div className={`mb-6 rounded-xl border px-6 py-4 text-sm font-medium ${paymentMessage.includes("cancelled") || paymentMessage.includes("failed") ? "border-red-500/30 bg-red-500/10 text-red-600" : "border-[#00ff88]/30 bg-[#00ff88]/10 text-[#00ff88]"}`}>
             {paymentMessage}

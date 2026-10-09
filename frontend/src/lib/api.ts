@@ -63,7 +63,29 @@ export const api = {
       request("/auth/reset-password", { method: "POST", body: JSON.stringify(body) }),
   },
   admin: {
-    stats: () => request("/admin/stats"),
+    stats: async () => {
+      const s = await request("/admin/stats");
+      return {
+        ...s,
+        totalUsers: s.total_users ?? 0,
+        totalOrders: s.total_orders ?? 0,
+        totalServers: s.total_subscriptions ?? 0,
+        activeServers: s.active_subscriptions ?? 0,
+        totalRevenue: s.total_revenue ?? 0,
+        walletBalance: s.wallet_balance_sum ?? 0,
+        pendingOrders: s.pending_orders ?? 0,
+        failedOrders: s.failed_orders ?? 0,
+        mrr: s.mrr ?? 0,
+        overdueInvoices: s.overdue_invoices ?? 0,
+        openTickets: s.open_tickets ?? 0,
+        expiringDomains: s.expiring_domains_30d ?? 0,
+      };
+    },
+    suspensionQueue: () => request("/admin/suspension-queue"),
+    impersonate: (userId: string) => request(`/admin/users/${userId}/impersonate`, { method: "POST" }),
+    suspendSubscription: (id: string) => request(`/admin/subscriptions/${id}/suspend`, { method: "POST" }),
+    unsuspendSubscription: (id: string) => request(`/admin/subscriptions/${id}/unsuspend`, { method: "POST" }),
+    salesReportUrl: "/admin/reports/sales.csv",
     settings: () => request("/admin/settings"),
     updateSetting: (body: { key: string; value: string }) =>
       request("/admin/settings", { method: "POST", body: JSON.stringify(body) }),
