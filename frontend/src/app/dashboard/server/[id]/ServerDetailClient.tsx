@@ -68,6 +68,7 @@ const TABS = [
   { id: "backup", label: "Automated backup", vpsOnly: true },
   { id: "disk", label: "Additional disk", vpsOnly: true },
   { id: "monitoring", label: "Monitoring" },
+  { id: "network", label: "Network" },
   { id: "databases", label: "Databases" },
   { id: "management", label: "Management" },
 ] as const;
@@ -216,6 +217,7 @@ export default function ServerDetailClient() {
         {tab === "backup" && isVps && <BackupTab server={server} />}
         {tab === "disk" && isVps && <DiskTab server={server} />}
         {tab === "monitoring" && <MonitoringTab server={server} detail={detail} metrics={metrics} />}
+        {tab === "network" && <NetworkTab server={server} detail={detail} isVps={isVps} />}
         {tab === "databases" && <DatabasesTab server={server} />}
         {tab === "management" && (
           <ManagementTab server={server} detail={detail} setServer={setServer} isVps={isVps} />
@@ -1078,6 +1080,288 @@ function MonitoringTab({ server, detail, metrics }: any) {
           <Row label="Monitoring" value={monEnabled !== false ? "Enabled" : "Paused"} />
         </Card>
       </div>
+    </div>
+  );
+}
+
+/* ================= NETWORK TAB ================= */
+
+function NetworkTab({ server, detail, isVps }: any) {
+  const { showToast } = useToast();
+  const [net, setNet] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [rdnsEdit, setRdnsEdit] = useState<string | null>(null);
+  const [rdnsVal, setRdnsVal] = useState("");
+  const [moveIp, setMoveIp] = useState<string | null>(null);
+  const [moveTarget, setMoveTarget] = useState("");
+  const [ddos, setDdos] = useState<Record<string, any>>({});
+  const [fw, setFw] = useState<Record<string, any>>({});
+  const [fwIp, setFwIp] = useState<string | null>(null);
+  const [newRule, setNewRule] = useState({ action: "permit", protocol: "tcp", source: "", destinationPort: "", sequence: 100 });
+  const [testTarget, setTestTarget] = useState("");
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testing, setTesting] = useState(false);
+
+  const reload = () => {
+    api.server.network(server.id).then((n: any) => {
+      setNet(n);
+      (n.ips || []).forEach((i: any) => {
+        if (!i.ip) return;
+        api.server.ddos(server.id, i.ip).then((d: any) => setDdos((p) => ({ ...p, [i.ip]: d }))).catch(() => {});
+        api.server.firewall(server.id, i.ip).then((f: any) => setFw((p) => ({ ...p, [i.ip]: f }))).catch(() => {});
+      });
+    }).catch((e: any) => showToast(e.message || "Failed to load network", "error")).finally(() => setLoading(false));
+  };
+  useEffect(reload, [server.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const run = async (fn: () => Promise<any>, okMsg: string) => {
+    try { await fn(); showToast(okMsg, "success"); reload(); }
+    catch (e: any) { showToast(e.message || "Failed", "error"); }
+  };
+
+  const saveRdns = (ip: string) => run(
+    () => api.server.rdnsBulk(server.id, [{ ip, reverse: rdnsVal || null }]),
+    rdnsVal ? "Reverse DNS set" : "Reverse DNS cleared"
+  );
+
+  if (loading) return <div className="py-12 text-center text-sm text-slate-400">Loading network info…</div>;
+  if (!net) return <div className="py-12 text-center text-sm text-slate-400">Network info unavailable for this service.</div>;
+
+  const moveTargets = (net.targets || []).filter((t: string) => t !== net.serviceName);
+  const isDedicated = server.category === "DEDICATED";
+
+  return (
+    <div className="space-y-6">
+      {/* ===== IP ADDRESSES ===== */}
+      <Card title="IP addresses" icon={<Network className="w-4 h-4 text-[#00b7ff]" />}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500">
+                <th className="pb-2 font-semibold">IP / Block</th>
+                <th className="pb-2 font-semibold">Type</th>
+                <th className="pb-2 font-semibold">Region</th>
+                <th className="pb-2 font-semibold">Reverse DNS</th>
+                <th className="pb-2 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {(net.ips || []).filter((i: any) => i.ip).map((i: any) => (
+                <tr key={i.ip}>
+                  <td className="py-2.5 font-mono font-medium text-[#0f172a]">{i.ip}</td>
+                  <td className="py-2.5">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                      i.type === "failover" ? "bg-[#b500ff]/10 text-[#b500ff]" : i.type === "additional" ? "bg-[#00b7ff]/10 text-[#00b7ff]" : "bg-slate-200 text-slate-600"}`}>
+                      {i.type || "primary"}
+                    </span>
+                    {i.version === 6 && <span className="ml-1 rounded bg-[#00ff88]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#00a832]">v6</span>}
+                  </td>
+                  <td className="py-2.5 text-slate-500">{i.region || i.country || "—"}</td>
+                  <td className="py-2.5">
+                    {rdnsEdit === i.ip ? (
+                      <div className="flex items-center gap-1">
+                        <input value={rdnsVal} onChange={(e) => setRdnsVal(e.target.value)} placeholder="host.example.com"
+                          className="w-44 rounded border border-slate-300 px-2 py-1 text-xs" />
+                        <button onClick={() => saveRdns(i.ip)} className="rounded bg-[#00b7ff] px-2 py-1 text-[10px] font-bold text-white">SAVE</button>
+                        <button onClick={() => setRdnsEdit(null)} className="text-slate-400"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setRdnsEdit(i.ip); setRdnsVal(""); }} className="text-slate-500 hover:text-[#00b7ff] flex items-center gap-1">
+                        <Pencil className="w-3 h-3" /> Set rDNS
+                      </button>
+                    )}
+                  </td>
+                  <td className="py-2.5 text-right">
+                    {i.type === "failover" && moveTargets.length > 0 && (
+                      moveIp === i.ip ? (
+                        <span className="inline-flex items-center gap-1">
+                          <select value={moveTarget} onChange={(e) => setMoveTarget(e.target.value)} className="rounded border border-slate-300 px-1.5 py-1 text-[10px]">
+                            <option value="">target…</option>
+                            {moveTargets.map((t: string) => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <button onClick={() => run(() => api.server.moveIp(server.id, i.ip, moveTarget), "IP move requested").then(() => setMoveIp(null))}
+                            className="rounded bg-[#00b7ff] px-2 py-1 text-[10px] font-bold text-white">MOVE</button>
+                          <button onClick={() => setMoveIp(null)} className="text-slate-400"><X className="w-3.5 h-3.5" /></button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setMoveIp(i.ip)} className="rounded bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-200">Move</button>
+                      )
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* ===== ANTI-DDOS ===== */}
+      <Card title="Anti-DDoS / Mitigation" icon={<ShieldCheck className="w-4 h-4 text-[#00a832]" />}>
+        <div className="space-y-2">
+          {(net.ips || []).filter((i: any) => i.ip && i.version === 4).map((i: any) => {
+            const d = ddos[i.ip];
+            const active = (d?.mitigations || []).length > 0;
+            const perm = (d?.mitigations || []).some((m: any) => m.permanent);
+            return (
+              <div key={i.ip} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <div>
+                  <span className="font-mono text-xs text-[#0f172a]">{i.ip}</span>
+                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold ${perm ? "bg-[#00ff88]/15 text-[#00a832]" : active ? "bg-yellow-500/15 text-yellow-700" : "bg-slate-200 text-slate-500"}`}>
+                    {perm ? "PERMANENT" : active ? "AUTO" : "AUTOMATIC (default)"}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  {!perm && (
+                    <button onClick={() => run(() => api.server.setMitigation(server.id, i.ip, { ipOnMitigation: i.ip.split("/")[0], permanent: true, auto: true }), "Permanent mitigation enabled")}
+                      className="rounded bg-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-300">Enable permanent</button>
+                  )}
+                  {perm && (
+                    <button onClick={() => run(() => api.server.deleteMitigation(server.id, i.ip, i.ip.split("/")[0]), "Permanent mitigation removed")}
+                      className="rounded bg-red-500/10 px-2.5 py-1 text-[10px] font-bold text-red-600 hover:bg-red-500/20">Disable permanent</button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          <p className="text-[10px] text-slate-400">Automatic mitigation triggers during attacks. Permanent keeps the shield always on (adds slight latency).</p>
+        </div>
+      </Card>
+
+      {/* ===== EDGE FIREWALL ===== */}
+      <Card title="Edge Network Firewall" icon={<ShieldCheck className="w-4 h-4 text-[#ff3d00]" />}>
+        <div className="space-y-3">
+          {(net.ips || []).filter((i: any) => i.ip && i.version === 4).map((i: any) => {
+            const f = fw[i.ip];
+            return (
+              <div key={i.ip} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-[#0f172a]">{i.ip}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${f?.enabled ? "bg-[#00ff88]/15 text-[#00a832]" : "bg-slate-200 text-slate-500"}`}>
+                      {f ? (f.enabled ? "ENABLED" : "DISABLED") : "…"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{f?.rules?.length || 0} rules</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setFwIp(fwIp === i.ip ? null : i.ip)} className="rounded bg-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700">
+                      {fwIp === i.ip ? "Close" : "Rules"}
+                    </button>
+                    <button onClick={() => run(() => api.server.setFirewall(server.id, i.ip, !(f?.enabled)), f?.enabled ? "Firewall disabled" : "Firewall enabled")}
+                      className={`rounded px-2.5 py-1 text-[10px] font-bold ${f?.enabled ? "bg-red-500/10 text-red-600" : "bg-[#00b7ff] text-white"}`}>
+                      {f?.enabled ? "Disable" : "Enable"}
+                    </button>
+                  </div>
+                </div>
+                {fwIp === i.ip && f?.enabled && (
+                  <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                    {(f.rules || []).map((r: any) => (
+                      <div key={r.sequence} className="flex items-center justify-between text-xs">
+                        <span className="font-mono text-slate-600">
+                          #{r.sequence} {r.action} {r.protocol} {r.source || "*"}:{r.sourcePort || "*"} → {r.destination || "*"}:{r.destinationPort || "*"}
+                        </span>
+                        <button onClick={() => run(() => api.server.deleteFwRule(server.id, i.ip, r.sequence), "Rule deleted")} className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                    {!f.rules?.length && <p className="text-[10px] text-slate-400">No rules — firewall allows all traffic until you add rules.</p>}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <select value={newRule.action} onChange={(e) => setNewRule({ ...newRule, action: e.target.value })} className="rounded border border-slate-300 px-2 py-1.5 text-[10px]">
+                        <option value="permit">permit</option><option value="deny">deny</option>
+                      </select>
+                      <select value={newRule.protocol} onChange={(e) => setNewRule({ ...newRule, protocol: e.target.value })} className="rounded border border-slate-300 px-2 py-1.5 text-[10px]">
+                        <option value="tcp">tcp</option><option value="udp">udp</option><option value="icmp">icmp</option><option value="ah">ah</option><option value="esp">esp</option><option value="gre">gre</option>
+                      </select>
+                      <input value={newRule.source} onChange={(e) => setNewRule({ ...newRule, source: e.target.value })} placeholder="src IP/CIDR (blank=any)" className="w-36 rounded border border-slate-300 px-2 py-1.5 text-[10px]" />
+                      <input value={newRule.destinationPort} onChange={(e) => setNewRule({ ...newRule, destinationPort: e.target.value })} placeholder="dst port" className="w-20 rounded border border-slate-300 px-2 py-1.5 text-[10px]" />
+                      <input type="number" value={newRule.sequence} onChange={(e) => setNewRule({ ...newRule, sequence: Number(e.target.value) })} className="w-16 rounded border border-slate-300 px-2 py-1.5 text-[10px]" title="sequence" />
+                      <button onClick={() => run(() => api.server.addFwRule(server.id, i.ip, { ...newRule, source: newRule.source || undefined, destinationPort: newRule.destinationPort || undefined }), "Rule added")}
+                        className="rounded bg-[#00b7ff] px-3 py-1.5 text-[10px] font-bold text-white">Add rule</button>
+                      <button onClick={() => {
+                        const blob = new Blob([JSON.stringify({ rules: f.rules }, null, 2)], { type: "application/json" });
+                        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `firewall-${i.ip.split("/")[0]}.json`; a.click();
+                      }} className="rounded bg-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-600">Export</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* ===== VIRTUAL MAC (dedicated) ===== */}
+      {isDedicated && (
+        <Card title="Virtual MAC addresses" icon={<Cpu className="w-4 h-4 text-[#b500ff]" />}>
+          <div className="space-y-2">
+            {(net.virtualMacs || []).map((m: any) => (
+              <div key={m.mac} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <div>
+                  <span className="font-mono text-xs text-[#0f172a]">{m.mac}</span>
+                  {m.type && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{m.type}</span>}
+                  {m.ip && <span className="ml-2 text-[10px] text-slate-500">→ {m.ip}</span>}
+                </div>
+                <button onClick={() => { if (confirm(`Delete vMAC ${m.mac}?`)) run(() => api.server.deleteVmac(server.id, m.mac), "vMAC deleted"); }}
+                  className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            ))}
+            {!net.virtualMacs?.length && <p className="text-xs text-slate-400">No virtual MACs — needed to route failover IPs to VMs on this server.</p>}
+            <button onClick={() => run(() => api.server.createVmac(server.id, {}), "Virtual MAC created")}
+              className="mt-1 rounded bg-[#00b7ff] px-3 py-1.5 text-[10px] font-bold text-white">+ Create virtual MAC</button>
+          </div>
+        </Card>
+      )}
+
+      {/* ===== VRACK ===== */}
+      <Card title="vRack private network" icon={<Network className="w-4 h-4 text-[#7c3aed]" />}>
+        <div className="space-y-2">
+          {(net.vracks || []).map((v: any) => (
+            <div key={v.name} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <div>
+                <span className="font-mono text-xs font-medium text-[#0f172a]">{v.name}</span>
+                {v.description && <span className="ml-2 text-xs text-slate-500">{v.description}</span>}
+                <span className="ml-2 text-[10px] text-slate-400">{v.memberCount} members</span>
+              </div>
+              {v.attached ? (
+                <span className="flex items-center gap-2">
+                  <span className="rounded-full bg-[#00ff88]/15 px-2 py-0.5 text-[10px] font-bold text-[#00a832]">ATTACHED</span>
+                  <button onClick={() => { if (confirm(`Detach this service from ${v.name}?`)) run(() => api.server.detachVrack(server.id, v.name), "Detached from vRack"); }}
+                    className="rounded bg-red-500/10 px-2.5 py-1 text-[10px] font-bold text-red-600">Detach</button>
+                </span>
+              ) : (
+                <button onClick={() => run(() => api.server.attachVrack(server.id, v.name), "Attach requested")}
+                  className="rounded bg-[#00b7ff] px-2.5 py-1 text-[10px] font-bold text-white">Attach</button>
+              )}
+            </div>
+          ))}
+          {!net.vracks?.length && <p className="text-xs text-slate-400">No vRack on this account — order one to link services over a private VLAN.</p>}
+        </div>
+      </Card>
+
+      {/* ===== NETWORK TEST ===== */}
+      <Card title="Network test (looking glass)" icon={<Activity className="w-4 h-4 text-[#00ff88]" />}>
+        <p className="text-xs text-slate-500 mb-3">Ping + traceroute from our edge to any IP/hostname — check reachability and routing.</p>
+        <div className="flex gap-2">
+          <input value={testTarget} onChange={(e) => setTestTarget(e.target.value)} placeholder="IP or hostname (e.g. 8.8.8.8)"
+            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-xs" />
+          <button disabled={testing || !testTarget} onClick={async () => {
+            setTesting(true); setTestResult(null);
+            try { setTestResult(await api.server.networkTest(server.id, testTarget)); }
+            catch (e: any) { showToast(e.message || "Test failed", "error"); }
+            setTesting(false);
+          }} className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+            {testing ? "Running…" : "Test"}
+          </button>
+        </div>
+        {testResult && (
+          <div className="mt-3 rounded-lg bg-slate-900 p-3 font-mono text-[11px] text-emerald-300 max-h-64 overflow-y-auto">
+            <div className={testResult.reachable ? "text-emerald-400" : "text-red-400"}>
+              {testResult.reachable ? "✓ reachable" : "✗ unreachable"}
+            </div>
+            {(testResult.ping || []).map((l: string, i: number) => <div key={"p" + i}>{l}</div>)}
+            <div className="mt-2 text-slate-400">--- traceroute ---</div>
+            {(testResult.traceroute || []).map((l: string, i: number) => <div key={"t" + i}>{l}</div>)}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

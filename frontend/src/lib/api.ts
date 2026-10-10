@@ -228,6 +228,33 @@ export const api = {
     carbon: (id: string) => request(`/server/${id}/carbon`),
     ping: (id: string) => request(`/server/${id}/ping`),
     pingHistory: (id: string) => request(`/server/${id}/ping/history`),
+    network: (id: string) => request(`/server/${id}/network`),
+    moveIp: (id: string, ip: string, target: string) =>
+      request(`/server/${id}/network/ip/${encodeURIComponent(ip)}/move`, { method: "POST", body: JSON.stringify({ target }) }),
+    ddos: (id: string, ip: string) => request(`/server/${id}/network/ip/${encodeURIComponent(ip)}/ddos`),
+    setMitigation: (id: string, ip: string, body: object) =>
+      request(`/server/${id}/network/ip/${encodeURIComponent(ip)}/mitigation`, { method: "POST", body: JSON.stringify(body) }),
+    deleteMitigation: (id: string, ip: string, onIp: string) =>
+      request(`/server/${id}/network/ip/${encodeURIComponent(ip)}/mitigation/${encodeURIComponent(onIp)}`, { method: "DELETE" }),
+    firewall: (id: string, ip: string) => request(`/server/${id}/network/ip/${encodeURIComponent(ip)}/firewall`),
+    setFirewall: (id: string, ip: string, enabled: boolean) =>
+      request(`/server/${id}/network/ip/${encodeURIComponent(ip)}/firewall`, { method: "POST", body: JSON.stringify({ enabled }) }),
+    addFwRule: (id: string, ip: string, rule: object) =>
+      request(`/server/${id}/network/ip/${encodeURIComponent(ip)}/firewall/rule`, { method: "POST", body: JSON.stringify(rule) }),
+    deleteFwRule: (id: string, ip: string, seq: number) =>
+      request(`/server/${id}/network/ip/${encodeURIComponent(ip)}/firewall/rule/${seq}`, { method: "DELETE" }),
+    createVmac: (id: string, body: object) =>
+      request(`/server/${id}/network/vmac`, { method: "POST", body: JSON.stringify(body) }),
+    deleteVmac: (id: string, mac: string) =>
+      request(`/server/${id}/network/vmac/${encodeURIComponent(mac)}`, { method: "DELETE" }),
+    attachVrack: (id: string, vrack: string) =>
+      request(`/server/${id}/network/vrack`, { method: "POST", body: JSON.stringify({ vrack }) }),
+    detachVrack: (id: string, vrack: string) =>
+      request(`/server/${id}/network/vrack/${encodeURIComponent(vrack)}`, { method: "DELETE" }),
+    rdnsBulk: (id: string, records: object[]) =>
+      request(`/server/${id}/network/rdns-bulk`, { method: "POST", body: JSON.stringify({ records }) }),
+    networkTest: (id: string, target: string) =>
+      request(`/server/${id}/network/test?target=${encodeURIComponent(target)}`),
     rescue: (id: string, body: { enabled?: boolean; reboot?: boolean }) =>
       request(`/server/${id}/rescue`, { method: "POST", body: JSON.stringify(body) }),
     reverseDns: (id: string, body: { ip: string; reverse?: string; delete?: boolean }) =>

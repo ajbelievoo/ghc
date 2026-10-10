@@ -33,7 +33,7 @@ from app.models.models import (
     User,
     UserNotification,
 )
-from app.routers import admin, auth, auto_scaling, catalog, cloud, compat, health, marketplace, orders, status, subscriptions, support, team, wallet, webhooks
+from app.routers import admin, auth, auto_scaling, catalog, cloud, compat, health, marketplace, network, orders, status, subscriptions, support, team, wallet, webhooks
 from app.services.auto_scaling_service import evaluate_rules
 from app.services.marketplace_service import marketplace_worker
 from app.services.email_service import send_domain_renewal_reminder_email, send_invoice_overdue_email, send_renewal_reminder_email, send_suspension_email
@@ -651,6 +651,7 @@ app.include_router(compat.router)
 app.include_router(auto_scaling.router)
 app.include_router(marketplace.router)
 app.include_router(status.router)
+app.include_router(network.router)
 app.include_router(cloud.router)
 
 
