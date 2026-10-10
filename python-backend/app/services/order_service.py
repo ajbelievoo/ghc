@@ -1003,20 +1003,36 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
                 cfg, {},
             )
 
-        # 5. Checkout (dry run first, then real)
+        # 5. Checkout (dry run first, then real).
+        #    Try auto-pay with the account's preferred payment method first —
+        #    a registered default card makes the OVH order paid in one step.
+        #    Fall back to a manual-payment order if auto-pay is not allowed.
         dry_checkout = ovh.get_cart_checkout(order.ovh_cart_id)
         log_ovh_step(db, order.id, "DRY_CHECKOUT", f"/order/cart/{order.ovh_cart_id}/checkout", {}, dry_checkout)
 
-        checkout = ovh.post_cart_checkout(order.ovh_cart_id, auto_pay_with_preferred_payment_mean=False)
+        auto_paid = False
+        try:
+            checkout = ovh.post_cart_checkout(order.ovh_cart_id, auto_pay_with_preferred_payment_mean=True)
+            auto_paid = True
+        except Exception as e:
+            logger.warning(f"Auto-pay checkout failed ({e}); retrying manual checkout")
+            log_ovh_step(db, order.id, "CHECKOUT_AUTOPAY_FAILED", f"/order/cart/{order.ovh_cart_id}/checkout", {}, {"error": str(e)})
+            checkout = ovh.post_cart_checkout(order.ovh_cart_id, auto_pay_with_preferred_payment_mean=False)
+
         ovh_order_id = checkout.get("orderId")
         order.ovh_order_id = str(ovh_order_id)
         order.ovh_order_url = checkout.get("url")
         _update_order_status(db, order, OrderStatus.OVH_ORDER_PLACED)
-        log_ovh_step(db, order.id, "CHECKOUT", f"/order/cart/{order.ovh_cart_id}/checkout", {}, checkout)
+        log_ovh_step(db, order.id, "CHECKOUT", f"/order/cart/{order.ovh_cart_id}/checkout", {"autoPay": auto_paid}, checkout)
 
         # 6. Try to pay OVH order using an available registered payment mean.
         #    If none, leave it unpaid and let the admin/customer pay via ovh_order_url.
-        paid = _pay_ovh_order(db, ovh, order, int(ovh_order_id))
+        if auto_paid:
+            paid = True
+            order.ovh_payment_mean = "default"
+            _update_order_status(db, order, OrderStatus.OVH_PAID)
+        else:
+            paid = _pay_ovh_order(db, ovh, order, int(ovh_order_id))
 
         if not paid:
             _update_order_status(db, order, OrderStatus.OVH_ORDER_PLACED, "Waiting for OVH payment; no registered payment method available")
