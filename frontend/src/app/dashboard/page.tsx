@@ -8,6 +8,7 @@ import { useToast } from "@/components/ToastProvider";
 import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
 import ServerDetailCards from "@/components/ServerDetailCards";
 import DomainDnsPanel from "@/components/DomainDnsPanel";
+import SshKeysCard from "@/components/SshKeysCard";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import DashboardHeader from "@/components/DashboardHeader";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -59,6 +60,7 @@ import {
   SlidersHorizontal,
   MoreVertical,
   ChevronDown,
+  ArrowRightLeft,
 } from "lucide-react";
 
 type Tab = "overview" | "servers" | "domains" | "invoices" | "wallet" | "support" | "security" | "profile";
@@ -137,6 +139,9 @@ export default function DashboardPage() {
   const [domainCols, setDomainCols] = useState({ technical: true, renewal: true, operations: true, registrant: true });
   const [domainTableQuery, setDomainTableQuery] = useState("");
   const [domainWizard, setDomainWizard] = useState<string | null>(null);
+  const [transferDomain, setTransferDomain] = useState("");
+  const [transferCode, setTransferCode] = useState("");
+  const [transferLoading, setTransferLoading] = useState(false);
   const [tickets, setTickets] = useState<any[]>([]);
   const [ticketsTotal, setTicketsTotal] = useState(0);
   const [ticketsPage, setTicketsPage] = useState(1);
@@ -1660,6 +1665,74 @@ export default function DashboardPage() {
               <p className="text-[10px] text-slate-500 mt-2">Guided order tunnel — select extensions, duration, contacts and payment step by step.</p>
             </div>
 
+            {/* Transfer a domain in */}
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">
+              <h3 className="text-sm font-semibold text-[#0f172a] mb-1 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-[#b500ff]" /> Transfer a domain to GHC
+              </h3>
+              <p className="text-[10px] text-slate-500 mb-4">
+                Already own a domain elsewhere? Unlock it at your current registrar, get the auth/EPP code, and move it here — adds 1 year.
+              </p>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const d = transferDomain.trim().toLowerCase();
+                  if (!d || !transferCode.trim()) { showToast("Domain and auth code are required", "error"); return; }
+                  if (!gateway || !activeGateways.includes(gateway)) { showToast("Select a valid payment gateway", "error"); return; }
+                  setTransferLoading(true);
+                  try {
+                    const reg = await api.server.transferDomain({ domainName: d, authCode: transferCode.trim(), currency });
+                    const res = await api.payments.createCheckoutSession({
+                      type: "DOMAIN_REGISTRATION",
+                      amount: reg.totalAmount,
+                      gateway,
+                      domainId: reg.domainId,
+                      domainName: d.split(".")[0],
+                      tld: "." + d.split(".").slice(1).join("."),
+                      years: 1,
+                    });
+                    if (res.paid) {
+                      showToast("Transfer order placed and paid from wallet!", "success");
+                      setTransferDomain(""); setTransferCode("");
+                      fetchMyDomains();
+                    } else if (res.manual) {
+                      setDomainPaymentMessage({ amount: res.amount, currency: res.currency, instructions: res.instructions, txId: res.id });
+                      showToast("Manual payment instructions generated", "success");
+                    } else if (res.checkoutUrl) {
+                      window.location.href = res.checkoutUrl;
+                    } else {
+                      showToast("Could not initiate payment.", "error");
+                    }
+                  } catch (err: any) {
+                    showToast(err.message || "Transfer failed", "error");
+                  } finally {
+                    setTransferLoading(false);
+                  }
+                }}
+                className="flex flex-col gap-3 md:flex-row md:items-center"
+              >
+                <input
+                  value={transferDomain}
+                  onChange={(e) => setTransferDomain(e.target.value)}
+                  placeholder="yourdomain.com"
+                  className="flex-1 rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+                />
+                <input
+                  value={transferCode}
+                  onChange={(e) => setTransferCode(e.target.value)}
+                  placeholder="Auth / EPP code"
+                  className="flex-1 rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm font-mono text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={transferLoading}
+                  className="rounded-lg bg-[#b500ff] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#b500ff]/85 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {transferLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />} Transfer
+                </button>
+              </form>
+            </div>
+
             <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">
               {/* OVH-style toolbar */}
               <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -1936,6 +2009,9 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+
+            {/* SSH Keys */}
+            <SshKeysCard />
 
             {/* Team Invitations Sent */}
             <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">

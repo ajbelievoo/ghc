@@ -138,7 +138,7 @@ def lifecycle_action(db: Session, ovh: OvhClient, sub: Subscription, action: str
     return sub
 
 
-def reinstall_os(db: Session, ovh: OvhClient, sub: Subscription, os_template: str) -> Dict[str, Any]:
+def reinstall_os(db: Session, ovh: OvhClient, sub: Subscription, os_template: str, ssh_key_name: Optional[str] = None) -> Dict[str, Any]:
     """Request OS reinstallation on VPS or dedicated server."""
     resource_id = _get_real_resource_id(sub)
     if not resource_id:
@@ -147,13 +147,29 @@ def reinstall_os(db: Session, ovh: OvhClient, sub: Subscription, os_template: st
     if sub.category not in (ServiceCategory.VPS, ServiceCategory.DEDICATED):
         raise ValueError("OS reinstall only supported for VPS and Dedicated servers")
 
+    # Resolve the account SSH key for injection (VPS wants the raw key,
+    # dedicated install wants the key *name* registered under /me/sshKey).
+    vps_pubkey = None
+    if ssh_key_name:
+        try:
+            k = ovh.get(f"/me/sshKey/{ssh_key_name}") or {}
+            vps_pubkey = k.get("key")
+        except Exception as e:
+            raise ValueError(f"SSH key '{ssh_key_name}' not found on account: {e}")
+
     try:
         if sub.category == ServiceCategory.VPS:
             # OVH VPS reinstall: POST /vps/{serviceName}/reinstall
-            ovh.request("POST", f"/vps/{resource_id}/reinstall", doNotSendPassword=False)
+            payload: Dict[str, Any] = {"doNotSendPassword": False}
+            if vps_pubkey:
+                payload["publicSshKey"] = vps_pubkey
+            ovh.request("POST", f"/vps/{resource_id}/reinstall", **payload)
         elif sub.category == ServiceCategory.DEDICATED:
             # OVH Dedicated reinstall: task-based
-            ovh.request("POST", f"/dedicated/server/{resource_id}/install/start", templateName=os_template)
+            payload = {"templateName": os_template}
+            if ssh_key_name:
+                payload["sshKeyName"] = ssh_key_name
+            ovh.request("POST", f"/dedicated/server/{resource_id}/install/start", **payload)
 
         sub.os_template = os_template
         sub.updated_at = func.now()

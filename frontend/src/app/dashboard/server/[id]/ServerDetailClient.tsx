@@ -1415,8 +1415,11 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
   const [geoCountry, setGeoCountry] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelText, setCancelText] = useState("");
+  const [sshKeys, setSshKeys] = useState<any[]>([]);
+  const [sshKeyName, setSshKeyName] = useState("");
 
   useEffect(() => {
+    api.auth.sshKeys().then((r: any) => setSshKeys(r.keys || [])).catch(() => {});
     if (!isVps) return;
     api.server.vpsImages(server.id).then((d) => setImages(d.images || [])).catch(() => {});
     api.server.vpsTasks(server.id).then(setTasks).catch(() => {});
@@ -1443,8 +1446,8 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
     if (!confirm(`Reinstall OS to ${osTemplate}? This will wipe all data.`)) return;
     setActionLoading("reinstall");
     try {
-      const res = await api.server.reinstall(server.id, osTemplate);
-      showToast("OS reinstall initiated", "success");
+      const res = await api.server.reinstall(server.id, osTemplate, sshKeyName || undefined);
+      showToast(sshKeyName ? `OS reinstall initiated with SSH key "${sshKeyName}"` : "OS reinstall initiated", "success");
     } catch (err: any) {
       showToast(err.message || "Reinstall failed", "error");
     } finally {
@@ -1616,6 +1619,15 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
               </>
             )}
           </select>
+          <select
+            value={sshKeyName}
+            onChange={(e) => setSshKeyName(e.target.value)}
+            className="flex-1 min-w-[180px] rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+            title="Optional SSH key to install"
+          >
+            <option value="">No SSH key (password login)</option>
+            {sshKeys.map((k: any) => <option key={k.name} value={k.name}>🔑 {k.name}</option>)}
+          </select>
           <button
             onClick={handleReinstall}
             disabled={actionLoading === "reinstall"}
@@ -1624,6 +1636,11 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
             {actionLoading === "reinstall" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reinstall OS"}
           </button>
         </div>
+        {sshKeys.length === 0 && (
+          <p className="text-[10px] text-slate-400 mt-2">
+            Add an SSH key under Dashboard → Security → SSH Keys to log in without a password after reinstall.
+          </p>
+        )}
       </Card>
 
       {/* Reverse DNS */}

@@ -1010,9 +1010,10 @@ def server_reinstall(server_id: str, body: dict, db: Session = Depends(get_db), 
     if not sub:
         raise HTTPException(status_code=404, detail="Server not found")
     os_template = body.get("osTemplate")
+    ssh_key_name = (body.get("sshKeyName") or "").strip() or None
     try:
         ovh = get_ovh_client_from_db(db)
-        return reinstall_os(db, ovh, sub, os_template)
+        return reinstall_os(db, ovh, sub, os_template, ssh_key_name=ssh_key_name)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2601,3 +2602,308 @@ def _ping_server(db: Session, sub: Subscription):
     db.add(metric)
     db.commit()
     return metric
+
+
+# ==================== SSH KEYS (account-level, OVH /me/sshKey) ====================
+
+def _ssh_fingerprint(public_key: str) -> str:
+    """SHA256 fingerprint of an OpenSSH public key (same format as `ssh-keygen -l`)."""
+    import base64, hashlib
+    try:
+        blob = base64.b64decode(public_key.split()[1].encode())
+        return "SHA256:" + base64.b64encode(hashlib.sha256(blob).digest()).decode().rstrip("=")
+    except Exception:
+        return ""
+
+
+def _validate_pubkey(key: str) -> str:
+    key = (key or "").strip()
+    parts = key.split()
+    if len(parts) < 2 or not parts[0].startswith(("ssh-", "ecdsa-", "sk-")):
+        raise HTTPException(status_code=400, detail="Invalid public key — paste the full `ssh-rsa AAAA…` / `ssh-ed25519 AAAA…` line")
+    import base64
+    try:
+        base64.b64decode(parts[1].encode(), validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid public key encoding")
+    return " ".join(parts[:2])
+
+
+@router.get("/account/ssh-keys")
+def list_ssh_keys(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Account-level SSH keys synced with OVH `/me/sshKey` — usable on dedicated
+    installs (sshKeyName) and VPS reinstalls (publicSshKey)."""
+    try:
+        ovh = get_ovh_client_from_db(db)
+        out = []
+        for name in ovh.get("/me/sshKey") or []:
+            try:
+                k = ovh.get(f"/me/sshKey/{name}")
+                out.append({
+                    "name": k.get("keyName") or name,
+                    "key": k.get("key"),
+                    "default": bool(k.get("default")),
+                    "fingerprint": _ssh_fingerprint(k.get("key") or ""),
+                })
+            except Exception:
+                out.append({"name": name})
+        return {"keys": out}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/account/ssh-keys")
+def create_ssh_key(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    name = (body.get("name") or "").strip()
+    if not name or len(name) > 128 or not all(c.isalnum() or c in "-_." for c in name):
+        raise HTTPException(status_code=400, detail="Key name must be 1-128 chars (letters, digits, -_.)")
+    key = _validate_pubkey(body.get("key") or "")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        res = ovh.post("/me/sshKey", keyName=name, key=key)
+        return {"success": True, "key": res, "fingerprint": _ssh_fingerprint(key)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/account/ssh-keys/{name}")
+def delete_ssh_key(name: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        ovh = get_ovh_client_from_db(db)
+        ovh.delete(f"/me/sshKey/{name}")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== DOMAIN: info / lock / authinfo / glue / transfer ====================
+
+@router.get("/server/domains/{domain}/info")
+def domain_info(domain: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Live registry-side info: expiry, transfer lock, DNSSEC, whois, name servers."""
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        info = ovh.get(f"/domain/{domain}") or {}
+        return {
+            "domain": domain,
+            "status": info.get("state") or info.get("status"),
+            "expirationDate": info.get("expirationDate") or info.get("lastUpdate"),
+            "transferLockStatus": info.get("transferLockStatus"),
+            "nameServerType": info.get("nameServerType"),
+            "whoisOwner": info.get("whoisOwner"),
+            "dnssecSupported": info.get("dnssecSupported"),
+            "owoSupported": info.get("owoSupported"),  # whois privacy available
+            "suspensionState": info.get("suspensionState"),
+            "renewalState": info.get("renewalState"),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/server/domains/{domain}/lock")
+def set_domain_lock(domain: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Toggle the registry transfer lock (clientTransferProhibited)."""
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    locked = bool(body.get("locked", True))
+    try:
+        ovh = get_ovh_client_from_db(db)
+        ovh.put(f"/domain/{domain}", transferLockStatus="locked" if locked else "unlocked")
+        return {"success": True, "transferLockStatus": "locked" if locked else "unlocked"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/server/domains/{domain}/authinfo")
+def request_authinfo(domain: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Request the EPP/auth code — OVH emails it to the registrant contact."""
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        res = ovh.post(f"/domain/{domain}/authInfo")
+        return {"success": True, "task": res, "message": "Transfer code sent to the registrant email address"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/server/domains/{domain}/glue")
+def list_glue_records(domain: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Glue records (registered host objects) — needed when the domain's own
+    nameservers are subdomains of itself, e.g. ns1.<domain>."""
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        out = []
+        for host in ovh.get(f"/domain/{domain}/glueRecord") or []:
+            try:
+                d = ovh.get(f"/domain/{domain}/glueRecord/{host}")
+                out.append({"host": host, "ips": d.get("ips") or []})
+            except Exception:
+                out.append({"host": host, "ips": []})
+        return {"domain": domain, "glueRecords": out}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/server/domains/{domain}/glue")
+def create_glue_record(domain: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    host = (body.get("host") or "").strip().lower()
+    ips = [ip.strip() for ip in (body.get("ips") or []) if ip.strip()]
+    import re, ipaddress
+    if not host.endswith("." + domain) and not re.fullmatch(r"[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?", host):
+        raise HTTPException(status_code=400, detail="host must be a hostname like ns1 (usually under your own domain)")
+    if not ips:
+        raise HTTPException(status_code=400, detail="at least one IP is required")
+    for ip in ips:
+        try:
+            ipaddress.ip_address(ip)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"invalid IP: {ip}")
+    # OVH expects the bare host prefix relative to the domain
+    host_name = host[: -(len(domain) + 1)] if host.endswith("." + domain) else host
+    try:
+        ovh = get_ovh_client_from_db(db)
+        res = ovh.post(f"/domain/{domain}/glueRecord", host=host_name, ips=ips)
+        return {"success": True, "task": res}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/server/domains/{domain}/glue/{host}")
+def delete_glue_record(domain: str, host: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = (domain or "").strip().lower()
+    host = host.strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        res = ovh.delete(f"/domain/{domain}/glueRecord/{host}")
+        return {"success": True, "task": res}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/server/domains/transfer")
+def transfer_domain(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Transfer-in: same pricing/idempotency pipeline as registration, but the
+    domain must already exist elsewhere and carries an auth/EPP code."""
+    from app.models.models import DomainRegistration, DomainStatus, PaymentStatus
+    from app.services.currency_service import convert
+    from datetime import datetime, timedelta
+    years = 1  # transfers always extend by 1 year at most registries
+    domain_name = (body.get("domainName") or "").strip().lower()
+    auth_code = (body.get("authCode") or "").strip()
+    if not domain_name or "." not in domain_name:
+        raise HTTPException(status_code=400, detail="Enter a full domain like example.com")
+    if not auth_code:
+        raise HTTPException(status_code=400, detail="Auth/EPP code is required for transfers")
+    if domain_name.startswith("*") or " " in domain_name:
+        raise HTTPException(status_code=400, detail="Invalid domain name")
+    tld = "." + domain_name.split(".", 1)[1]
+    from app.models.models import PlanCatalog
+    plans = [p for p in db.query(PlanCatalog).filter(
+        PlanCatalog.category == ServiceCategory.DOMAINS, PlanCatalog.is_active == True
+    ).all() if p.plan_code and p.plan_code.lower() != "ovh"]
+    matched = _resolve_domain_plan(domain_name, plans)
+    if not matched:
+        raise HTTPException(status_code=400, detail="This extension cannot be transferred here")
+    tld_code, plan = matched
+    tld = "." + tld_code
+    if tld == ".ovh":
+        raise HTTPException(status_code=400, detail="This extension is not available")
+    target = (body.get("currency") or get_settings().currency or "USD").upper()
+    base_currency = (plan.durations[0].currency if plan.durations and plan.durations[0].currency else (plan.currency or "INR")).upper()
+    base_price = (plan.override_price if plan.override_price is not None else plan.durations[0].final_price)
+    if base_price <= 0:
+        raise HTTPException(status_code=400, detail="Transfer pricing not available for this TLD")
+    price = round(convert(db, base_price, base_currency, target), 2)
+    tax_rate = get_settings().tax_rate_percent / 100.0
+    tax_amount = round(price * tax_rate, 2)
+    total = round(price + tax_amount, 2)
+    payment_tx_id = body.get("paymentTransactionId")
+    name = domain_name.split(".", 1)[0]
+    existing = db.query(DomainRegistration).filter(
+        DomainRegistration.user_id == user.id,
+        DomainRegistration.domain_name == name,
+        DomainRegistration.tld == tld,
+        DomainRegistration.is_transfer == True,  # noqa: E712
+        DomainRegistration.status == DomainStatus.PENDING,
+        DomainRegistration.payment_transaction_id.is_(None),
+    ).first()
+    if existing and not payment_tx_id:
+        existing.transfer_auth_code = auth_code
+        db.commit()
+        return {
+            "success": True, "domainId": existing.id, "priceAmount": existing.price_amount,
+            "taxAmount": existing.tax_amount,
+            "totalAmount": round(float(existing.price_amount or 0) + float(existing.tax_amount or 0), 2),
+            "currency": existing.currency, "status": existing.status.value, "transfer": True,
+        }
+    status = DomainStatus.PENDING
+    if payment_tx_id:
+        tx = db.query(PaymentTransaction).filter(PaymentTransaction.id == payment_tx_id, PaymentTransaction.user_id == user.id).first()
+        if not tx:
+            raise HTTPException(status_code=400, detail="Payment transaction not found")
+        if round(float(tx.amount), 2) != total:
+            raise HTTPException(status_code=400, detail="Payment amount does not match transfer total")
+        if (tx.currency or "USD").upper() != target:
+            raise HTTPException(status_code=400, detail="Payment currency does not match")
+        if tx.status != PaymentStatus.COMPLETED and tx.status != PaymentStatus.PENDING:
+            raise HTTPException(status_code=400, detail="Payment is not in a valid state")
+    reg = DomainRegistration(
+        user_id=user.id,
+        domain_name=name,
+        tld=tld,
+        years=years,
+        status=status,
+        expires_at=datetime.utcnow() + timedelta(days=365),
+        price_amount=price,
+        tax_amount=tax_amount,
+        tax_rate=tax_rate,
+        currency=target,
+        payment_transaction_id=payment_tx_id,
+        is_transfer=True,
+        transfer_auth_code=auth_code,
+    )
+    db.add(reg)
+    db.commit()
+    db.refresh(reg)
+    if payment_tx_id:
+        tx = db.query(PaymentTransaction).filter(PaymentTransaction.id == payment_tx_id).first()
+        if tx:
+            meta = tx.payment_metadata or {}
+            meta["domain_registration_id"] = reg.id
+            meta["domain_transfer"] = True
+            tx.payment_metadata = meta
+            db.commit()
+    return {"success": True, "domainId": reg.id, "priceAmount": price, "taxAmount": tax_amount,
+            "totalAmount": total, "currency": reg.currency, "status": reg.status.value, "transfer": True}

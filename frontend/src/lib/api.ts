@@ -52,6 +52,10 @@ export const api = {
     updateMe: (body: { name?: string; phone?: string; country?: string; gstin?: string; billingAddress?: string; billingCity?: string; billingState?: string; billingPincode?: string }) =>
       request("/auth/me", { method: "PUT", body: JSON.stringify(body) }),
     activity: () => request("/user/activity"),
+    sshKeys: () => request("/account/ssh-keys"),
+    createSshKey: (name: string, key: string) =>
+      request("/account/ssh-keys", { method: "POST", body: JSON.stringify({ name, key }) }),
+    deleteSshKey: (name: string) => request(`/account/ssh-keys/${encodeURIComponent(name)}`, { method: "DELETE" }),
     referral: () => request("/user/referral"),
     notifications: () => request("/user/notifications"),
     updateNotifications: (body: object) => request("/user/notifications", { method: "PUT", body: JSON.stringify(body) }),
@@ -193,6 +197,18 @@ export const api = {
       request("/server/domains", { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
     toggleDomainAutoRenew: (domainId: string) =>
       request(`/server/domains/${domainId}/auto-renew`, { method: "POST" }),
+    domainInfo: (domain: string) => request(`/server/domains/${encodeURIComponent(domain)}/info`),
+    setDomainLock: (domain: string, locked: boolean) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/lock`, { method: "PUT", body: JSON.stringify({ locked }) }),
+    domainAuthInfo: (domain: string) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/authinfo`, { method: "POST" }),
+    domainGlue: (domain: string) => request(`/server/domains/${encodeURIComponent(domain)}/glue`),
+    createDomainGlue: (domain: string, host: string, ips: string[]) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/glue`, { method: "POST", body: JSON.stringify({ host, ips }) }),
+    deleteDomainGlue: (domain: string, host: string) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/glue/${encodeURIComponent(host)}`, { method: "DELETE" }),
+    transferDomain: (body: { domainName: string; authCode: string; paymentTransactionId?: string; currency?: string }) =>
+      request("/server/domains/transfer", { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
     domainRecords: (domain: string) => request(`/server/domains/records?domain=${encodeURIComponent(domain)}`),
     createDomainRecord: (body: { domain: string; recordType: string; subDomain: string; target: string; ttl?: number }) =>
       request("/server/domains/records", { method: "POST", body: JSON.stringify(body) }),
@@ -209,8 +225,8 @@ export const api = {
     details: (id: string) => request(`/server/${id}`),
     power: (id: string, action: string) =>
       request(`/server/${id}/power`, { method: "POST", body: JSON.stringify({ action }) }),
-    reinstall: (id: string, osTemplate: string) =>
-      request(`/server/${id}/reinstall`, { method: "POST", body: JSON.stringify({ osTemplate }) }),
+    reinstall: (id: string, osTemplate: string, sshKeyName?: string) =>
+      request(`/server/${id}/reinstall`, { method: "POST", body: JSON.stringify({ osTemplate, sshKeyName: sshKeyName || undefined }) }),
     metrics: (id: string) => request(`/server/${id}/metrics`),
     metricsHistory: (id: string, range: string = "24h") => request(`/server/${id}/metrics/history?range=${range}`),
     uptime: (id: string) => request(`/server/${id}/uptime`),

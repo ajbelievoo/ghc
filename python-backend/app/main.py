@@ -72,6 +72,11 @@ def ensure_schema():
         if "monitoring_enabled" not in sub_cols:
             conn.execute(text("ALTER TABLE subscriptions ADD COLUMN monitoring_enabled BOOLEAN DEFAULT 1"))
             logger.info("Added subscriptions.monitoring_enabled column")
+        dom_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(domain_registrations)"))}
+        if "is_transfer" not in dom_cols:
+            conn.execute(text("ALTER TABLE domain_registrations ADD COLUMN is_transfer BOOLEAN DEFAULT 0"))
+            conn.execute(text("ALTER TABLE domain_registrations ADD COLUMN transfer_auth_code VARCHAR(255)"))
+            logger.info("Added domain_registrations transfer columns")
         conn.commit()
 
 

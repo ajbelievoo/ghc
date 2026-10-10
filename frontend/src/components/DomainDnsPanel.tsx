@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ToastProvider";
-import { Globe, Plus, Pencil, Trash2, X, Loader2, Save, RefreshCw } from "lucide-react";
+import { Globe, Plus, Pencil, Trash2, X, Loader2, Save, RefreshCw, Lock, LockOpen, KeySquare } from "lucide-react";
 
 interface DomainDnsPanelProps {
   domain: string;
@@ -27,6 +27,10 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
   const [nsList, setNsList] = useState<string[]>([]);
   const [nsInput, setNsInput] = useState("");
   const [dnssec, setDnssec] = useState<any>(null);
+  const [info, setInfo] = useState<any>(null);
+  const [glue, setGlue] = useState<any[]>([]);
+  const [glueHost, setGlueHost] = useState("");
+  const [glueIps, setGlueIps] = useState("");
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -48,6 +52,8 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
       setNsInput(cur.join("\n"));
     }).catch(() => {});
     api.server.domainDnssec(domain).then((d) => setDnssec(d)).catch(() => {});
+    api.server.domainInfo(domain).then(setInfo).catch(() => {});
+    api.server.domainGlue(domain).then((r) => setGlue(r.glueRecords || [])).catch(() => {});
   }, [domain]);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -117,6 +123,53 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
           <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 transition-all">
             <X className="w-5 h-5 text-slate-500" />
           </button>
+        </div>
+
+        {/* ===== Domain info / lock / authinfo ===== */}
+        {info && (
+          <div className="mb-4 grid grid-cols-2 md:grid-cols-4 gap-2 rounded-xl bg-slate-100 border border-slate-200 p-4 text-xs">
+            <div><p className="text-slate-500">Expires</p><p className="font-medium text-[#0f172a]">{info.expirationDate ? new Date(info.expirationDate).toLocaleDateString() : "—"}</p></div>
+            <div><p className="text-slate-500">Registry status</p><p className="font-medium text-[#0f172a]">{info.status || "—"}</p></div>
+            <div><p className="text-slate-500">NS type</p><p className="font-medium text-[#0f172a]">{info.nameServerType || "—"}</p></div>
+            <div>
+              <p className="text-slate-500">Transfer lock</p>
+              <button
+                onClick={async () => {
+                  const want = info.transferLockStatus !== "locked";
+                  setSaving(true);
+                  try {
+                    await api.server.setDomainLock(domain, want);
+                    setInfo({ ...info, transferLockStatus: want ? "locked" : "unlocked" });
+                    showToast(want ? "Transfer lock enabled" : "Transfer lock disabled", "success");
+                  } catch (e: any) { showToast(e.message || "Lock update failed", "error"); }
+                  finally { setSaving(false); }
+                }}
+                className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                  info.transferLockStatus === "locked" ? "bg-[#00ff88]/15 text-[#00a832]" : "bg-yellow-500/15 text-yellow-700"}`}
+                title="Click to toggle"
+              >
+                {info.transferLockStatus === "locked" ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
+                {(info.transferLockStatus || "unknown").toUpperCase()}
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <button
+            onClick={async () => {
+              if (!confirm(`Request the transfer (auth/EPP) code for ${domain}? It will be emailed to the registrant contact.`)) return;
+              setSaving(true);
+              try {
+                const r = await api.server.domainAuthInfo(domain);
+                showToast(r.message || "Auth code requested — check registrant email", "success");
+              } catch (e: any) { showToast(e.message || "Request failed", "error"); }
+              finally { setSaving(false); }
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200"
+          >
+            <KeySquare className="w-3.5 h-3.5" /> Get transfer (auth) code
+          </button>
+          <span className="text-[10px] text-slate-400">Unlock the domain first, then request the code to transfer out.</span>
         </div>
 
         <form onSubmit={handleCreate} className="mb-6 rounded-xl bg-slate-100 border border-slate-200 p-4">
@@ -298,6 +351,70 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
           <span className={`rounded-full px-3 py-1 text-[11px] font-bold ${dnssec?.status === "enabled" || dnssec?.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
             {dnssec?.status || "off"}
           </span>
+        </div>
+
+        {/* ===== Glue records ===== */}
+        <div className="mt-4 rounded-xl bg-slate-100 border border-slate-200 p-4">
+          <h4 className="text-sm font-medium text-[#0f172a] mb-1">Glue records</h4>
+          <p className="text-xs text-slate-500 mb-3">
+            Register host objects at the registry — needed when your nameservers are subdomains of this domain (e.g. ns1.{domain}).
+          </p>
+          {glue.length > 0 && (
+            <div className="space-y-1.5 mb-3">
+              {glue.map((g) => (
+                <div key={g.host} className="flex items-center justify-between rounded-lg bg-white border border-slate-200 px-3 py-2">
+                  <div>
+                    <span className="font-mono text-xs text-[#0f172a]">{g.host}</span>
+                    <span className="ml-2 text-[10px] text-slate-500">{(g.ips || []).join(", ")}</span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Delete glue record ${g.host}?`)) return;
+                      setSaving(true);
+                      try {
+                        await api.server.deleteDomainGlue(domain, g.host);
+                        setGlue(glue.filter((x) => x.host !== g.host));
+                        showToast("Glue record deleted", "success");
+                      } catch (e: any) { showToast(e.message || "Delete failed", "error"); }
+                      finally { setSaving(false); }
+                    }}
+                    className="text-red-400 hover:text-red-600"
+                  ><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={glueHost}
+              onChange={(e) => setGlueHost(e.target.value)}
+              placeholder="ns1"
+              className="w-28 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs font-mono"
+            />
+            <span className="text-xs text-slate-400">.{domain}</span>
+            <input
+              value={glueIps}
+              onChange={(e) => setGlueIps(e.target.value)}
+              placeholder="IPs (comma separated)"
+              className="flex-1 min-w-[160px] rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs font-mono"
+            />
+            <button
+              disabled={saving || !glueHost.trim() || !glueIps.trim()}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  const host = glueHost.trim().endsWith(`.${domain}`) ? glueHost.trim() : `${glueHost.trim()}.${domain}`;
+                  const ips = glueIps.split(",").map((s) => s.trim()).filter(Boolean);
+                  await api.server.createDomainGlue(domain, host, ips);
+                  setGlue([...glue, { host, ips }]);
+                  setGlueHost(""); setGlueIps("");
+                  showToast("Glue record created at registry", "success");
+                } catch (e: any) { showToast(e.message || "Create failed", "error"); }
+                finally { setSaving(false); }
+              }}
+              className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-2 text-xs font-medium text-[#00b7ff] hover:bg-[#00b7ff]/20 disabled:opacity-50"
+            >Add glue</button>
+          </div>
         </div>
 
         <p className="text-[10px] text-slate-500 mt-4">

@@ -351,6 +351,8 @@ class DomainRegistration(Base):
     tax_rate = Column(Float, default=0.0, nullable=False)
     currency = Column(String(10), default="USD", nullable=False)
     payment_transaction_id = Column(String(36), ForeignKey("payment_transactions.id", ondelete="SET NULL"), nullable=True, index=True)
+    is_transfer = Column(Boolean, default=False, nullable=False)
+    transfer_auth_code = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
