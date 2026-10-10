@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ToastProvider";
@@ -147,6 +147,51 @@ function ConfigurePageContent() {
   const [couponResult, setCouponResult] = useState<any>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
+  const [draftBanner, setDraftBanner] = useState<any>(null);
+  const draftRef = useRef<any>(null);
+
+  // ---- cart draft persistence (configure → abandon → resume) ----
+  const DRAFT_KEY = "ghc-cart-draft";
+  const readDraft = () => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch { return null; } };
+  useEffect(() => {
+    const d = readDraft();
+    if (!d?.planCode) return;
+    if (d.savedAt && Date.now() - d.savedAt > 30 * 864e5) { clearDraft(); return; } // stale draft
+    if (d.planCode === planCode && d.category === category) {
+      // same plan — restore selections silently
+      draftRef.current = d;
+      if (d.durationLabel) setDurationLabel(d.durationLabel);
+      if (d.datacenter) setDatacenter(d.datacenter);
+      if (d.image) setImage(d.image);
+      if (d.imageVersion) setImageVersion(d.imageVersion);
+      if (d.imageTab) setImageTab(d.imageTab);
+      if (d.region) setRegion(d.region);
+      if (d.gateway) setGateway(d.gateway);
+      if (d.quantity) setQuantity(d.quantity);
+      if (typeof d.backup === "boolean") setBackup(d.backup);
+      if (typeof d.snapshot === "boolean") setSnapshot(d.snapshot);
+      if (typeof d.storage === "boolean") setStorage(d.storage);
+      if (d.selectedApp) setSelectedApp(d.selectedApp);
+      if (d.couponCode) setCouponCode(d.couponCode);
+    } else {
+      setDraftBanner(d); // different plan — offer resume
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // save draft whenever selection changes (after first paint)
+  useEffect(() => {
+    if (loading) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          planCode, category, subCategory, durationLabel, datacenter, image, imageVersion, imageTab,
+          region, gateway, quantity, backup, snapshot, storage, selectedApp, couponCode, savedAt: Date.now(),
+        }));
+      } catch {}
+    }, 400);
+    return () => clearTimeout(t);
+  }, [planCode, category, subCategory, durationLabel, datacenter, image, imageVersion, imageTab, region, gateway, quantity, backup, snapshot, storage, selectedApp, couponCode, loading]);
+  const clearDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch {} };
 
   useEffect(() => {
     let alive = true;
@@ -219,7 +264,8 @@ function ConfigurePageContent() {
       .then((data: any) => {
         if (!alive) return;
         setOvhConfig(data);
-        setDatacenter("");
+        setDatacenter(draftRef.current?.datacenter || "");
+        draftRef.current = null;
       })
       .catch((e: any) => {
         if (!alive) return;
@@ -273,10 +319,11 @@ function ConfigurePageContent() {
           couponCode: couponResult?.code,
         });
         if (res.subscription) {
+          clearDraft();
           window.location.href = "/dashboard";
         } else {
           showToast(res.message || "Order placed", res.order?.status === "FAILED" ? "error" : "success");
-          if (res.order?.status !== "FAILED") window.location.href = "/dashboard";
+          if (res.order?.status !== "FAILED") { clearDraft(); window.location.href = "/dashboard"; }
         }
         return;
       }
@@ -291,7 +338,7 @@ function ConfigurePageContent() {
         configuration,
         couponCode: couponResult?.code,
       });
-      if (res.checkoutUrl) window.location.href = res.checkoutUrl;
+      if (res.checkoutUrl) { clearDraft(); window.location.href = res.checkoutUrl; }
       else if (res.manual) setManualPayment({ id: res.id, amount: res.amount, currency: res.currency, instructions: res.instructions });
       else showToast("Payment gateway did not return checkout URL", "error");
     } catch (e: any) {
@@ -339,6 +386,28 @@ function ConfigurePageContent() {
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-[#00b7ff]">{category} Configurator</p>
           <h1 className="mt-1 text-3xl font-black">Configure your Virtual Private Server</h1>
+
+          {draftBanner && (
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <p className="text-xs text-amber-800">
+                You have a saved configuration for <b>{draftBanner.planCode}</b>
+                {draftBanner.savedAt ? ` (${new Date(draftBanner.savedAt).toLocaleDateString()})` : ""}
+              </p>
+              <div className="flex shrink-0 items-center gap-3">
+                <button
+                  onClick={() => {
+                    const q = new URLSearchParams({ category: draftBanner.category || "VPS", plan: draftBanner.planCode });
+                    if (draftBanner.subCategory) q.set("subCategory", draftBanner.subCategory);
+                    window.location.href = `/configure?${q.toString()}`;
+                  }}
+                  className="rounded-lg bg-amber-500 px-3 py-1 text-xs font-bold text-white hover:bg-amber-600"
+                >
+                  Resume
+                </button>
+                <button onClick={() => { clearDraft(); setDraftBanner(null); }} className="text-xs text-amber-600 hover:text-amber-800">Discard</button>
+              </div>
+            </div>
+          )}
 
           {subCategory && subCategoryApps[subCategory] && (
             <div className="mt-4 rounded-lg border border-[#00b7ff] bg-slate-100 p-4">

@@ -267,6 +267,8 @@ def _subscription_to_server(s: Subscription) -> dict:
         "datacenter": s.datacenter,
         "status": s.status.value,
         "suspensionReason": s.suspension_reason,
+        "customerNote": s.customer_note,
+        "tags": s.tags or [],
         "billingCycle": s.billing_cycle.value,
         "autoRenew": s.auto_renew,
         "nextBillDate": s.next_bill_date.isoformat() if s.next_bill_date else None,
@@ -2552,6 +2554,81 @@ def server_cancel(server_id: str, body: dict, db: Session = Depends(get_db), use
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.put("/server/{server_id}/meta")
+def update_server_meta(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Customer-editable note + tags on a service (labels like 'production-db')."""
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    if "customerNote" in body:
+        note = body.get("customerNote")
+        sub.customer_note = (note or "").strip()[:1000] or None
+    if "tags" in body:
+        tags = body.get("tags")
+        if not isinstance(tags, list):
+            raise HTTPException(status_code=400, detail="tags must be a list")
+        sub.tags = [str(t).strip()[:40] for t in tags[:10] if str(t).strip()]
+    db.commit()
+    return {"success": True, "customerNote": sub.customer_note, "tags": sub.tags or []}
+
+
+@router.post("/billing/bulk-renew")
+def bulk_renew(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Renew multiple services at once. Creates one renewal invoice per service;
+    gateway "wallet" pays them all in one shot."""
+    from app.services.subscription_service import create_renewal_invoice
+    ids = body.get("subscriptionIds") or []
+    if not isinstance(ids, list) or not ids or len(ids) > 20:
+        raise HTTPException(status_code=400, detail="Select 1-20 services")
+    subs = db.query(Subscription).filter(
+        Subscription.id.in_(ids),
+        Subscription.user_id == user.id,
+        Subscription.order_id.isnot(None),
+        Subscription.status.notin_([SubscriptionStatus.TERMINATED, SubscriptionStatus.CANCELLED]),
+    ).all()
+    if not subs:
+        raise HTTPException(status_code=404, detail="No renewable services found")
+
+    invoices, skipped = [], []
+    for sub in subs:
+        try:
+            inv = create_renewal_invoice(db, sub)
+            if inv:
+                invoices.append(inv)
+        except Exception:
+            logger.exception(f"Bulk renew invoice failed for sub {sub.id}")
+            skipped.append(sub.id)
+
+    gateway = (body.get("gateway") or "").lower()
+    result = {
+        "invoices": [{"invoiceId": i.id, "invoiceNumber": i.invoice_number, "amount": i.amount, "currency": i.currency} for i in invoices],
+        "total": sum(i.amount for i in invoices),
+        "skipped": skipped,
+        "paid": 0,
+    }
+    if gateway == "wallet":
+        from app.services.wallet_service import pay_invoice_with_wallet
+        for inv in invoices:
+            if inv.status == InvoiceStatus.PAID:
+                result["paid"] += 1
+                continue
+            try:
+                pay_invoice_with_wallet(db, user, inv)
+                result["paid"] += 1
+            except HTTPException as e:
+                result["error"] = e.detail
+                break  # insufficient balance — stop, remaining stay unpaid for manual pay
+    elif gateway:
+        if not invoices:
+            raise HTTPException(status_code=400, detail="No invoices to pay")
+        from app.services.payment_service import create_payment_session
+        first = invoices[0]
+        session = create_payment_session(db, user, result["total"], first.currency, gateway, "INVOICE_PAYMENT", {"invoice_ids": [i.id for i in invoices]})
+        result["checkoutUrl"] = session.checkout_url
+        result["sessionId"] = session.id
+    return result
 
 
 @router.post("/server/{server_id}/renew")

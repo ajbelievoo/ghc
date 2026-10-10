@@ -164,9 +164,9 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 execute_checkout(db, ovh, tx.order_id)
             except Exception as e:
                 logger.exception(f"Auto-provision after payment failed for order {tx.order_id}: {e}")
-    elif meta.get("type") == "INVOICE_PAYMENT" or meta.get("invoice_id"):
-        invoice_id = meta.get("invoice_id") or meta.get("invoiceId")
-        if invoice_id:
+    elif meta.get("type") == "INVOICE_PAYMENT" or meta.get("invoice_id") or meta.get("invoice_ids"):
+        ids = meta.get("invoice_ids") or ([meta.get("invoice_id") or meta.get("invoiceId")] if (meta.get("invoice_id") or meta.get("invoiceId")) else [])
+        for invoice_id in ids:
             invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
             if invoice and invoice.status != InvoiceStatus.PAID:
                 invoice.status = InvoiceStatus.PAID

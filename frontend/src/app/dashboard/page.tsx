@@ -64,6 +64,7 @@ import {
   ChevronDown,
   ArrowRightLeft,
   CreditCard,
+  Tag,
 } from "lucide-react";
 
 type Tab = "overview" | "servers" | "domains" | "invoices" | "wallet" | "support" | "security" | "profile";
@@ -85,6 +86,9 @@ interface ServerInstance {
   additional_ips?: any[];
   suspensionReason?: string | null;
   suspension_reason?: string | null;
+  customerNote?: string | null;
+  customer_note?: string | null;
+  tags?: string[];
 }
 
 export default function DashboardPage() {
@@ -97,6 +101,9 @@ export default function DashboardPage() {
   const [launchParam, setLaunchParam] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [renewSelected, setRenewSelected] = useState<Set<string>>(new Set());
+  const [bulkRenewing, setBulkRenewing] = useState(false);
   const [servers, setServers] = useState<ServerInstance[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [ordersList, setOrdersList] = useState<any[]>([]);
@@ -777,7 +784,11 @@ export default function DashboardPage() {
   const safeDomains = Array.isArray(myDomains) ? myDomains : [];
   const safeInvoices = Array.isArray(invoices) ? invoices : [];
   const safeTickets = Array.isArray(tickets) ? tickets : [];
-  const filteredServers = useMemo(() => safeServers.filter((s) => (s.name || s.displayName || s.planCode || "").toLowerCase().includes(q) || (s.ipAddress || "").toLowerCase().includes(q) || (s.category || "").toLowerCase().includes(q)), [safeServers, q]);
+  const allTags = useMemo(() => Array.from(new Set(safeServers.flatMap((s: any) => s.tags || []))).sort(), [safeServers]);
+  const filteredServers = useMemo(() => safeServers.filter((s) => {
+    if (tagFilter && !(s.tags || []).includes(tagFilter)) return false;
+    return (s.name || s.displayName || s.planCode || "").toLowerCase().includes(q) || (s.ipAddress || "").toLowerCase().includes(q) || (s.category || "").toLowerCase().includes(q) || (s.tags || []).join(" ").includes(q) || (s.customerNote || s.customer_note || "").toLowerCase().includes(q);
+  }), [safeServers, q, tagFilter]);
   const filteredDomains = useMemo(() => {
     const tq = domainTableQuery.toLowerCase();
     return safeDomains.filter((d) =>
@@ -1042,6 +1053,54 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-[#0f172a]">My Infrastructure</h2>
 
+            {allTags.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Tag className="w-3.5 h-3.5 text-slate-400" />
+                <button onClick={() => setTagFilter(null)} className={`rounded-full px-3 py-1 text-xs font-medium border ${!tagFilter ? "bg-[#00b7ff]/10 border-[#00b7ff]/40 text-[#00b7ff]" : "bg-slate-100 border-slate-200 text-slate-500"}`}>All</button>
+                {allTags.map((t: string) => (
+                  <button key={t} onClick={() => setTagFilter(tagFilter === t ? null : t)} className={`rounded-full px-3 py-1 text-xs font-medium border ${tagFilter === t ? "bg-[#00b7ff]/10 border-[#00b7ff]/40 text-[#00b7ff]" : "bg-slate-100 border-slate-200 text-slate-500"}`}>{t}</button>
+                ))}
+              </div>
+            )}
+
+            {renewSelected.size > 0 && (
+              <div className="flex items-center justify-between rounded-xl border border-[#00b7ff]/40 bg-[#00b7ff]/5 px-4 py-3">
+                <p className="text-sm font-medium text-[#0f172a]">{renewSelected.size} service{renewSelected.size > 1 ? "s" : ""} selected for renewal</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={bulkRenewing}
+                    onClick={async () => {
+                      setBulkRenewing(true);
+                      try {
+                        const r = await api.billing.bulkRenew({ subscriptionIds: Array.from(renewSelected), gateway: "wallet" });
+                        if (r.paid > 0) { showToast(`${r.paid} service${r.paid > 1 ? "s" : ""} renewed from wallet`, "success"); setRenewSelected(new Set()); fetchData(); }
+                        else if (r.error) showToast(r.error, "error");
+                        else showToast("Invoices created — pay from the Invoices tab", "success");
+                      } catch (e: any) { showToast(e.message || "Bulk renew failed", "error"); }
+                      finally { setBulkRenewing(false); }
+                    }}
+                    className="rounded-lg bg-[#00b7ff] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#009fe0] disabled:opacity-50"
+                  >
+                    {bulkRenewing ? "Paying…" : "Pay all from wallet"}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const r = await api.billing.bulkRenew({ subscriptionIds: Array.from(renewSelected) });
+                        showToast(`${r.invoices.length} renewal invoice${r.invoices.length > 1 ? "s" : ""} created`, "success");
+                        setRenewSelected(new Set());
+                        setTab("invoices");
+                      } catch (e: any) { showToast(e.message || "Could not create invoices", "error"); }
+                    }}
+                    className="rounded-lg border border-slate-300 px-3.5 py-1.5 text-xs font-bold text-[#0f172a] hover:bg-slate-50"
+                  >
+                    Create invoices
+                  </button>
+                  <button onClick={() => setRenewSelected(new Set())} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+              </div>
+            )}
+
             {filteredServers.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-12 text-center">
                 <Server className="w-12 h-12 text-slate-500 mx-auto mb-4" />
@@ -1069,6 +1128,14 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={renewSelected.has(srv.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => setRenewSelected((prev) => { const n = new Set(prev); e.target.checked ? n.add(srv.id) : n.delete(srv.id); return n; })}
+                            title="Select for bulk renewal"
+                            className="rounded border-slate-300 text-[#00b7ff]"
+                          />
                           <h3 className="text-sm font-semibold text-[#0f172a]">{srv.name}</h3>
                           <span className="rounded-full px-2 py-0.5 text-[10px] font-medium bg-slate-100/50 text-slate-500 uppercase">{srv.category || 'VPS'}</span>
                         </div>
@@ -1099,8 +1166,18 @@ export default function DashboardPage() {
                       {srv.status === "SUSPENDED" && (srv.suspensionReason || srv.suspension_reason) && (
                         <p className="text-[10px] text-red-500 mt-1.5">⚠ {srv.suspensionReason || srv.suspension_reason}</p>
                       )}
+                      {(srv.customerNote || srv.customer_note) && (
+                        <p className="text-[10px] text-slate-400 mt-1.5 italic">📝 {srv.customerNote || srv.customer_note}</p>
+                      )}
                       {srv.status === "ACTIVE" && srv.nextBillDate && new Date(srv.nextBillDate) < new Date() && (
                         <p className="text-[10px] text-amber-600 mt-1.5">⚠ Payment overdue — grace period</p>
+                      )}
+                      {(srv.tags || []).length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          {(srv.tags || []).map((t: string) => (
+                            <span key={t} className="rounded-full bg-[#00b7ff]/10 border border-[#00b7ff]/25 px-2 py-0.5 text-[9px] font-medium text-[#00b7ff]">{t}</span>
+                          ))}
+                        </div>
                       )}
                     </button>
                   ))}

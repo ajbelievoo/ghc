@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/ToastProvider";
 import { getCurrencySymbol } from "@/components/CurrencyProvider";
 import ServerDetailCards from "@/components/ServerDetailCards";
+import ServiceMetaCard from "@/components/ServiceMetaCard";
 import {
   Server as ServerIcon,
   Activity,
@@ -62,6 +63,8 @@ interface ServerInstance {
   expiresAt: string;
   suspensionReason?: string | null;
   suspension_reason?: string | null;
+  customerNote?: string | null;
+  tags?: string[];
 }
 
 const TABS = [
@@ -229,6 +232,9 @@ export default function ServerDetailClient() {
             </span>
           </div>
         </div>
+
+        {/* Note + tags */}
+        <ServiceMetaCard server={server} onUpdated={(note, tags) => setServer((x) => (x ? { ...x, customerNote: note, tags } : x))} />
 
         {/* Suspension reason / grace period banner */}
         {server.status === "SUSPENDED" && (

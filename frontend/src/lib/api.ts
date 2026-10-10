@@ -238,6 +238,8 @@ export const api = {
     uptime: (id: string) => request(`/server/${id}/uptime`),
     setMonitoring: (id: string, enabled: boolean) =>
       request(`/server/${id}/monitoring`, { method: "PUT", body: JSON.stringify({ enabled }) }),
+    updateMeta: (id: string, body: { customerNote?: string | null; tags?: string[] }) =>
+      request(`/server/${id}/meta`, { method: "PUT", body: JSON.stringify(body) }),
     renew: (id: string, gateway?: string) =>
       request(`/server/${id}/renew`, { method: "POST", body: JSON.stringify(gateway ? { gateway } : {}) }),
     alerts: (id: string) => request(`/server/${id}/alerts`),
@@ -334,6 +336,8 @@ export const api = {
     wallet: () => request("/billing/wallet"),
     walletTransactions: () => request("/wallet/transactions"),
     payInvoice: (id: string, gateway: string) => request(`/billing/invoices/${id}/pay`, { method: "POST", body: JSON.stringify({ gateway }) }),
+    bulkRenew: (body: { subscriptionIds: string[]; gateway?: string }) =>
+      request(`/billing/bulk-renew`, { method: "POST", body: JSON.stringify(body) }),
     payWithWallet: (body: { planCode: string; durationLabel: string; category: string; configuration?: object; currency?: string; couponCode?: string }) =>
       request("/billing/wallet/pay", { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
   },
