@@ -468,6 +468,31 @@ def send_order_failed_email(db: Session, order: CustomerOrder, user: User, error
     return send_email(db, user.email, f"Issue with GHC order #{order.id[:8]}", html)
 
 
+def send_admin_fulfillment_email(db: Session, order: CustomerOrder, reason: str) -> bool:
+    """Alert admins when an order needs manual fulfillment (e.g. OVH checkout blocked)."""
+    customer = order.user.email if order.user else "unknown"
+    html = render_email(
+        preheader=f"Order #{order.id[:8]} needs manual fulfillment",
+        heading="Action needed — manual fulfillment",
+        paragraphs=[
+            "A customer order could not complete automatically and needs a manual OVH order in the manager.",
+            "After creating the service upstream, use the admin panel's <strong>Retry Provision</strong> on this order.",
+        ],
+        details=[
+            ("Order #", order.id[:8]),
+            ("Customer", customer),
+            ("Plan", order.plan_code or "Custom"),
+            ("Category", _category_label(order.category)),
+            ("Amount", _fmt_money(order.customer_amount, order.currency)),
+            ("OVH cart", order.ovh_cart_id or "—"),
+        ],
+        cta_label="Open admin panel",
+        cta_url=f"{settings.site_url}/admin",
+        note=f"<strong>Reason:</strong> {reason}",
+    )
+    return send_email(db, settings.admin_email, f"[ACTION] GHC order #{order.id[:8]} needs manual fulfillment", html)
+
+
 def send_wallet_topup_email(db: Session, user: User, amount: float, currency: str, gateway: str) -> bool:
     html = render_email(
         preheader=f"Wallet credited with {currency} {amount}",

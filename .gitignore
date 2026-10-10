@@ -13,6 +13,9 @@ venv/
 .next/
 dist/
 dist2/
+
+# Customer-uploaded files (support attachments etc.)
+python-backend/uploads/
 web-build/
 *.tsbuildinfo
 

@@ -30,6 +30,7 @@ from app.services.catalog_service import get_margin_for_category
 from app.services.currency_service import convert
 from app.services.wallet_service import get_or_create_wallet
 from app.services.email_service import (
+    send_admin_fulfillment_email,
     send_order_failed_email,
     send_order_payment_email,
     send_service_activated_email,
@@ -1036,6 +1037,10 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
 
         if not paid:
             _update_order_status(db, order, OrderStatus.OVH_ORDER_PLACED, "Waiting for OVH payment; no registered payment method available")
+            try:
+                send_admin_fulfillment_email(db, order, f"OVH order {ovh_order_id} placed but unpaid — pay upstream via {order.ovh_order_url or 'manager'}, then retry provisioning")
+            except Exception:
+                logger.exception("Admin fulfillment email failed")
             # Return early; provisioning will happen after admin/customer completes OVH payment and retries.
             return order
 
@@ -1098,6 +1103,10 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         _ensure_invoice_and_subscription(db, order)
         _update_order_status(db, order, OrderStatus.PROVISIONING_FAILED, str(e))
         log_ovh_step(db, order.id, "CHECKOUT_FAILED", "", {}, {}, is_success=False, error_message=str(e))
+        try:
+            send_admin_fulfillment_email(db, order, f"OVH checkout/provisioning error: {e}")
+        except Exception:
+            logger.exception("Admin fulfillment email failed")
         raise
 
 
