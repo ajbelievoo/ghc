@@ -834,5 +834,20 @@ def admin_ovh_account_health(db: Session = Depends(get_db), admin: User = Depend
 
     out["orderingLikelyBlocked"] = any("expired" in i.lower() or "no default" in i.lower()
                                        or "kyc" in i.lower() for i in out["issues"])
+
+    from app.models.models import GatewayConfig
+    from app.services.payment_service import get_gateway_config, gateway_ready, gateway_issues
+    gw = {}
+    for g in db.query(GatewayConfig).all():
+        cfg = get_gateway_config(db, g.name)
+        gw[g.name] = {
+            "active": bool(g.is_active),
+            "customerReady": gateway_ready(cfg),
+            "issues": gateway_issues(cfg),
+        }
+        for gi in gw[g.name]["issues"]:
+            if g.is_active and "disabled" not in gi and "webhook" not in gi:
+                out["issues"].append(f"Gateway {g.name}: {gi}")
+    out["paymentGateways"] = gw
     return out
 
