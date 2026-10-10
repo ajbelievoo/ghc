@@ -94,3 +94,13 @@ every site offline permanently.
   any `/order/cart/*/checkout` that would spend real account balance.
 - Order/cart creation and real payment/provisioning tests require the user to confirm in
   the conversation first — always.
+
+## Monitoring & Metrics (Phase A, added 2026-10-10)
+
+- `app/services/metrics_service.py` — provider-neutral live metrics. Sources: OVH `/vps/{sn}/monitoring` (older ranges only; new ranges 500 → negatively cached 10 min) and Proxmox (`proxmox:<node>/<vmid>` in `subscriptions.service_name`, creds via `admin_configs` keys `proxmox_host`, `proxmox_token_id`, `proxmox_token_secret`, `proxmox_verify_ssl`). Always returns `{available, source, reason}` — never fabricates values.
+- `MetricSample` table stores real samples every ~10 min via `metric_sampling_loop` in `main.py`; `/api/server/{id}/metrics/history?range=1h|24h|7d` serves them.
+- `/api/server/{id}/uptime` computes uptime % (24h/7d/30d) from `server_ping_metrics`.
+- `subscriptions.monitoring_enabled` toggles both ping monitor and sampling.
+- Ping monitor alerts: 3 consecutive DOWN/TIMEOUT → email + `UserNotification`; recovery notice on first UP. Customer alert rules (`service_alert_rules`) evaluated per-check on latency/packet_loss and latest `MetricSample` for cpu/ram/disk; 30-min re-trigger cooldown.
+- Status page: `/api/status/summary` (public, real 30d category uptime + incidents), `/api/status/subscribe`, `/api/status/unsubscribe/{token}`; admin CRUD `/api/admin/status/incidents` emails subscribers (`status_subscribers`) and optionally affected customers (maintenance notifications).
+- OVH dedicated servers expose NO live metrics via API — RTM data is only visible inside the guest OS; the API returns explicit `available:false` with reason instead of fake data.

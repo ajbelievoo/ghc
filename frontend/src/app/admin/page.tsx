@@ -14,7 +14,7 @@ import {
   CloudCog, Tag, Ban, RotateCcw, XCircle, Percent, Clock
 } from "lucide-react";
 
-type Tab = "overview" | "users" | "credentials" | "brand" | "settings" | "margins" | "coupons" | "catalog" | "subscriptions" | "suspensions" | "domain-tlds" | "customer-domains" | "logs" | "orders" | "support" | "invoices";
+type Tab = "overview" | "users" | "credentials" | "brand" | "settings" | "margins" | "coupons" | "catalog" | "subscriptions" | "suspensions" | "incidents" | "domain-tlds" | "customer-domains" | "logs" | "orders" | "support" | "invoices";
 
 interface LogEntry { id: string; type: string; message: string; createdAt: string; details?: any; }
 interface SubEntry { id: string; name: string; providerResourceId: string | null; category: string; status: string; userId: string; user?: { name: string; email: string }; planCode: string | null; billingCycle: string; nextBillDate: string; priceAmount: number; currency: string; autoRenew: boolean; createdAt: string; }
@@ -76,6 +76,8 @@ export default function AdminPage() {
   const [ordersFilter, setOrdersFilter] = useState("ALL");
   const [invoices, setInvoices] = useState<any[]>([]);
   const [suspensionQueue, setSuspensionQueue] = useState<any>(null);
+  const [incidents, setIncidents] = useState<any[]>([]);
+  const [incidentForm, setIncidentForm] = useState({ title: "", kind: "incident", status: "investigating", severity: "minor", message: "", services: "", scheduledFor: "", scheduledUntil: "", notify: true, notifyCustomers: false });
   const [invoicesFilter, setInvoicesFilter] = useState("ALL");
   const [viewingServer, setViewingServer] = useState<string | null>(null);
   const [sendingInvoice, setSendingInvoice] = useState<string | null>(null);
@@ -122,6 +124,7 @@ export default function AdminPage() {
       if (t === "orders") { const o = await api.admin.getOrders({ status: ordersFilter !== "ALL" ? ordersFilter : undefined, page: ordersPage, limit: 20 }); setOrders(o.orders || []); setOrdersTotal(o.total || 0); }
       if (t === "invoices") { const inv = await api.admin.getInvoices({ status: invoicesFilter !== "ALL" ? invoicesFilter : undefined }); setInvoices(inv || []); }
       if (t === "suspensions") { const q = await api.admin.suspensionQueue(); setSuspensionQueue(q); }
+      if (t === "incidents") { const i = await api.admin.incidents(); setIncidents(i || []); }
       if (t === "support") { const params: any = {}; if (supportFilter !== "ALL") params.status = supportFilter; const st = await api.support.getTickets(params); setSupportTickets(st.tickets || []); }
     } catch (e: any) { console.error(e); setPageError(e.message || "Failed to load data"); } finally { setLoading(false); }
   };
@@ -131,6 +134,7 @@ export default function AdminPage() {
   useEffect(() => { if (tab === "catalog") loadTabData("catalog"); }, [catalogCategory, catalogSearch, tab]);
   useEffect(() => { if (tab === "subscriptions") loadTabData("subscriptions"); }, [subFilter, subCategory, tab]);
   useEffect(() => { if (tab === "suspensions") loadTabData("suspensions"); }, [tab]);
+  useEffect(() => { if (tab === "incidents") loadTabData("incidents"); }, [tab]);
   useEffect(() => { if (tab === "support") loadTabData("support"); }, [supportFilter, tab]);
   useEffect(() => { if (tab === "orders") loadTabData("orders"); }, [ordersFilter, ordersPage, tab]);
   useEffect(() => { if (tab === "invoices") loadTabData("invoices"); }, [invoicesFilter, tab]);
@@ -220,6 +224,7 @@ export default function AdminPage() {
           {navItem("catalog", "Catalog", <Package className="w-4 h-4" />)}
           {navItem("subscriptions", "Subscriptions", <Server className="w-4 h-4" />)}
           {navItem("suspensions", "Suspension Queue", <AlertTriangle className="w-4 h-4" />)}
+          {navItem("incidents", "Status & Incidents", <Activity className="w-4 h-4" />)}
           {navItem("domain-tlds", "Domain TLDs", <Globe className="w-4 h-4" />)}
           {navItem("customer-domains", "Customer Domains", <Globe className="w-4 h-4" />)}
           {navItem("orders", "Orders", <FileText className="w-4 h-4" />)}
@@ -924,6 +929,101 @@ export default function AdminPage() {
                     {(!suspensionQueue || suspensionQueue.overdueInvoices?.length === 0) && <tr><td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-500">No overdue invoices.</td></tr>}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== STATUS & INCIDENTS ===== */}
+        {tab === "incidents" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2 className="text-2xl font-bold text-[#0f172a]">Status & Incidents</h2>
+                <p className="text-xs text-slate-500 mt-1">Posts appear on <a href="/status" className="text-[#00b7ff] hover:underline">/status</a> and are emailed to subscribers. "Notify customers" also emails users with active services in the selected categories.</p>
+              </div>
+              <button onClick={() => loadTabData("incidents")} className="flex items-center gap-2 rounded-lg bg-slate-100/50 border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100/80 transition-all"><RefreshCw className="w-4 h-4" />Refresh</button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">
+              <h3 className="font-bold text-[#0f172a] mb-4">Post new incident / maintenance</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const services = incidentForm.services ? incidentForm.services.split(",").map((s) => s.trim()).filter(Boolean) : [];
+                  await api.admin.createIncident({
+                    title: incidentForm.title, kind: incidentForm.kind, status: incidentForm.status,
+                    severity: incidentForm.severity, message: incidentForm.message || null, services,
+                    scheduledFor: incidentForm.scheduledFor ? new Date(incidentForm.scheduledFor).toISOString() : null,
+                    scheduledUntil: incidentForm.scheduledUntil ? new Date(incidentForm.scheduledUntil).toISOString() : null,
+                    notify: incidentForm.notify, notifyCustomers: incidentForm.notifyCustomers,
+                  });
+                  showToast("Incident posted", "success");
+                  setIncidentForm({ title: "", kind: "incident", status: "investigating", severity: "minor", message: "", services: "", scheduledFor: "", scheduledUntil: "", notify: true, notifyCustomers: false });
+                  loadTabData("incidents");
+                } catch (err: any) { showToast(err.message || "Failed", "error"); }
+              }} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input required value={incidentForm.title} onChange={(e) => setIncidentForm({ ...incidentForm, title: e.target.value })} placeholder="Title (e.g. Network maintenance SGP)" className="md:col-span-2 rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]" />
+                <div className="flex gap-2">
+                  <select value={incidentForm.kind} onChange={(e) => setIncidentForm({ ...incidentForm, kind: e.target.value })} className="flex-1 rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm">
+                    <option value="incident">Incident</option>
+                    <option value="maintenance">Maintenance</option>
+                  </select>
+                  <select value={incidentForm.severity} onChange={(e) => setIncidentForm({ ...incidentForm, severity: e.target.value })} className="flex-1 rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm">
+                    <option value="minor">Minor</option>
+                    <option value="major">Major</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <textarea value={incidentForm.message} onChange={(e) => setIncidentForm({ ...incidentForm, message: e.target.value })} placeholder="Details shown on status page + emails" rows={2} className="md:col-span-3 rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]" />
+                {incidentForm.kind === "maintenance" && (
+                  <>
+                    <div>
+                      <label className="text-[10px] text-slate-500">Window start (UTC)</label>
+                      <input type="datetime-local" value={incidentForm.scheduledFor} onChange={(e) => setIncidentForm({ ...incidentForm, scheduledFor: e.target.value })} className="w-full rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500">Window end (UTC)</label>
+                      <input type="datetime-local" value={incidentForm.scheduledUntil} onChange={(e) => setIncidentForm({ ...incidentForm, scheduledUntil: e.target.value })} className="w-full rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm" />
+                    </div>
+                  </>
+                )}
+                <input value={incidentForm.services} onChange={(e) => setIncidentForm({ ...incidentForm, services: e.target.value })} placeholder="Affected categories (e.g. VPS,DEDICATED — blank = all)" className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm" />
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input type="checkbox" checked={incidentForm.notify} onChange={(e) => setIncidentForm({ ...incidentForm, notify: e.target.checked })} /> Email subscribers
+                </label>
+                <label className="flex items-center gap-2 text-xs text-slate-600">
+                  <input type="checkbox" checked={incidentForm.notifyCustomers} onChange={(e) => setIncidentForm({ ...incidentForm, notifyCustomers: e.target.checked })} /> Email affected customers
+                </label>
+                <button type="submit" className="md:col-span-3 rounded-lg bg-[#00b7ff] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0090cc]">Publish</button>
+              </form>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-100/50"><h3 className="font-bold text-[#0f172a]">Incidents ({incidents.length})</h3></div>
+              <div className="divide-y divide-slate-100">
+                {incidents.map((i: any) => (
+                  <div key={i.id} className="px-6 py-4 flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-bold text-sm text-[#0f172a]">{i.title}</p>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${i.severity === "critical" ? "bg-red-500/10 text-red-600" : i.severity === "major" ? "bg-orange-500/10 text-orange-600" : "bg-yellow-500/10 text-yellow-700"}`}>{i.severity}</span>
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">{i.kind} · {i.status}</span>
+                      </div>
+                      {i.message && <p className="mt-1 text-xs text-slate-500">{i.message}</p>}
+                      <p className="mt-1 text-[10px] text-slate-400">{i.createdAt?.slice(0, 16).replace("T", " ")}{i.scheduledFor ? ` · window ${i.scheduledFor.slice(0, 16).replace("T", " ")}` : ""}{(i.services || []).length ? ` · ${i.services.join(", ")}` : ""}</p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      {i.status !== "resolved" && i.status !== "completed" && (
+                        <button onClick={async () => { try { await api.admin.updateIncident(i.id, { title: i.title, kind: i.kind, status: "resolved", severity: i.severity, message: i.message, services: i.services, notify: true }); showToast("Resolved + subscribers notified", "success"); loadTabData("incidents"); } catch (e: any) { showToast(e.message, "error"); } }}
+                          className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-500/20">Resolve</button>
+                      )}
+                      <button onClick={async () => { if (!confirm("Delete this incident?")) return; try { await api.admin.deleteIncident(i.id); loadTabData("incidents"); } catch (e: any) { showToast(e.message, "error"); } }}
+                        className="rounded-lg bg-red-500/10 border border-red-500/30 px-3 py-1.5 text-xs text-red-600 hover:bg-red-500/20">Delete</button>
+                    </div>
+                  </div>
+                ))}
+                {!incidents.length && <p className="px-6 py-8 text-center text-sm text-slate-500">No incidents posted yet.</p>}
               </div>
             </div>
           </div>

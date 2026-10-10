@@ -81,7 +81,6 @@ export default function ServerDetailClient() {
   const [server, setServer] = useState<ServerInstance | null>(null);
   const [detail, setDetail] = useState<any>(null);
   const [metrics, setMetrics] = useState<any>(null);
-  const [metricsHistory, setMetricsHistory] = useState<any[]>([]);
   const [additionalIps, setAdditionalIps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<string>("home");
@@ -93,14 +92,12 @@ export default function ServerDetailClient() {
     Promise.all([
       api.server.details(serverId),
       api.server.metrics(serverId),
-      api.server.metricsHistory(serverId),
       api.server.additionalIps(serverId),
     ])
-      .then(([s, m, h, ips]) => {
+      .then(([s, m, ips]) => {
         setServer(s);
         setDetail(s);
         setMetrics(m);
-        setMetricsHistory(h || []);
         setAdditionalIps(ips || []);
       })
       .catch((err) => {
@@ -218,7 +215,7 @@ export default function ServerDetailClient() {
         {tab === "secondary-dns" && isVps && <SecondaryDnsTab server={server} />}
         {tab === "backup" && isVps && <BackupTab server={server} />}
         {tab === "disk" && isVps && <DiskTab server={server} />}
-        {tab === "monitoring" && <MonitoringTab server={server} detail={detail} metrics={metrics} metricsHistory={metricsHistory} />}
+        {tab === "monitoring" && <MonitoringTab server={server} detail={detail} metrics={metrics} />}
         {tab === "databases" && <DatabasesTab server={server} />}
         {tab === "management" && (
           <ManagementTab server={server} detail={detail} setServer={setServer} isVps={isVps} />
@@ -856,56 +853,216 @@ function OptionOrderModal({ serverId, option, onClose, onDone }: { serverId: str
 
 /* ================= MONITORING TAB ================= */
 
-function MonitoringTab({ server, detail, metrics, metricsHistory }: any) {
+function MonitoringTab({ server, detail, metrics }: any) {
   const [ping, setPing] = useState<any>(null);
+  const [pingHistory, setPingHistory] = useState<any[]>([]);
+  const [uptime, setUptime] = useState<any>(null);
+  const [histRange, setHistRange] = useState("24h");
+  const [history, setHistory] = useState<any[]>([]);
+  const [monEnabled, setMonEnabled] = useState<boolean | null>(null);
+  const [rules, setRules] = useState<any[]>([]);
+  const [newRule, setNewRule] = useState({ metric: "latency", operator: "gt", threshold: 200 });
+  const { showToast } = useToast();
+
+  const reloadRules = () => api.server.alerts(server.id).then(setRules).catch(() => {});
+  const reloadHistory = (r: string) => api.server.metricsHistory(server.id, r).then(setHistory).catch(() => setHistory([]));
+
   useEffect(() => {
     api.server.ping(server.id).then(setPing).catch(() => {});
+    api.server.pingHistory(server.id).then(setPingHistory).catch(() => {});
+    api.server.uptime(server.id).then((u: any) => { setUptime(u); setMonEnabled(u.monitoringEnabled); }).catch(() => {});
+    reloadRules();
+    reloadHistory(histRange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server.id]);
+
+  const changeRange = (r: string) => { setHistRange(r); reloadHistory(r); };
+
+  const toggleMon = async () => {
+    const next = !(monEnabled !== false);
+    try {
+      const res = await api.server.setMonitoring(server.id, next);
+      setMonEnabled(res.monitoringEnabled);
+      showToast(next ? "Monitoring enabled" : "Monitoring paused", "success");
+    } catch (e: any) { showToast(e.message || "Failed", "error"); }
+  };
+
+  const addRule = async () => {
+    try {
+      await api.server.createAlert(server.id, { ...newRule, threshold: Number(newRule.threshold) });
+      showToast("Alert rule created", "success");
+      reloadRules();
+    } catch (e: any) { showToast(e.message || "Failed", "error"); }
+  };
+
+  const removeRule = async (id: string) => {
+    try { await api.server.deleteAlert(server.id, id); reloadRules(); } catch { /* noop */ }
+  };
+
+  const METRIC_LABELS: Record<string, string> = { cpu: "CPU %", ram: "RAM %", disk: "Disk %", latency: "Latency ms", packet_loss: "Packet loss %" };
 
   return (
     <div className="space-y-6">
-      <Card title="Live resource monitor" icon={<Activity className="w-4 h-4 text-[#00b7ff]" />} extra={
-        <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" /> Live</span>
+      {/* Uptime cards — real ping-derived data */}
+      <Card title="Uptime" icon={<Activity className="w-4 h-4 text-[#00ff88]" />} extra={
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-slate-500">Monitoring</span>
+          <button onClick={toggleMon}
+            className={`relative h-5 w-9 rounded-full transition ${monEnabled !== false ? "bg-[#00b7ff]" : "bg-slate-300"}`}>
+            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${monEnabled !== false ? "left-4.5 left-[18px]" : "left-0.5"}`} />
+          </button>
+        </div>
       }>
-        {metrics ? (
-          <>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {[
-                { label: "CPU", value: metrics.cpu, unit: "%", icon: Cpu, color: "#00b7ff" },
-                { label: "RAM", value: metrics.ram, unit: "%", icon: HardDrive, color: "#7c3aed" },
-                { label: "Disk", value: metrics.disk, unit: "%", icon: HardDrive, color: "#ff3d00" },
-                { label: "Load", value: metrics.load, unit: "", icon: BarChart3, color: "#00ff88" },
-              ].map((m) => (
-                <div key={m.label} className="rounded-xl bg-slate-100 border border-slate-200 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2"><m.icon className="w-4 h-4" style={{ color: m.color }} /><span className="text-xs text-slate-500">{m.label}</span></div>
-                    <span className="text-sm font-bold text-[#0f172a]">{m.value?.toFixed(1)}{m.unit}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-slate-100/50 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, m.value || 0)}%`, backgroundColor: m.color }} />
-                  </div>
-                </div>
-              ))}
+        <div className="grid grid-cols-3 gap-4">
+          {[["24h", uptime?.d24], ["7d", uptime?.d7], ["30d", uptime?.d30]].map(([label, w]: any) => (
+            <div key={label} className="rounded-xl bg-slate-100 border border-slate-200 p-4 text-center">
+              <p className="text-2xl font-black text-[#0f172a]">{w ? `${w.uptime}%` : "—"}</p>
+              <p className="text-xs text-slate-500 mt-1">last {label}</p>
+              {w && <p className="text-[10px] text-slate-400 mt-0.5">{w.checks} checks{w.down ? `, ${w.down} down` : ""}{w.avgLatencyMs != null ? ` · ${w.avgLatencyMs} ms` : ""}</p>}
             </div>
-            {metricsHistory?.length > 0 && (
-              <div className="rounded-xl bg-slate-100 border border-slate-200 p-4">
-                <p className="text-xs text-slate-500 mb-2">CPU history</p>
-                <svg viewBox="0 0 300 60" className="w-full h-16">
-                  <polyline
-                    points={metricsHistory.map((pt: any, i: number) => `${(i / (metricsHistory.length - 1)) * 300},${60 - (pt.cpu / 100) * 60}`).join(" ")}
-                    fill="none" stroke="#00b7ff" strokeWidth="1.5" opacity="0.8"
-                  />
-                </svg>
+          ))}
+        </div>
+      </Card>
+
+      <Card title="Live resource monitor" icon={<Activity className="w-4 h-4 text-[#00b7ff]" />} extra={
+        metrics?.available ? (
+          <span className="flex items-center gap-1 text-[10px] text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" /> {metrics.source}</span>
+        ) : null
+      }>
+        {metrics?.available ? (
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "CPU", value: metrics.cpu, unit: "%", icon: Cpu, color: "#00b7ff" },
+              { label: "RAM", value: metrics.ram, unit: "%", icon: HardDrive, color: "#7c3aed" },
+              { label: "Disk", value: metrics.disk, unit: "%", icon: HardDrive, color: "#ff3d00" },
+              { label: "Load", value: metrics.load, unit: "", icon: BarChart3, color: "#00ff88" },
+            ].filter((m) => m.value != null).map((m) => (
+              <div key={m.label} className="rounded-xl bg-slate-100 border border-slate-200 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2"><m.icon className="w-4 h-4" style={{ color: m.color }} /><span className="text-xs text-slate-500">{m.label}</span></div>
+                  <span className="text-sm font-bold text-[#0f172a]">{m.value?.toFixed(1)}{m.unit}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-slate-100/50 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(100, m.value || 0)}%`, backgroundColor: m.color }} />
+                </div>
               </div>
-            )}
-          </>
+            ))}
+          </div>
         ) : (
           <div className="text-center py-8">
             <Activity className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-            <p className="text-sm text-slate-500">Live monitoring data is not available for this service.</p>
-            <p className="text-xs text-slate-400 mt-1">The provider does not expose real-time metrics for this range.</p>
+            <p className="text-sm text-slate-500">Live resource metrics are not available for this service.</p>
+            {metrics?.reason && <p className="text-xs text-slate-400 mt-1">{metrics.reason}</p>}
           </div>
         )}
+      </Card>
+
+      {/* Metrics history with range selector */}
+      <Card title="Metric history" icon={<BarChart3 className="w-4 h-4 text-[#7c3aed]" />} extra={
+        <div className="flex gap-1">
+          {["1h", "24h", "7d"].map((r) => (
+            <button key={r} onClick={() => changeRange(r)}
+              className={`rounded-md px-2.5 py-1 text-[10px] font-bold ${histRange === r ? "bg-[#00b7ff] text-white" : "bg-slate-100 text-slate-500"}`}>
+              {r}
+            </button>
+          ))}
+        </div>
+      }>
+        {history.length > 1 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { key: "cpu", label: "CPU %", color: "#00b7ff", max: 100 },
+              { key: "ram", label: "RAM %", color: "#7c3aed", max: 100 },
+              { key: "netIn", label: "Net RX", color: "#00ff88", max: Math.max(...history.map((p) => p.netIn || 0), 1) },
+              { key: "netOut", label: "Net TX", color: "#ff3d00", max: Math.max(...history.map((p) => p.netOut || 0), 1) },
+            ].map((s) => {
+              const pts = history.filter((p) => p[s.key] != null);
+              return (
+                <div key={s.key} className="rounded-xl bg-slate-100 border border-slate-200 p-4">
+                  <p className="text-xs text-slate-500 mb-2">{s.label}</p>
+                  <svg viewBox="0 0 300 60" className="w-full h-16" preserveAspectRatio="none">
+                    <polyline
+                      points={pts.map((p: any, i: number) => `${(i / Math.max(1, pts.length - 1)) * 300},${58 - ((p[s.key] || 0) / s.max) * 56}`).join(" ")}
+                      fill="none" stroke={s.color} strokeWidth="1.5" opacity="0.9"
+                    />
+                  </svg>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 text-center py-6">
+            No samples yet. Samples appear automatically every ~10 minutes once the provider exposes metrics for this service.
+          </p>
+        )}
+      </Card>
+
+      {/* Ping history detail */}
+      <Card title="Reachability log" icon={<Network className="w-4 h-4 text-[#00b7ff]" />}>
+        {pingHistory.length > 0 ? (
+          <>
+            <svg viewBox="0 0 300 60" className="w-full h-14 mb-3" preserveAspectRatio="none">
+              <polyline
+                points={pingHistory.slice().reverse().map((p: any, i: number) => `${(i / Math.max(1, pingHistory.length - 1)) * 300},${58 - Math.min(58, (p.latencyMs || 0) / 5)}`).join(" ")}
+                fill="none" stroke="#00b7ff" strokeWidth="1.5" opacity="0.8"
+              />
+            </svg>
+            <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 text-xs">
+              {pingHistory.slice(0, 40).map((p: any, i: number) => (
+                <div key={i} className="flex items-center justify-between py-1.5">
+                  <span className="text-slate-400">{p.time}</span>
+                  <span className="text-slate-500">{p.ipAddress}</span>
+                  <span className={p.status === "UP" ? "text-[#00a832] font-bold" : "text-red-500 font-bold"}>{p.status}</span>
+                  <span className="text-slate-500 w-16 text-right">{p.latencyMs != null ? `${p.latencyMs} ms` : "—"}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : <p className="text-xs text-slate-400 text-center py-6">No reachability checks recorded yet.</p>}
+      </Card>
+
+      {/* Alert rules */}
+      <Card title="Alert rules" icon={<AlertTriangle className="w-4 h-4 text-[#ff3d00]" />}>
+        <p className="text-xs text-slate-500 mb-3">Get an email + dashboard notification when a threshold is breached.</p>
+        <div className="space-y-2 mb-4">
+          {rules.map((r) => (
+            <div key={r.id} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+              <span className="text-[#0f172a] font-medium">
+                {METRIC_LABELS[r.metric] || r.metric} {r.operator === "gt" ? ">" : "<"} {r.threshold}
+                {r.metric === "latency" ? " ms" : r.metric === "packet_loss" ? "" : "%"} · {r.durationChecks} checks
+              </span>
+              <div className="flex items-center gap-2">
+                {r.lastTriggeredAt && <span className="text-slate-400">last fired {new Date(r.lastTriggeredAt + "Z").toLocaleDateString("en-IN")}</span>}
+                <button onClick={async () => { await api.server.updateAlert(server.id, r.id, { enabled: !r.enabled }); reloadRules(); }}
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${r.enabled ? "bg-[#00ff88]/15 text-[#00a832]" : "bg-slate-200 text-slate-500"}`}>
+                  {r.enabled ? "ON" : "OFF"}
+                </button>
+                <button onClick={() => removeRule(r.id)} className="text-red-400 hover:text-red-600 text-[10px] font-bold">DELETE</button>
+              </div>
+            </div>
+          ))}
+          {!rules.length && <p className="text-xs text-slate-400">No alert rules configured.</p>}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={newRule.metric} onChange={(e) => setNewRule({ ...newRule, metric: e.target.value })}
+            className="rounded-lg border border-slate-300 px-2.5 py-2 text-xs">
+            <option value="latency">Latency</option>
+            <option value="packet_loss">Packet loss</option>
+            <option value="cpu">CPU %</option>
+            <option value="ram">RAM %</option>
+            <option value="disk">Disk %</option>
+          </select>
+          <select value={newRule.operator} onChange={(e) => setNewRule({ ...newRule, operator: e.target.value })}
+            className="rounded-lg border border-slate-300 px-2.5 py-2 text-xs">
+            <option value="gt">above</option>
+            <option value="lt">below</option>
+          </select>
+          <input type="number" value={newRule.threshold} onChange={(e) => setNewRule({ ...newRule, threshold: Number(e.target.value) })}
+            className="w-24 rounded-lg border border-slate-300 px-2.5 py-2 text-xs" placeholder="threshold" />
+          <button onClick={addRule} className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-bold text-white hover:bg-[#0090cc]">
+            Add rule
+          </button>
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -918,7 +1075,7 @@ function MonitoringTab({ server, detail, metrics, metricsHistory }: any) {
         <Card title="Security" icon={<ShieldCheck className="w-4 h-4 text-[#00b7ff]" />}>
           <Row label="DDoS protection" value={<Badge ok>Enabled</Badge>} />
           <Row label="Anti-DDoS" value={detail?.security?.antiDDoS || "Automatic"} />
-          <Row label="Monitoring" value={detail?.security?.monitoring ? "Enabled" : "—"} />
+          <Row label="Monitoring" value={monEnabled !== false ? "Enabled" : "Paused"} />
         </Card>
       </div>
     </div>

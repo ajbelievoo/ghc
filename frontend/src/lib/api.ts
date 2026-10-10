@@ -82,6 +82,13 @@ export const api = {
       };
     },
     suspensionQueue: () => request("/admin/suspension-queue"),
+    incidents: () => request("/admin/status/incidents"),
+    createIncident: (body: object) =>
+      request("/admin/status/incidents", { method: "POST", body: JSON.stringify(body) }),
+    updateIncident: (id: string, body: object) =>
+      request(`/admin/status/incidents/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    deleteIncident: (id: string) =>
+      request(`/admin/status/incidents/${id}`, { method: "DELETE" }),
     impersonate: (userId: string) => request(`/admin/users/${userId}/impersonate`, { method: "POST" }),
     suspendSubscription: (id: string) => request(`/admin/subscriptions/${id}/suspend`, { method: "POST" }),
     unsuspendSubscription: (id: string) => request(`/admin/subscriptions/${id}/unsuspend`, { method: "POST" }),
@@ -205,7 +212,17 @@ export const api = {
     reinstall: (id: string, osTemplate: string) =>
       request(`/server/${id}/reinstall`, { method: "POST", body: JSON.stringify({ osTemplate }) }),
     metrics: (id: string) => request(`/server/${id}/metrics`),
-    metricsHistory: (id: string) => request(`/server/${id}/metrics/history`),
+    metricsHistory: (id: string, range: string = "24h") => request(`/server/${id}/metrics/history?range=${range}`),
+    uptime: (id: string) => request(`/server/${id}/uptime`),
+    setMonitoring: (id: string, enabled: boolean) =>
+      request(`/server/${id}/monitoring`, { method: "PUT", body: JSON.stringify({ enabled }) }),
+    alerts: (id: string) => request(`/server/${id}/alerts`),
+    createAlert: (id: string, body: object) =>
+      request(`/server/${id}/alerts`, { method: "POST", body: JSON.stringify(body) }),
+    updateAlert: (id: string, ruleId: string, body: object) =>
+      request(`/server/${id}/alerts/${ruleId}`, { method: "PUT", body: JSON.stringify(body) }),
+    deleteAlert: (id: string, ruleId: string) =>
+      request(`/server/${id}/alerts/${ruleId}`, { method: "DELETE" }),
     bandwidth: (id: string) => request(`/server/${id}/bandwidth`),
     console: (id: string) => request(`/server/${id}/console`),
     carbon: (id: string) => request(`/server/${id}/carbon`),

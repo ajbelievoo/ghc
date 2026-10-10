@@ -91,11 +91,12 @@ def reinstall(
 
 @router.get("/{subscription_id}/metrics")
 def metrics(subscription_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.services import metrics_service
     sub = get_subscription(db, user.id, subscription_id)
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
     try:
         ovh = get_ovh_client_from_db(db)
-        return get_service_metrics(ovh, sub)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        ovh = None
+    return metrics_service.fetch_live_metrics(db, ovh, sub)

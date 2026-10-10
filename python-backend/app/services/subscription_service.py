@@ -165,14 +165,17 @@ def reinstall_os(db: Session, ovh: OvhClient, sub: Subscription, os_template: st
         raise
 
 
-def get_service_metrics(ovh: OvhClient, sub: Subscription) -> Optional[Dict[str, Any]]:
-    """Fetch live metrics from OVH if available.
+def get_service_metrics(ovh: OvhClient, sub: Subscription, db: Optional[Any] = None) -> Optional[Dict[str, Any]]:
+    """Fetch live metrics from the provider if available.
 
     OVH does not expose real-time CPU/RAM usage for many current VPS/dedicated
-    ranges without an agent (RTM). We return live data only when we can read it;
-    otherwise we return None so the UI can show a "monitoring not available"
-    fallback.
+    ranges without an agent (RTM). Delegates to metrics_service when a db
+    session is supplied (Proxmox config + negative caching live there);
+    otherwise returns None so callers show a "monitoring not available" state.
     """
+    if db is not None:
+        from app.services import metrics_service
+        return metrics_service.fetch_live_metrics(db, ovh, sub)
     return None
 
 

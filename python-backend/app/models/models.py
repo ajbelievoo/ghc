@@ -261,6 +261,7 @@ class Subscription(Base):
     os_template = Column(String(255), nullable=True)
     datacenter = Column(String(50), nullable=True)
     status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.PENDING, nullable=False)
+    monitoring_enabled = Column(Boolean, default=True, nullable=False)
     billing_cycle = Column(Enum(BillingCycle), default=BillingCycle.MONTHLY, nullable=False)
     auto_renew = Column(Boolean, default=True, nullable=False)
     next_bill_date = Column(DateTime, nullable=True)
@@ -848,3 +849,69 @@ class CouponRedemption(Base):
 
     coupon = relationship("Coupon")
     user = relationship("User")
+
+
+class MetricSample(Base):
+    __tablename__ = "service_metric_samples"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    subscription_id = Column(String(36), ForeignKey("subscriptions.id", ondelete="CASCADE"), nullable=False, index=True)
+    cpu = Column(Float, nullable=True)          # percent
+    ram = Column(Float, nullable=True)          # percent
+    disk = Column(Float, nullable=True)         # percent
+    load = Column(Float, nullable=True)
+    net_rx = Column(Float, nullable=True)       # bytes/s
+    net_tx = Column(Float, nullable=True)       # bytes/s
+    disk_read = Column(Float, nullable=True)    # bytes/s or iops per source
+    disk_write = Column(Float, nullable=True)
+    source = Column(String(30), default="none", nullable=False)  # ovh, proxmox, agent
+    sampled_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    subscription = relationship("Subscription")
+
+
+class ServiceAlertRule(Base):
+    __tablename__ = "service_alert_rules"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    subscription_id = Column(String(36), ForeignKey("subscriptions.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    metric = Column(String(30), nullable=False)       # cpu, ram, disk, latency, packet_loss
+    operator = Column(String(4), default="gt", nullable=False)  # gt, lt
+    threshold = Column(Float, nullable=False)
+    duration_checks = Column(Integer, default=2, nullable=False)  # consecutive samples before firing
+    enabled = Column(Boolean, default=True, nullable=False)
+    notify_email = Column(Boolean, default=True, nullable=False)
+    last_triggered_at = Column(DateTime, nullable=True)
+    breach_count = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    subscription = relationship("Subscription")
+    user = relationship("User")
+
+
+class StatusIncident(Base):
+    __tablename__ = "status_incidents"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String(255), nullable=False)
+    kind = Column(String(30), default="incident", nullable=False)  # incident, maintenance
+    status = Column(String(30), default="investigating", nullable=False)  # investigating, identified, monitoring, scheduled, in_progress, resolved, completed
+    severity = Column(String(20), default="minor", nullable=False)  # minor, major, critical
+    message = Column(Text, nullable=True)
+    services = Column(JSON, default=list, nullable=True)  # category tags e.g. ["VPS","DEDICATED"]
+    scheduled_for = Column(DateTime, nullable=True)
+    scheduled_until = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class StatusSubscriber(Base):
+    __tablename__ = "status_subscribers"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    token = Column(String(64), default=lambda: uuid.uuid4().hex, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

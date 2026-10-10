@@ -23,14 +23,17 @@ from app.models.models import (
     Invoice,
     InvoiceStatus,
     LogType,
+    MetricSample,
     PaymentTransaction,
     PaymentStatus,
     ServerPingMetric,
     Subscription,
     SubscriptionStatus,
     SystemLog,
+    User,
+    UserNotification,
 )
-from app.routers import admin, auth, auto_scaling, catalog, cloud, compat, health, marketplace, orders, subscriptions, support, team, wallet, webhooks
+from app.routers import admin, auth, auto_scaling, catalog, cloud, compat, health, marketplace, orders, status, subscriptions, support, team, wallet, webhooks
 from app.services.auto_scaling_service import evaluate_rules
 from app.services.marketplace_service import marketplace_worker
 from app.services.email_service import send_domain_renewal_reminder_email, send_invoice_overdue_email, send_renewal_reminder_email, send_suspension_email
@@ -65,6 +68,10 @@ def ensure_schema():
             if col not in cols:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col} {ddl}"))
                 logger.info(f"Added users.{col} column")
+        sub_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(subscriptions)"))}
+        if "monitoring_enabled" not in sub_cols:
+            conn.execute(text("ALTER TABLE subscriptions ADD COLUMN monitoring_enabled BOOLEAN DEFAULT 1"))
+            logger.info("Added subscriptions.monitoring_enabled column")
         conn.commit()
 
 
@@ -284,12 +291,113 @@ def run_usage_collection():
         db.close()
 
 
+def _ping_alert(db, sub, status):
+    """Consecutive-down detection + customer notification. No spam: at most one
+    DOWN alert until the service recovers, and one recovery notice."""
+    from app.models.models import ServiceAlertRule
+    from app.services.email_service import send_email
+    from app.services.metrics_service import fetch_live_metrics, record_metric_sample
+
+    recent = db.query(ServerPingMetric).filter(
+        ServerPingMetric.subscription_id == sub.id
+    ).order_by(ServerPingMetric.checked_at.desc()).limit(12).all()
+
+    down_run = 0
+    for r in recent:
+        if r.status in ("DOWN", "TIMEOUT"):
+            down_run += 1
+        else:
+            break
+
+    already_alerted = any((r.details or {}).get("alerted") for r in recent)
+    user = db.query(User).filter(User.id == sub.user_id).first()
+
+    if down_run >= 3 and not already_alerted and user:
+        msg = (f"Your service {sub.display_name or sub.service_name or sub.plan_code or sub.id} "
+               f"({sub.ip_address}) has failed {down_run} consecutive reachability checks.")
+        db.add(UserNotification(user_id=user.id, type="error", title="Service unreachable",
+                                message=msg, link=f"/dashboard/server/{sub.id}"))
+        try:
+            send_email(db, user.email, "GHC: service unreachable",
+                       f"<p>{msg}</p><p>We will keep checking and notify you when it recovers. "
+                       f"View details in your <a href='https://ghc.believoo.com/dashboard/server/{sub.id}'>dashboard</a>.</p>",
+                       msg)
+        except Exception as e:
+            logger.error(f"Down-alert email failed: {e}")
+        recent[0].details = {**(recent[0].details or {}), "alerted": True}
+        db.commit()
+    elif down_run == 0 and already_alerted and user and recent and recent[0].status == "UP":
+        msg = (f"Service {sub.display_name or sub.service_name or sub.plan_code or sub.id} "
+               f"({sub.ip_address}) is reachable again.")
+        db.add(UserNotification(user_id=user.id, type="success", title="Service recovered",
+                                message=msg, link=f"/dashboard/server/{sub.id}"))
+        try:
+            send_email(db, user.email, "GHC: service recovered", f"<p>{msg}</p>", msg)
+        except Exception as e:
+            logger.error(f"Recovery email failed: {e}")
+        db.commit()
+
+    # --- Customer alert rules ---
+    latest_ping = recent[0] if recent else None
+    rules = db.query(ServiceAlertRule).filter(
+        ServiceAlertRule.subscription_id == sub.id,
+        ServiceAlertRule.enabled == True,  # noqa: E712
+    ).all()
+    if not rules:
+        return
+
+    latest_sample = None
+    for r in rules:
+        value = None
+        if r.metric == "latency":
+            value = latest_ping.latency_ms if latest_ping else None
+        elif r.metric == "packet_loss":
+            value = latest_ping.packet_loss if latest_ping else None
+        else:  # cpu, ram, disk
+            if latest_sample is None:
+                latest_sample = db.query(MetricSample).filter(
+                    MetricSample.subscription_id == sub.id,
+                    MetricSample.sampled_at >= datetime.utcnow() - timedelta(minutes=15),
+                ).order_by(MetricSample.sampled_at.desc()).first()
+            value = getattr(latest_sample, r.metric, None) if latest_sample else None
+        if value is None:
+            r.breach_count = 0
+            continue
+        breach = value > r.threshold if r.operator == "gt" else value < r.threshold
+        if breach:
+            r.breach_count += 1
+            cooldown_ok = (r.last_triggered_at is None or
+                           r.last_triggered_at < datetime.utcnow() - timedelta(minutes=30))
+            if r.breach_count >= r.duration_checks and cooldown_ok and user:
+                unit = "%" if r.metric in ("cpu", "ram", "disk") else ("ms" if r.metric == "latency" else "%")
+                op = ">" if r.operator == "gt" else "<"
+                msg = (f"Alert on {sub.display_name or sub.service_name or sub.plan_code}: "
+                       f"{r.metric} is {value:.1f}{unit} (threshold {op} {r.threshold}{unit})")
+                db.add(UserNotification(user_id=user.id, type="warning", title="Monitoring alert",
+                                        message=msg, link=f"/dashboard/server/{sub.id}"))
+                if r.notify_email:
+                    try:
+                        send_email(db, user.email, f"GHC alert: {r.metric} threshold crossed",
+                                   f"<p>{msg}.</p><p>Check your <a href='https://ghc.believoo.com/dashboard/server/{sub.id}'>server dashboard</a>.</p>",
+                                   msg)
+                    except Exception as e:
+                        logger.error(f"Rule alert email failed: {e}")
+                r.last_triggered_at = datetime.utcnow()
+                r.breach_count = 0
+        else:
+            r.breach_count = 0
+    db.commit()
+
+
 def run_ping_monitor():
     import subprocess
     import re
     db = SessionLocal()
     try:
-        subs = db.query(Subscription).filter(Subscription.status.in_([SubscriptionStatus.ACTIVE])).all()
+        subs = db.query(Subscription).filter(
+            Subscription.status.in_([SubscriptionStatus.ACTIVE]),
+            Subscription.monitoring_enabled == True,  # noqa: E712
+        ).all()
         for sub in subs:
             ip = sub.ip_address
             if not ip:
@@ -318,10 +426,55 @@ def run_ping_monitor():
                 details={"source": "cron"},
             ))
             db.commit()
+            try:
+                _ping_alert(db, sub, status)
+            except Exception as e:
+                logger.error(f"Ping alert eval failed for {sub.id}: {e}")
     except Exception as e:
         logger.error(f"Ping monitor error: {e}")
     finally:
         db.close()
+
+
+def run_metric_sampling():
+    """Collect live CPU/RAM/network samples from providers every ~10 min.
+    Stores only real values; skips services whose provider exposes nothing."""
+    from app.services.metrics_service import fetch_live_metrics, record_metric_sample, prune_old_samples
+    from app.services.ovh_client import get_ovh_client_from_db
+    db = SessionLocal()
+    try:
+        try:
+            ovh = get_ovh_client_from_db(db)
+        except Exception:
+            ovh = None
+        subs = db.query(Subscription).filter(
+            Subscription.status == SubscriptionStatus.ACTIVE,
+            Subscription.monitoring_enabled == True,  # noqa: E712
+        ).all()
+        stored = 0
+        for sub in subs:
+            try:
+                m = fetch_live_metrics(db, ovh, sub)
+                if record_metric_sample(db, sub, m):
+                    stored += 1
+            except Exception as e:
+                logger.debug(f"metric sample {sub.id}: {e}")
+        db.commit()
+        pruned = prune_old_samples(db, keep_days=8)
+        db.commit()
+        if stored or pruned:
+            _log(db, LogType.CRON, f"Metric sampling: {stored} stored, {pruned} pruned")
+    except Exception as e:
+        logger.error(f"Metric sampling error: {e}")
+    finally:
+        db.close()
+
+
+async def metric_sampling_loop():
+    await asyncio.sleep(60)
+    while True:
+        await asyncio.to_thread(run_metric_sampling)
+        await asyncio.sleep(600)  # every 10 min
 
 
 async def ping_monitor_loop():
@@ -409,12 +562,14 @@ async def lifespan(app: FastAPI):
 
     task = asyncio.create_task(maintenance_loop())
     ping_task = asyncio.create_task(ping_monitor_loop())
+    metrics_task = asyncio.create_task(metric_sampling_loop())
     auto_scaling_task = asyncio.create_task(auto_scaling_loop())
     marketplace_task = asyncio.create_task(marketplace_worker())
     cloud_billing_task = asyncio.create_task(cloud_billing_loop())
     yield
     task.cancel()
     ping_task.cancel()
+    metrics_task.cancel()
     auto_scaling_task.cancel()
     marketplace_task.cancel()
     cloud_billing_task.cancel()
@@ -495,6 +650,7 @@ app.include_router(team.router)
 app.include_router(compat.router)
 app.include_router(auto_scaling.router)
 app.include_router(marketplace.router)
+app.include_router(status.router)
 app.include_router(cloud.router)
 
 

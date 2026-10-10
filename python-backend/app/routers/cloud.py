@@ -515,9 +515,14 @@ def get_usage(db: Session = Depends(get_db), user: User = Depends(get_current_us
         proj = ensure_active_project(db, user)
         return get_ovh_client_from_db(db).cloud_usage(proj.upstream_project_id)
     except CloudError as e:
+        if "no usages found" in str(e).lower() or "not found" in str(e).lower():
+            return {"hourlyUsage": {"totalPrice": 0, "hourlyPrice": 0, "resourcesUsage": [], "lastUpdate": None}}
         raise _err(e)
     except Exception as e:
-        raise HTTPException(500, str(e))
+        msg = str(e)
+        if "no usages found" in msg.lower() or "not found" in msg.lower():
+            return {"hourlyUsage": {"totalPrice": 0, "hourlyPrice": 0, "resourcesUsage": [], "lastUpdate": None}}
+        raise HTTPException(500, msg)
 
 
 # ---------- unified services ----------

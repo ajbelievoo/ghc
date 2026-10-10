@@ -23,7 +23,9 @@ from app.models.models import (
     PaymentStatus,
     PaymentTransaction,
     PlanCatalog,
+    MetricSample,
     ServerPingMetric,
+    ServiceAlertRule,
     ServiceCategory,
     Subscription,
     SupportTicket,
@@ -38,6 +40,7 @@ from app.models.models import (
     WalletTransactionType,
 )
 from app.schemas.order import OrderCreate
+from app.services import metrics_service
 from app.services.catalog_service import get_active_plans
 from app.services.currency_service import get_rate
 from app.services.domain_service import (
@@ -1021,9 +1024,18 @@ def server_metrics(server_id: str, db: Session = Depends(get_db), user: User = D
         raise HTTPException(status_code=404, detail="Server not found")
     try:
         ovh = get_ovh_client_from_db(db)
-        return get_service_metrics(ovh, sub)
+    except Exception:
+        ovh = None
+    if not (sub.monitoring_enabled if sub.monitoring_enabled is not None else True):
+        return {"available": False, "source": "none", "reason": "monitoring is disabled for this service",
+                "cpu": None, "ram": None, "disk": None, "load": None, "netIn": None, "netOut": None,
+                "diskRead": None, "diskWrite": None, "fetchedAt": None}
+    try:
+        return metrics_service.fetch_live_metrics(db, ovh, sub)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"available": False, "source": "none", "reason": str(e),
+                "cpu": None, "ram": None, "disk": None, "load": None, "netIn": None, "netOut": None,
+                "diskRead": None, "diskWrite": None, "fetchedAt": None}
 
 
 @router.get("/server/{server_id}/bandwidth")
@@ -2022,35 +2034,148 @@ def admin_server_override(server_id: str, body: dict, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=str(e))
 
 
+_METRIC_RANGES = {"1h": timedelta(hours=1), "24h": timedelta(hours=24), "7d": timedelta(days=7)}
+
+
 @router.get("/server/{server_id}/metrics/history")
-def server_metrics_history(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def server_metrics_history(server_id: str, range: str = "24h", db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     sub = get_subscription(db, user.id, server_id)
     if not sub:
         raise HTTPException(status_code=404, detail="Server not found")
+    span = _METRIC_RANGES.get(range, _METRIC_RANGES["24h"])
+    since = datetime.utcnow() - span
+    rows = (db.query(MetricSample)
+            .filter(MetricSample.subscription_id == server_id, MetricSample.sampled_at >= since)
+            .order_by(MetricSample.sampled_at.asc()).limit(2000).all())
+    # Downsample to ~120 points for chart rendering
+    step = max(1, len(rows) // 120) if rows else 1
+    return [
+        {
+            "time": r.sampled_at.isoformat(),
+            "cpu": r.cpu, "ram": r.ram, "disk": r.disk, "load": r.load,
+            "netIn": r.net_rx, "netOut": r.net_tx,
+            "diskRead": r.disk_read, "diskWrite": r.disk_write,
+        }
+        for r in rows[::step]
+    ]
+
+
+@router.get("/server/{server_id}/uptime")
+def server_uptime(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Uptime % from real ping history over 24h / 7d / 30d windows."""
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    out = {"ipAddress": sub.ip_address, "monitoringEnabled": bool(sub.monitoring_enabled if sub.monitoring_enabled is not None else True)}
+    for label, span in (("d24", timedelta(hours=24)), ("d7", timedelta(days=7)), ("d30", timedelta(days=30))):
+        since = datetime.utcnow() - span
+        rows = db.query(ServerPingMetric).filter(
+            ServerPingMetric.subscription_id == server_id, ServerPingMetric.checked_at >= since
+        ).all()
+        total = len(rows)
+        if not total:
+            out[label] = None
+            continue
+        up = sum(1 for r in rows if r.status == "UP")
+        lat = [r.latency_ms for r in rows if r.latency_ms is not None]
+        out[label] = {
+            "uptime": round(up / total * 100, 3),
+            "checks": total,
+            "down": total - up,
+            "avgLatencyMs": round(sum(lat) / len(lat), 2) if lat else None,
+        }
+    return out
+
+
+@router.put("/server/{server_id}/monitoring")
+def toggle_monitoring(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    sub.monitoring_enabled = bool(body.get("enabled", True))
+    db.commit()
+    return {"monitoringEnabled": sub.monitoring_enabled}
+
+
+# ---------------- Customer alert rules ----------------
+
+def _alert_rule_dict(r: ServiceAlertRule) -> dict:
+    return {
+        "id": r.id, "metric": r.metric, "operator": r.operator, "threshold": r.threshold,
+        "durationChecks": r.duration_checks, "enabled": r.enabled, "notifyEmail": r.notify_email,
+        "lastTriggeredAt": r.last_triggered_at.isoformat() if r.last_triggered_at else None,
+        "createdAt": r.created_at.isoformat(),
+    }
+
+
+@router.get("/server/{server_id}/alerts")
+def list_alert_rules(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    rules = db.query(ServiceAlertRule).filter(ServiceAlertRule.subscription_id == server_id).order_by(ServiceAlertRule.created_at).all()
+    return [_alert_rule_dict(r) for r in rules]
+
+
+@router.post("/server/{server_id}/alerts")
+def create_alert_rule(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    metric = (body.get("metric") or "").lower()
+    if metric not in ("cpu", "ram", "disk", "latency", "packet_loss"):
+        raise HTTPException(status_code=400, detail="metric must be cpu, ram, disk, latency or packet_loss")
+    op = (body.get("operator") or "gt").lower()
+    if op not in ("gt", "lt"):
+        raise HTTPException(status_code=400, detail="operator must be gt or lt")
     try:
-        ovh = get_ovh_client_from_db(db)
-        current = get_service_metrics(ovh, sub)
-        if current and (current.get("cpu") is not None or current.get("ram") is not None):
-            points = []
-            base_cpu = current.get("cpu", 15)
-            base_ram = current.get("ram", 40)
-            base_net_in = current.get("netIn", 1)
-            base_net_out = current.get("netOut", 0.5)
-            now = datetime.utcnow()
-            for i in range(24, -1, -1):
-                t = now - timedelta(hours=i)
-                points.append({
-                    "time": t.strftime("%H:%M"),
-                    "cpu": max(0, min(100, base_cpu + (i % 7 - 3) * 4)),
-                    "ram": max(0, min(100, base_ram + (i % 5 - 2) * 3)),
-                    "netIn": max(0, base_net_in + (i % 4 - 2) * 0.1),
-                    "netOut": max(0, base_net_out + (i % 3 - 1) * 0.05),
-                })
-            return points
-    except Exception:
-        pass
-    # No long-term metrics store yet; return empty series (frontend renders only when non-empty)
-    return []
+        threshold = float(body.get("threshold"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="threshold must be a number")
+    count = db.query(ServiceAlertRule).filter(ServiceAlertRule.subscription_id == server_id).count()
+    if count >= 10:
+        raise HTTPException(status_code=400, detail="Maximum 10 alert rules per service")
+    r = ServiceAlertRule(
+        subscription_id=sub.id, user_id=user.id, metric=metric, operator=op,
+        threshold=threshold, duration_checks=max(1, int(body.get("durationChecks") or 2)),
+        enabled=bool(body.get("enabled", True)), notify_email=bool(body.get("notifyEmail", True)),
+    )
+    db.add(r)
+    db.commit()
+    return _alert_rule_dict(r)
+
+
+@router.put("/server/{server_id}/alerts/{rule_id}")
+def update_alert_rule(server_id: str, rule_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    r = db.query(ServiceAlertRule).filter(
+        ServiceAlertRule.id == rule_id, ServiceAlertRule.subscription_id == server_id,
+        ServiceAlertRule.user_id == user.id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Alert rule not found")
+    if "enabled" in body:
+        r.enabled = bool(body["enabled"])
+        if not r.enabled:
+            r.breach_count = 0
+    if "threshold" in body:
+        r.threshold = float(body["threshold"])
+    if "notifyEmail" in body:
+        r.notify_email = bool(body["notifyEmail"])
+    if "durationChecks" in body:
+        r.duration_checks = max(1, int(body["durationChecks"]))
+    db.commit()
+    return _alert_rule_dict(r)
+
+
+@router.delete("/server/{server_id}/alerts/{rule_id}")
+def delete_alert_rule(server_id: str, rule_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    r = db.query(ServiceAlertRule).filter(
+        ServiceAlertRule.id == rule_id, ServiceAlertRule.subscription_id == server_id,
+        ServiceAlertRule.user_id == user.id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Alert rule not found")
+    db.delete(r)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/server/{server_id}/carbon")
