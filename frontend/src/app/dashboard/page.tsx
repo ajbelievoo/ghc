@@ -62,6 +62,7 @@ import {
   MoreVertical,
   ChevronDown,
   ArrowRightLeft,
+  CreditCard,
 } from "lucide-react";
 
 type Tab = "overview" | "servers" | "domains" | "invoices" | "wallet" | "support" | "security" | "profile";
@@ -126,6 +127,7 @@ export default function DashboardPage() {
   const [gateway, setGateway] = useState("stripe");
   const [plans, setPlans] = useState<any[]>([]);
   const [activeGateways, setActiveGateways] = useState<string[]>([]);
+  const [payPrefs, setPayPrefs] = useState<any>(null);
   const [wallet, setWallet] = useState<any>(null);
   const [depositAmount, setDepositAmount] = useState("50");
   const [myDomains, setMyDomains] = useState<any[]>([]);
@@ -410,7 +412,10 @@ export default function DashboardPage() {
       const gws = await api.server.gateways();
       const active = (gws || []).filter((g: any) => g.isActive).map((g: any) => g.name);
       setActiveGateways(active);
-      if (active.length > 0) setGateway(active[0]);
+      const prefs = await api.auth.paymentPreferences().catch(() => null);
+      if (prefs) setPayPrefs(prefs);
+      const preferred = prefs?.preferredGateway && active.includes(prefs.preferredGateway) ? prefs.preferredGateway : active[0];
+      if (preferred) setGateway(preferred);
     } catch (e) { console.error(e); }
   };
   const fetchWallet = async () => {
@@ -1500,7 +1505,7 @@ export default function DashboardPage() {
                           <td className="px-6 py-3 text-xs font-mono text-slate-500">#{o.id.slice(0, 8).toUpperCase()}</td>
                           <td className="px-6 py-3 text-sm font-medium text-[#0f172a]">{o.display_name || o.plan_code || o.category}</td>
                           <td className="px-6 py-3 text-sm">{getCurrencySymbol(o.currency || currency)}{Number(o.customer_amount ?? o.total_amount ?? 0).toFixed(2)}</td>
-                          <td className="px-6 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${o.status === "COMPLETED" || o.status === "DELIVERED" ? "bg-emerald-100 text-emerald-700" : o.status === "PENDING" ? "bg-amber-100 text-amber-700" : o.status === "FAILED" ? "bg-red-100 text-red-700" : o.status === "PAYMENT_RECEIVED" || o.status === "PROVISIONING" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"}`}>{o.status}</span></td>
+                          <td className="px-6 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${o.status === "ACTIVE" || o.status === "COMPLETED" || o.status === "DELIVERED" || o.status === "OVH_PAID" ? "bg-emerald-100 text-emerald-700" : o.status === "PENDING" ? "bg-amber-100 text-amber-700" : o.status === "FAILED" || o.status === "PROVISIONING_FAILED" ? "bg-red-100 text-red-700" : o.status === "PAYMENT_RECEIVED" || o.status === "PROVISIONING" || o.status === "OVH_CART_CREATED" || o.status === "OVH_ORDER_PLACED" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"}`}>{o.status}</span></td>
                           <td className="px-6 py-3 text-xs text-slate-500">{o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}</td>
                           <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                             {(o.status === "PENDING" || o.status === "PENDING_PAYMENT") && (
@@ -1617,6 +1622,51 @@ export default function DashboardPage() {
                   </select>
                 </div>
                 <button onClick={() => handleDeposit()} className="w-full rounded-lg bg-[#00b7ff] text-white py-2.5 text-sm font-semibold hover:bg-[#009fe0] transition-all">Deposit Now</button>
+              </div>
+            </div>
+
+            {/* Payment preferences */}
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">
+              <h3 className="text-sm font-semibold text-[#0f172a] mb-4 flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-[#00b7ff]" /> Payment preferences
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#0f172a]">Wallet auto-pay</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Automatically pay due invoices from your wallet balance.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const next = !(payPrefs?.walletAutopay);
+                      setPayPrefs((p: any) => ({ ...(p || {}), walletAutopay: next }));
+                      try { await api.auth.updatePaymentPreferences({ walletAutopay: next }); showToast(next ? "Auto-pay enabled" : "Auto-pay disabled", "success"); }
+                      catch (e: any) { setPayPrefs((p: any) => ({ ...(p || {}), walletAutopay: !next })); showToast(e.message, "error"); }
+                    }}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${payPrefs?.walletAutopay ? "bg-[#00b7ff]" : "bg-slate-300"}`}
+                  >
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${payPrefs?.walletAutopay ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#0f172a]">Preferred gateway</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Pre-selected at checkout and for wallet top-ups.</p>
+                  </div>
+                  <select
+                    value={payPrefs?.preferredGateway || ""}
+                    onChange={async (e) => {
+                      const v = e.target.value || null;
+                      setPayPrefs((p: any) => ({ ...(p || {}), preferredGateway: v }));
+                      try { await api.auth.updatePaymentPreferences({ preferredGateway: v }); if (v && activeGateways.includes(v)) setGateway(v); }
+                      catch (err: any) { showToast(err.message, "error"); }
+                    }}
+                    className="rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+                  >
+                    <option value="">No preference</option>
+                    {activeGateways.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
             {walletTransactions.length > 0 && (

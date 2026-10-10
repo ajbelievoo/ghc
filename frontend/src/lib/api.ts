@@ -60,6 +60,9 @@ export const api = {
     notifications: () => request("/user/notifications"),
     updateNotifications: (body: object) => request("/user/notifications", { method: "PUT", body: JSON.stringify(body) }),
     notificationsList: () => request("/user/notifications-list"),
+    paymentPreferences: () => request("/user/payment-preferences"),
+    updatePaymentPreferences: (body: { walletAutopay?: boolean; preferredGateway?: string | null }) =>
+      request("/user/payment-preferences", { method: "PUT", body: JSON.stringify(body) }),
     markNotificationRead: (id: string) => request(`/user/notifications/${id}/read`, { method: "POST" }),
     forgotPassword: (body: { email: string; captchaId?: string; captchaAnswer?: string }) =>
       request("/auth/forgot-password", { method: "POST", body: JSON.stringify(body) }),
@@ -232,6 +235,8 @@ export const api = {
     uptime: (id: string) => request(`/server/${id}/uptime`),
     setMonitoring: (id: string, enabled: boolean) =>
       request(`/server/${id}/monitoring`, { method: "PUT", body: JSON.stringify({ enabled }) }),
+    renew: (id: string, gateway?: string) =>
+      request(`/server/${id}/renew`, { method: "POST", body: JSON.stringify(gateway ? { gateway } : {}) }),
     alerts: (id: string) => request(`/server/${id}/alerts`),
     createAlert: (id: string, body: object) =>
       request(`/server/${id}/alerts`, { method: "POST", body: JSON.stringify(body) }),

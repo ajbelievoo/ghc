@@ -56,6 +56,8 @@ USER_COLUMN_MIGRATIONS = {
     "billing_city": "VARCHAR(100)",
     "billing_state": "VARCHAR(100)",
     "billing_pincode": "VARCHAR(20)",
+    "wallet_autopay": "BOOLEAN DEFAULT 0",
+    "preferred_gateway": "VARCHAR(30)",
 }
 
 
@@ -106,32 +108,13 @@ def run_maintenance():
         for sub in subs:
             # Renewal invoice ~3 days before due (needs a linked order for the FK)
             if sub.order_id and sub.next_bill_date <= invoice_lead and sub.next_bill_date > now:
+                from app.services.subscription_service import create_renewal_invoice
                 existing = db.query(Invoice).filter(
                     Invoice.user_id == sub.user_id,
                     Invoice.due_date == sub.next_bill_date,
                 ).first()
                 if not existing:
-                    tax_type, hsn_code, place = gst_fields_for_user(db, sub.user_id)
-                    tax_rate = get_settings().tax_rate_percent / 100.0
-                    taxable = sub.price_amount / (1 + tax_rate)
-                    tax_amount = round(sub.price_amount - taxable, 2)
-                    invoice = Invoice(
-                        order_id=sub.order_id,
-                        user_id=sub.user_id,
-                        amount=sub.price_amount,
-                        tax_amount=tax_amount,
-                        tax_rate=tax_rate,
-                        tax_type=tax_type,
-                        hsn_code=hsn_code,
-                        place_of_supply=place,
-                        due_date=sub.next_bill_date,
-                        currency=(sub.currency or "USD").upper(),
-                    )
-                    db.add(invoice)
-                    db.flush()
-                    invoice.invoice_number = generate_invoice_number(invoice)
-                    db.commit()
-                    db.refresh(invoice)
+                    invoice = create_renewal_invoice(db, sub)
                     _log(db, LogType.CRON, f"Renewal invoice created for subscription {sub.id}")
                     try:
                         if sub.user:
@@ -154,6 +137,43 @@ def run_maintenance():
                         logger.exception("Suspension email failed")
                 except Exception as e:
                     _log(db, LogType.ERROR, f"Auto-suspend failed for {sub.id}: {e}")
+
+        # Wallet auto-pay — users who opted in get their unpaid invoices settled
+        # automatically once they're due (balance permitting).
+        autopay_invoices = db.query(Invoice).join(User, Invoice.user_id == User.id).filter(
+            Invoice.status == InvoiceStatus.UNPAID,
+            Invoice.due_date.isnot(None),
+            Invoice.due_date <= now,
+            User.wallet_autopay == True,
+        ).all()
+        for inv in autopay_invoices:
+            try:
+                from app.services.wallet_service import pay_invoice_with_wallet
+                from app.services.notification_service import create_notification
+                result = pay_invoice_with_wallet(db, inv.user, inv)
+                if result.get("paid") and not result.get("already"):
+                    _log(db, LogType.CRON, f"Auto-paid invoice {inv.id} from wallet for user {inv.user_id}")
+                    try:
+                        create_notification(db, inv.user, "Invoice auto-paid",
+                                            f"Invoice #{inv.invoice_number or inv.id[:8].upper()} was paid from your wallet.",
+                                            "success", "/dashboard?tab=invoices")
+                    except Exception:
+                        pass
+            except Exception as e:
+                # Insufficient balance or other failure — notify once, then wait for manual pay.
+                already = db.query(SystemLog).filter(
+                    SystemLog.type == LogType.CRON,
+                    SystemLog.message == f"Wallet autopay failed for {inv.id}",
+                ).first()
+                if not already:
+                    _log(db, LogType.CRON, f"Wallet autopay failed for {inv.id}: {e}")
+                    try:
+                        from app.services.notification_service import create_notification
+                        create_notification(db, inv.user, "Auto-pay failed",
+                                            "Could not auto-pay your invoice from the wallet — please pay manually.",
+                                            "warning", "/dashboard?tab=invoices")
+                    except Exception:
+                        pass
 
         # Overdue invoice reminders — one email per unpaid invoice past due date
         overdue_invoices = db.query(Invoice).filter(

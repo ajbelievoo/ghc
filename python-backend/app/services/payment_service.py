@@ -172,8 +172,8 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 invoice.status = InvoiceStatus.PAID
                 if invoice.order_id:
                     order = db.query(CustomerOrder).filter(CustomerOrder.id == invoice.order_id).first()
-                    if order and order.status != OrderStatus.COMPLETED:
-                        order.status = OrderStatus.COMPLETED
+                    if order and order.status != OrderStatus.ACTIVE:
+                        order.status = OrderStatus.ACTIVE
                 db.commit()
                 try:
                     from app.services.subscription_service import reactivate_after_invoice_payment

@@ -87,6 +87,7 @@ export default function ServerDetailClient() {
   const [additionalIps, setAdditionalIps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<string>("home");
+  const [renewState, setRenewState] = useState<any>(null);
 
   const isVps = server?.category === "VPS";
   const tabs = TABS.filter((t) => !(t as any).vpsOnly || isVps);
@@ -196,6 +197,23 @@ export default function ServerDetailClient() {
                 {server.nextBillDate ? new Date(server.nextBillDate).toLocaleDateString() : "N/A"}
               </p>
               <p className="text-xs text-[#00b7ff] mt-1">{getCurrencySymbol(server.currency || "USD")}{server.priceAmount?.toFixed(2)}/mo</p>
+              {server.status !== "TERMINATED" && server.status !== "CANCELLED" && (
+                <button
+                  onClick={async () => {
+                    setRenewState({ loading: true });
+                    try {
+                      const r = await api.server.renew(serverId);
+                      setRenewState({ invoice: r });
+                    } catch (e: any) {
+                      setRenewState(null);
+                      showToast(e.message || "Could not create renewal invoice", "error");
+                    }
+                  }}
+                  className="mt-2 rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-[11px] font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20 transition"
+                >
+                  {renewState?.loading ? "…" : "Renew now"}
+                </button>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -229,6 +247,52 @@ export default function ServerDetailClient() {
             </Link>
           </div>
         )}
+        {/* Renewal invoice ready to pay */}
+        {renewState?.invoice && !renewState.invoice.paid && (
+          <div className="rounded-xl border border-[#00b7ff]/40 bg-[#00b7ff]/5 px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm font-semibold text-[#0f172a]">
+                Renewal invoice {renewState.invoice.invoiceNumber ? `#${renewState.invoice.invoiceNumber}` : ""} ready
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {getCurrencySymbol(renewState.invoice.currency)}{Number(renewState.invoice.amount).toFixed(2)} {renewState.invoice.currency} — pay now to extend the service by one cycle.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  setRenewState((s: any) => ({ ...s, paying: true }));
+                  try {
+                    const r = await api.server.renew(serverId, "wallet");
+                    if (r.paid) {
+                      showToast("Renewed — service extended", "success");
+                      setServer((s) => (s ? { ...s, nextBillDate: r.nextBillDate || s.nextBillDate, status: "ACTIVE", suspensionReason: null } : s));
+                      setRenewState(null);
+                    }
+                  } catch (e: any) { showToast(e.message || "Wallet payment failed", "error"); setRenewState((s: any) => ({ ...s, paying: false })); }
+                }}
+                disabled={renewState.paying}
+                className="rounded-lg bg-[#00b7ff] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#009fe0] disabled:opacity-50"
+              >
+                {renewState.paying ? "Paying…" : "Pay from wallet"}
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const r = await api.billing.payInvoice(renewState.invoice.invoiceId, renewState.gw || "razorpay");
+                    if (r.checkoutUrl) window.location.href = r.checkoutUrl;
+                    else if (r.paid) { showToast("Paid", "success"); setRenewState(null); }
+                  } catch (e: any) { showToast(e.message || "Could not start checkout", "error"); }
+                }}
+                className="rounded-lg border border-slate-300 px-3.5 py-1.5 text-xs font-bold text-[#0f172a] hover:bg-slate-50"
+              >
+                Pay online
+              </button>
+              <button onClick={() => setRenewState(null)} className="text-xs text-slate-400 hover:text-slate-600 px-1">✕</button>
+            </div>
+          </div>
+        )}
+
         {server.status === "ACTIVE" && server.nextBillDate && new Date(server.nextBillDate) < new Date() && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-center justify-between gap-4">
             <div className="flex items-start gap-2">

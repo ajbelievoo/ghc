@@ -1026,3 +1026,49 @@ def reactivate_after_invoice_payment(db: Session, invoice, ovh: Optional[OvhClie
         db.refresh(sub)
         return sub
     return None
+
+
+def create_renewal_invoice(db: Session, sub: Subscription, due_date=None):
+    """Create (or return the existing) renewal invoice covering a subscription's
+    next billing period. Shared by the maintenance cron and the renew-now flow."""
+    from app.models.models import Invoice, InvoiceStatus
+    from app.services.tax_service import generate_invoice_number, gst_fields_for_user
+    from app.core.config import get_settings
+
+    if not sub.order_id:
+        return None
+    due = due_date or sub.next_bill_date or datetime.utcnow()
+    existing = db.query(Invoice).filter(
+        Invoice.user_id == sub.user_id,
+        Invoice.order_id == sub.order_id,
+        Invoice.due_date == due,
+    ).first()
+    if existing:
+        if not existing.invoice_number:
+            existing.invoice_number = generate_invoice_number(existing)
+            db.commit()
+            db.refresh(existing)
+        return existing
+
+    tax_type, hsn_code, place = gst_fields_for_user(db, sub.user_id)
+    tax_rate = get_settings().tax_rate_percent / 100.0
+    taxable = sub.price_amount / (1 + tax_rate)
+    tax_amount = round(sub.price_amount - taxable, 2)
+    invoice = Invoice(
+        order_id=sub.order_id,
+        user_id=sub.user_id,
+        amount=sub.price_amount,
+        tax_amount=tax_amount,
+        tax_rate=tax_rate,
+        tax_type=tax_type,
+        hsn_code=hsn_code,
+        place_of_supply=place,
+        due_date=due,
+        currency=(sub.currency or "USD").upper(),
+    )
+    db.add(invoice)
+    db.flush()
+    invoice.invoice_number = generate_invoice_number(invoice)
+    db.commit()
+    db.refresh(invoice)
+    return invoice

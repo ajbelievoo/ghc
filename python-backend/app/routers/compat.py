@@ -29,6 +29,7 @@ from app.models.models import (
     ServiceAlertRule,
     ServiceCategory,
     Subscription,
+    SubscriptionStatus,
     SupportTicket,
     SystemLog,
     TicketStatus,
@@ -1333,31 +1334,9 @@ def pay_invoice(invoice_id: str, body: dict, db: Session = Depends(get_db), user
         raise HTTPException(status_code=400, detail="Invoice already paid")
     gateway = (body.get("gateway") or "razorpay").lower()
     if gateway == "wallet":
-        wallet = get_or_create_wallet(db, user.id)
-        amount = convert(db, invoice.amount, invoice.currency, wallet.currency)
-        if wallet.balance < amount:
-            raise HTTPException(status_code=400, detail=f"Insufficient wallet balance: {wallet.balance:.2f} {wallet.currency}")
-        wallet.balance -= amount
-        db.add(WalletTransaction(
-            wallet_id=wallet.id,
-            type=WalletTransactionType.PAYMENT,
-            amount=-amount,
-            description=f"Wallet payment for invoice {invoice.id[:8].upper()}",
-            gateway="wallet",
-            metadata={"invoice_id": invoice.id, "original_amount": invoice.amount, "original_currency": invoice.currency},
-        ))
-        invoice.status = InvoiceStatus.PAID
-        if invoice.order_id:
-            order = db.query(CustomerOrder).filter(CustomerOrder.id == invoice.order_id).first()
-            if order:
-                order.status = OrderStatus.COMPLETED
-        db.commit()
-        try:
-            from app.services.subscription_service import reactivate_after_invoice_payment
-            reactivate_after_invoice_payment(db, invoice)
-        except Exception:
-            logger.exception(f"Reactivation after invoice {invoice.id} wallet payment failed")
-        return {"paid": True, "invoiceId": invoice.id, "message": "Paid from wallet"}
+        from app.services.wallet_service import pay_invoice_with_wallet
+        result = pay_invoice_with_wallet(db, user, invoice)
+        return {"paid": True, "invoiceId": invoice.id, "message": "Paid from wallet", **result}
     session = create_payment_session(db, user, invoice.amount, invoice.currency, gateway, "INVOICE_PAYMENT", {"invoice_id": invoice.id})
     return {"paid": False, "checkoutUrl": session.checkout_url, "sessionId": session.id}
 
@@ -2549,6 +2528,74 @@ def server_cancel(server_id: str, body: dict, db: Session = Depends(get_db), use
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/renew")
+def server_renew_now(server_id: str, body: dict = None, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Renew-now: create the renewal invoice immediately and optionally pay it.
+    body: {"gateway": "wallet" | "razorpay" | ...} — wallet pays instantly,
+    others return a checkout URL. Without a gateway just creates the invoice."""
+    from app.services.subscription_service import create_renewal_invoice
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    if not sub.order_id:
+        raise HTTPException(status_code=400, detail="No billing order linked to this service")
+    if sub.status == SubscriptionStatus.TERMINATED or sub.status == SubscriptionStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Service is terminated")
+
+    invoice = create_renewal_invoice(db, sub)
+    if not invoice:
+        raise HTTPException(status_code=500, detail="Could not create renewal invoice")
+    resp = {
+        "invoiceId": invoice.id,
+        "invoiceNumber": invoice.invoice_number,
+        "amount": invoice.amount,
+        "currency": invoice.currency,
+        "dueDate": invoice.due_date.isoformat() if invoice.due_date else None,
+        "paid": invoice.status == InvoiceStatus.PAID,
+    }
+    if resp["paid"]:
+        return resp
+
+    gateway = ((body or {}).get("gateway") or "").lower()
+    if gateway == "wallet":
+        from app.services.wallet_service import pay_invoice_with_wallet
+        result = pay_invoice_with_wallet(db, user, invoice)
+        db.refresh(sub)
+        resp.update({"paid": True, "gateway": "wallet", "nextBillDate": sub.next_bill_date.isoformat() if sub.next_bill_date else None})
+        return resp
+    if gateway:
+        from app.services.payment_service import create_payment_session
+        session = create_payment_session(db, user, invoice.amount, invoice.currency, gateway, "INVOICE_PAYMENT", {"invoice_id": invoice.id})
+        resp.update({"paid": False, "gateway": gateway, "checkoutUrl": session.checkout_url, "sessionId": session.id})
+        return resp
+    return resp
+
+
+@router.get("/user/payment-preferences")
+def get_payment_preferences(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.services.wallet_service import get_or_create_wallet
+    wallet = get_or_create_wallet(db, user.id)
+    return {
+        "walletAutopay": bool(user.wallet_autopay),
+        "preferredGateway": user.preferred_gateway,
+        "walletBalance": wallet.balance,
+        "walletCurrency": wallet.currency,
+    }
+
+
+@router.put("/user/payment-preferences")
+def update_payment_preferences(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    if "walletAutopay" in body:
+        user.wallet_autopay = bool(body.get("walletAutopay"))
+    if "preferredGateway" in body:
+        gw = (body.get("preferredGateway") or "").strip().lower() or None
+        if gw and len(gw) > 30:
+            raise HTTPException(status_code=400, detail="Invalid gateway")
+        user.preferred_gateway = gw
+    db.commit()
+    return {"walletAutopay": bool(user.wallet_autopay), "preferredGateway": user.preferred_gateway}
 
 
 @router.get("/server/{server_id}/ping")

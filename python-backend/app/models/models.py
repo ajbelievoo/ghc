@@ -111,6 +111,8 @@ class User(Base):
     email_verified = Column(Boolean, default=False, nullable=False)
     totp_secret = Column(String(64), nullable=True)
     totp_enabled = Column(Boolean, default=False, nullable=False)
+    wallet_autopay = Column(Boolean, default=False, nullable=False)
+    preferred_gateway = Column(String(30), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
