@@ -8,24 +8,42 @@ function selectedCurrency(): string {
   return c && /^[A-Z]{3}$/i.test(c) ? c.toUpperCase() : "USD";
 }
 
+function emit(name: string, detail?: any) {
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
 async function request(path: string, options: RequestInit & { formData?: boolean } = {}) {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const isForm = options.formData || options.body instanceof FormData;
   const headers: any = { ...(token && { Authorization: `Bearer ${token}` }), ...options.headers };
   if (!isForm) headers["Content-Type"] = "application/json";
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (e) {
+    emit("ghc:api-offline");
+    throw e;
+  }
   if (!res.ok) {
+    if (res.status === 429) {
+      emit("ghc:api-limited");
+      throw new Error("Too many requests — please wait a moment and try again");
+    }
     const err = await res.json().catch(() => ({}));
     const detail = err.detail ?? err.error;
     throw new Error(typeof detail === "string" ? detail : `HTTP ${res.status}`);
   }
+  emit("ghc:api-ok");
   return res.json();
 }
 
 export const api = {
+  clientError: (body: { message: string; stack?: string; url?: string; component?: string }) =>
+    request("/client-errors", { method: "POST", body: JSON.stringify(body) }).catch(() => {}),
+  serverHealthScore: (id: string) => request(`/server/${id}/health-score`),
   auth: {
     getConfig: () => request("/auth/config"),
     me: () => request("/auth/me"),

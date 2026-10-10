@@ -13,6 +13,7 @@ import OrderProgress from "@/components/OrderProgress";
 import LoginHistoryCard from "@/components/LoginHistoryCard";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import DashboardHeader from "@/components/DashboardHeader";
+import ApiStatusBanner from "@/components/ApiStatusBanner";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ServerMetricsChart from "@/components/ServerMetricsChart";
@@ -102,6 +103,16 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [tipsHidden, setTipsHidden] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("ghc-tips-hidden") || "{}"); } catch { return {}; }
+  });
+  const tipsVisible = { servers: !tipsHidden.servers };
+  const dismissTip = (k: string) => setTipsHidden((v) => {
+    const n = { ...v, [k]: true };
+    try { localStorage.setItem("ghc-tips-hidden", JSON.stringify(n)); } catch {}
+    return n;
+  });
   const [renewSelected, setRenewSelected] = useState<Set<string>>(new Set());
   const [bulkRenewing, setBulkRenewing] = useState(false);
   const [servers, setServers] = useState<ServerInstance[]>([]);
@@ -240,6 +251,26 @@ export default function DashboardPage() {
     }, 5000);
     return () => clearInterval(interval);
   }, [selectedServer]);
+
+  // Keyboard shortcuts — g+letter navigation, / search, ? cheat-sheet
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  useEffect(() => {
+    let gPending = false;
+    let gTimer: ReturnType<typeof setTimeout> | null = null;
+    const tabFor: Record<string, Tab> = { o: "overview", s: "servers", d: "domains", i: "invoices", w: "wallet", t: "support", e: "security", p: "profile" };
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      const typing = el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
+      if (e.key === "?" && !typing) { e.preventDefault(); setShortcutsOpen((v) => !v); return; }
+      if (e.key === "Escape") setShortcutsOpen(false);
+      if (typing) return;
+      if (e.key === "/") { e.preventDefault(); document.querySelector<HTMLInputElement>(".ghc-dash-search input")?.focus(); return; }
+      if (e.key === "g") { gPending = true; if (gTimer) clearTimeout(gTimer); gTimer = setTimeout(() => { gPending = false; }, 800); return; }
+      if (gPending && tabFor[e.key]) { gPending = false; setActiveView(null); setTab(tabFor[e.key]); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); if (gTimer) clearTimeout(gTimer); };
+  }, []);
 
   const handlePaymentReturn = () => {
     if (typeof window === "undefined") return;
@@ -797,6 +828,48 @@ export default function DashboardPage() {
     );
   }, [safeDomains, q, domainTableQuery]);
 
+  // Print-friendly invoice — opens a clean window and triggers the print dialog
+  const printInvoice = (inv: any, u: any) => {
+    const w = window.open("", "_blank", "width=800,height=900");
+    if (!w) { showToast("Popup blocked — allow popups to print", "error"); return; }
+    const sym = getCurrencySymbol(inv.currency || currency);
+    const num = inv.invoiceNumber || inv.invoice_number || inv.id.slice(0, 8).toUpperCase();
+    const due = inv.dueDate || inv.due_date;
+    const created = inv.createdAt || inv.created_at;
+    const esc = (v: any) => String(v ?? "").replace(/</g, "&lt;");
+    w.document.write(`<!doctype html><html><head><title>Invoice ${esc(num)} — GHC</title>
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:720px;margin:40px auto;padding:0 24px}
+        .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #00b7ff;padding-bottom:16px;margin-bottom:24px}
+        .brand{font-size:22px;font-weight:800;color:#00b7ff}.muted{color:#64748b;font-size:12px}
+        table{width:100%;border-collapse:collapse;margin-top:20px}
+        td,th{padding:10px 8px;font-size:13px;text-align:left;border-bottom:1px solid #e2e8f0}
+        .total td{font-weight:800;font-size:15px;border-top:2px solid #0f172a;border-bottom:none}
+        .badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:${inv.status === "PAID" ? "#dcfce7;color:#166534" : "#fef9c3;color:#854d0e"}}
+        @media print{body{margin:0}}
+      </style></head><body>
+      <div class="head">
+        <div><div class="brand">GHC Cloud</div><div class="muted">Believoo — ghc.believoo.com</div></div>
+        <div style="text-align:right"><div style="font-size:16px;font-weight:800">INVOICE</div><div class="muted">${esc(num)}</div></div>
+      </div>
+      <table>
+        <tr><td class="muted">Billed to</td><td>${esc(u?.name || "")} &lt;${esc(u?.email || "")}&gt;</td>
+            <td class="muted">Status</td><td><span class="badge">${esc(inv.status)}</span></td></tr>
+        <tr><td class="muted">Issued</td><td>${created ? new Date(created).toLocaleDateString() : "—"}</td>
+            <td class="muted">Due date</td><td>${due ? new Date(due).toLocaleDateString() : "—"}</td></tr>
+      </table>
+      <table>
+        <tr><th>Description</th><th style="text-align:right">Amount</th></tr>
+        <tr><td>${esc(inv.description || "GHC Cloud services")}</td><td style="text-align:right">${sym}${(inv.amount - (inv.taxAmount || inv.tax_amount || 0)).toFixed(2)}</td></tr>
+        ${(inv.taxAmount || inv.tax_amount) ? `<tr><td class="muted">Tax (${esc(inv.taxType || inv.tax_type || "GST")})</td><td style="text-align:right" class="muted">${sym}${(inv.taxAmount || inv.tax_amount).toFixed(2)}</td></tr>` : ""}
+        <tr class="total"><td>Total</td><td style="text-align:right">${sym}${inv.amount.toFixed(2)} ${esc(inv.currency || currency)}</td></tr>
+      </table>
+      <p class="muted" style="margin-top:32px">Generated ${new Date().toLocaleString()} · This is a computer-generated invoice.</p>
+      <script>window.onload=function(){window.print()}<\/script>
+      </body></html>`);
+    w.document.close();
+  };
+
   const exportDomainsCsv = () => {
     const rows = [["Domain name", "Status", "Technical status", "Renewal frequency", "Ongoing operations", "Expiry", "Registrant contact", "Auto-renew"]];
     filteredDomains.forEach((d: any) => rows.push([d.domain, d.status, d.technicalStatus || "", d.renewalFrequency || "", String(d.ongoingOperations || 0), d.expiresAt ? new Date(d.expiresAt).toISOString().slice(0, 10) : "", d.registrantContact || "", d.autoRenew ? "yes" : "no"]));
@@ -858,6 +931,7 @@ export default function DashboardPage() {
         />
 
         <div className="ghc-dash-content p-4 sm:p-6 lg:p-8">
+        <div className="mb-4"><ApiStatusBanner /></div>
         {typeof window !== "undefined" && localStorage.getItem("ghc-impersonating") && (
           <div className="mb-6 rounded-xl border border-[#ffaa00]/40 bg-[#ffaa00]/10 px-6 py-3 flex items-center justify-between">
             <p className="text-sm font-medium text-amber-700">You are impersonating <strong>{localStorage.getItem("ghc-impersonating")}</strong> (support mode)</p>
@@ -920,6 +994,39 @@ export default function DashboardPage() {
               <button onClick={() => setTab("support")} className="rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#0a0f1c] hover:border-[#00b7ff] transition-all flex items-center gap-2"><MessageSquare className="w-4 h-4 text-[#00b7ff]" /> Create Ticket</button>
               <button onClick={() => setTab("wallet")} className="rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#0a0f1c] hover:border-[#00b7ff] transition-all flex items-center gap-2"><Wallet className="w-4 h-4 text-[#00b7ff]" /> Top Up</button>
             </div>
+
+            {/* Getting-started checklist — hidden once everything is done */}
+            {(() => {
+              const steps = [
+                { label: "Verify your email", done: !!user?.email_verified, action: () => setTab("profile"), cta: "Profile" },
+                { label: "Add funds to your wallet", done: (wallet?.balance || 0) > 0, action: () => setTab("wallet"), cta: "Top up" },
+                { label: "Deploy your first service", done: servers.length > 0, action: () => setActiveView("order"), cta: "Order" },
+                { label: "Enable two-factor auth", done: !!user?.totp_enabled, action: () => setTab("security"), cta: "Security" },
+              ];
+              const doneCount = steps.filter((s) => s.done).length;
+              if (doneCount === steps.length) return null;
+              return (
+                <div className="rounded-2xl border border-[#00b7ff]/30 bg-gradient-to-r from-[#00b7ff]/5 to-transparent p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-bold text-[#0f172a]">Get started with GHC</p>
+                    <p className="text-xs font-bold text-[#00b7ff]">{doneCount}/{steps.length} done</p>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-slate-100 mb-4 overflow-hidden"><div className="h-full bg-[#00b7ff] rounded-full transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} /></div>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {steps.map((s) => (
+                      <button key={s.label} onClick={s.action} className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left hover:bg-white/60 transition" aria-label={`${s.label} — ${s.done ? "done" : "pending"}`}>
+                        {s.done
+                          ? <span className="w-5 h-5 rounded-full bg-[#00ff88]/20 text-[#00a854] flex items-center justify-center shrink-0"><Check className="w-3 h-3" /></span>
+                          : <span className="w-5 h-5 rounded-full border-2 border-slate-300 shrink-0" />}
+                        <span className={`text-sm flex-1 ${s.done ? "text-slate-400 line-through" : "text-[#0f172a] font-medium"}`}>{s.label}</span>
+                        {!s.done && <span className="text-[10px] font-bold text-[#00b7ff] uppercase">{s.cta} →</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6"><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 flex items-center justify-center"><Server className="w-5 h-5 text-[#00b7ff]" /></div><p className="text-sm font-medium text-slate-500">Active Servers</p></div><p className="text-2xl font-bold text-[#0f172a]">{servers.filter((s) => s.status === "ACTIVE").length}</p></div>
               <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6"><div className="flex items-center gap-3 mb-3"><div className="w-10 h-10 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/30 flex items-center justify-center"><Globe className="w-5 h-5 text-[#00ff88]" /></div><p className="text-sm font-medium text-slate-500">My Domains</p></div><p className="text-2xl font-bold text-[#0f172a]">{myDomains.length}</p></div>
@@ -1053,6 +1160,16 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-[#0f172a]">My Infrastructure</h2>
 
+            {tipsVisible.servers && (
+              <div className="flex items-start justify-between gap-3 rounded-xl border border-[#00b7ff]/30 bg-[#00b7ff]/5 px-4 py-3" role="note">
+                <p className="text-xs text-slate-600">
+                  <b className="text-[#00b7ff]">Tip:</b> tick the checkbox on any card to renew several services at once,
+                  tag services like <i>prod</i> / <i>web</i> from the server page to filter them here, and press <kbd className="rounded bg-slate-100 border border-slate-200 px-1 font-mono">?</kbd> anytime for keyboard shortcuts.
+                </p>
+                <button onClick={() => dismissTip("servers")} className="text-slate-400 hover:text-slate-600 text-sm leading-none" aria-label="Dismiss tip">×</button>
+              </div>
+            )}
+
             {allTags.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
                 <Tag className="w-3.5 h-3.5 text-slate-400" />
@@ -1064,7 +1181,7 @@ export default function DashboardPage() {
             )}
 
             {renewSelected.size > 0 && (
-              <div className="flex items-center justify-between rounded-xl border border-[#00b7ff]/40 bg-[#00b7ff]/5 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#00b7ff]/40 bg-[#00b7ff]/5 px-4 py-3">
                 <p className="text-sm font-medium text-[#0f172a]">{renewSelected.size} service{renewSelected.size > 1 ? "s" : ""} selected for renewal</p>
                 <div className="flex items-center gap-2">
                   <button
@@ -1096,7 +1213,7 @@ export default function DashboardPage() {
                   >
                     Create invoices
                   </button>
-                  <button onClick={() => setRenewSelected(new Set())} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+                  <button onClick={() => setRenewSelected(new Set())} className="text-xs text-slate-400 hover:text-slate-600" aria-label="Clear selection">✕</button>
                 </div>
               </div>
             )}
@@ -1134,6 +1251,7 @@ export default function DashboardPage() {
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => setRenewSelected((prev) => { const n = new Set(prev); e.target.checked ? n.add(srv.id) : n.delete(srv.id); return n; })}
                             title="Select for bulk renewal"
+                            aria-label={`Select ${srv.name} for bulk renewal`}
                             className="rounded border-slate-300 text-[#00b7ff]"
                           />
                           <h3 className="text-sm font-semibold text-[#0f172a]">{srv.name}</h3>
@@ -1654,6 +1772,13 @@ export default function DashboardPage() {
                             className="text-xs font-bold text-[#00b7ff] hover:text-[#0f172a] hover:underline"
                           >
                             PDF
+                          </button>
+                          <button
+                            onClick={() => printInvoice(inv, user)}
+                            className="text-xs font-bold text-slate-500 hover:text-[#0f172a] hover:underline"
+                            aria-label={`Print invoice ${inv.invoiceNumber || inv.id}`}
+                          >
+                            Print
                           </button>
                         </div>
                       </td>
@@ -2356,6 +2481,29 @@ export default function DashboardPage() {
         )}
         </div>
       </main>
+
+      {/* Keyboard shortcuts cheat-sheet (press ?) */}
+      {shortcutsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShortcutsOpen(false)} role="dialog" aria-label="Keyboard shortcuts">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[#0f172a]">Keyboard shortcuts</h3>
+              <button onClick={() => setShortcutsOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none" aria-label="Close shortcuts">×</button>
+            </div>
+            <table className="w-full text-sm">
+              <tbody>
+                {[["g then o", "Overview"], ["g then s", "My servers"], ["g then d", "Domains"], ["g then i", "Invoices"], ["g then w", "Wallet"], ["g then t", "Support tickets"], ["g then e", "Security"], ["g then p", "Profile"], ["/", "Search"], ["?", "This cheat-sheet"], ["Esc", "Close dialogs"]].map(([k, d]) => (
+                  <tr key={k} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-4"><kbd className="rounded bg-slate-100 border border-slate-200 px-2 py-0.5 text-xs font-mono">{k}</kbd></td>
+                    <td className="py-2 text-slate-600">{d}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <MobileBottomNav tab={tab} setTab={(t) => { setTab(t); setActiveView(null); setSelectedServer(null); setMetrics(null); }} />
     </div>
     </ErrorBoundary>

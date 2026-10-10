@@ -19,6 +19,7 @@ from app.models.models import (
     GatewayConfig,
     Invoice,
     InvoiceStatus,
+    LogType,
     MarginSetting,
     OrderStatus,
     PaymentStatus,
@@ -2554,6 +2555,89 @@ def server_cancel(server_id: str, body: dict, db: Session = Depends(get_db), use
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/client-errors")
+def client_error_report(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Frontend error capture (Sentry-lite) — persisted to system_logs for admin triage."""
+    msg = str(body.get("message") or "")[:500]
+    if not msg:
+        raise HTTPException(status_code=400, detail="message required")
+    db.add(SystemLog(
+        type=LogType.ERROR,
+        message=f"[frontend] {msg}",
+        details={
+            "user_id": user.id,
+            "source": "client",
+            "stack": str(body.get("stack") or "")[:3000],
+            "url": str(body.get("url") or "")[:300],
+            "component": str(body.get("component") or "")[:120],
+        },
+    ))
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/server/{server_id}/health-score")
+def server_health_score(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Composite health score 0-100: 7d ping uptime + open tickets + billing standing."""
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+
+    score = 100
+    factors = []
+
+    # 1) Uptime over last 7 days (50% weight)
+    since = datetime.utcnow() - timedelta(days=7)
+    rows = db.query(ServerPingMetric).filter(
+        ServerPingMetric.subscription_id == server_id, ServerPingMetric.checked_at >= since
+    ).all()
+    if rows:
+        up_ratio = sum(1 for r in rows if r.status == "UP") / len(rows)
+        uptime_pts = round(up_ratio * 50)
+        score = score - 50 + uptime_pts
+        factors.append({
+            "name": "7-day uptime",
+            "detail": f"{round(up_ratio * 100, 2)}% over {len(rows)} checks",
+            "impact": uptime_pts - 50 if uptime_pts < 50 else 0,
+        })
+    else:
+        score -= 10
+        factors.append({"name": "7-day uptime", "detail": "no monitoring data yet", "impact": -10})
+
+    # 2) Billing standing (30% weight)
+    overdue_invoice = db.query(Invoice).filter(
+        Invoice.order_id == sub.order_id, Invoice.status == InvoiceStatus.UNPAID,
+        Invoice.due_date != None, Invoice.due_date < datetime.utcnow(),
+    ).first() if sub.order_id else None
+    if sub.status == SubscriptionStatus.SUSPENDED:
+        score -= 30
+        factors.append({"name": "Service state", "detail": f"suspended — {sub.suspension_reason or 'see invoices'}", "impact": -30})
+    elif overdue_invoice:
+        score -= 15
+        factors.append({"name": "Billing", "detail": "overdue invoice", "impact": -15})
+    elif sub.status != SubscriptionStatus.ACTIVE:
+        score -= 10
+        factors.append({"name": "Service state", "detail": (sub.status.value if hasattr(sub.status, 'value') else str(sub.status)).lower(), "impact": -10})
+    else:
+        factors.append({"name": "Billing", "detail": "in good standing", "impact": 0})
+
+    # 3) Open support tickets (20% weight — each open ticket -5, max -20)
+    open_tickets = db.query(SupportTicket).filter(
+        SupportTicket.user_id == user.id,
+        SupportTicket.status.in_([TicketStatus.OPEN, TicketStatus.PENDING] if hasattr(TicketStatus, 'PENDING') else [TicketStatus.OPEN]),
+    ).count()
+    ticket_hit = min(20, open_tickets * 5)
+    if ticket_hit:
+        score -= ticket_hit
+        factors.append({"name": "Support", "detail": f"{open_tickets} open ticket(s)", "impact": -ticket_hit})
+    else:
+        factors.append({"name": "Support", "detail": "no open tickets", "impact": 0})
+
+    score = max(0, min(100, score))
+    grade = "excellent" if score >= 90 else "good" if score >= 70 else "fair" if score >= 50 else "poor"
+    return {"score": score, "grade": grade, "factors": factors}
 
 
 @router.put("/server/{server_id}/meta")

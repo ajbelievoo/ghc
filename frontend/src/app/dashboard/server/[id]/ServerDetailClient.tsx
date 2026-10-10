@@ -86,6 +86,7 @@ export default function ServerDetailClient() {
 
   const [server, setServer] = useState<ServerInstance | null>(null);
   const [detail, setDetail] = useState<any>(null);
+  const [health, setHealth] = useState<any>(null);
   const [metrics, setMetrics] = useState<any>(null);
   const [additionalIps, setAdditionalIps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,6 +123,7 @@ export default function ServerDetailClient() {
     }
     if (!serverId) return;
     load();
+    api.serverHealthScore(serverId).then(setHealth).catch(() => {});
   }, [serverId, router, load]);
 
   useEffect(() => {
@@ -230,6 +232,20 @@ export default function ServerDetailClient() {
             <span className="flex items-center gap-1 text-xs text-slate-500">
               <Clock className="w-3 h-3" /> Expires {new Date(server.expiresAt).toLocaleDateString()}
             </span>
+            {health && (
+              <span
+                title={health.factors?.map((f: any) => `${f.name}: ${f.detail}`).join("\n") || ""}
+                className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold cursor-help ${
+                  health.grade === "excellent" ? "bg-emerald-100 text-emerald-700"
+                  : health.grade === "good" ? "bg-[#00b7ff]/10 text-[#00b7ff]"
+                  : health.grade === "fair" ? "bg-amber-100 text-amber-700"
+                  : "bg-red-100 text-red-700"
+                }`}
+                aria-label={`Health score ${health.score} of 100 — ${health.grade}`}
+              >
+                <Activity className="w-3 h-3" /> {health.score}
+              </span>
+            )}
           </div>
         </div>
 

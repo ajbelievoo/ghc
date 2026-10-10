@@ -70,7 +70,7 @@ export default function ServiceMetaCard({ server, onUpdated }: { server: any; on
           )}
         </div>
         {!editingNote && (
-          <button onClick={() => setEditingNote(true)} className="text-slate-400 hover:text-[#00b7ff] shrink-0">
+          <button onClick={() => setEditingNote(true)} className="text-slate-400 hover:text-[#00b7ff] shrink-0" aria-label="Edit note">
             <Pencil className="w-3.5 h-3.5" />
           </button>
         )}
@@ -82,7 +82,7 @@ export default function ServiceMetaCard({ server, onUpdated }: { server: any; on
         {tags.map((t) => (
           <span key={t} className="inline-flex items-center gap-1 rounded-full bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-2 py-0.5 text-[10px] font-medium text-[#00b7ff]">
             {t}
-            <button onClick={() => updateTags(tags.filter((x) => x !== t))} className="hover:text-red-500"><X className="w-2.5 h-2.5" /></button>
+            <button onClick={() => updateTags(tags.filter((x) => x !== t))} className="hover:text-red-500" aria-label={`Remove tag ${t}`}><X className="w-2.5 h-2.5" /></button>
           </span>
         ))}
         <span className="inline-flex items-center gap-1">
