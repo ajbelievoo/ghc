@@ -385,6 +385,18 @@ export const api = {
     registries: () => request("/cloud/registries"),
     createRegistry: (body: object) => request("/cloud/registries", { method: "POST", body: JSON.stringify(body) }),
     deleteRegistry: (id: string) => request(`/cloud/registries/${id}`, { method: "DELETE" }),
+    databaseCapabilities: () => request("/cloud/database-capabilities"),
+    databases: () => request("/cloud/databases"),
+    createDatabase: (body: object) => request("/cloud/databases", { method: "POST", body: JSON.stringify(body) }),
+    databaseDetail: (engine: string, id: string) => request(`/cloud/databases/${engine}/${id}`),
+    deleteDatabase: (engine: string, id: string) => request(`/cloud/databases/${engine}/${id}`, { method: "DELETE" }),
+    loadBalancers: (region?: string) => request(`/cloud/loadbalancers${region ? `?region=${region}` : ""}`),
+    createLoadBalancer: (body: { region: string; name: string }) =>
+      request("/cloud/loadbalancers", { method: "POST", body: JSON.stringify(body) }),
+    deleteLoadBalancer: (region: string, id: string) =>
+      request(`/cloud/loadbalancers/${region}/${id}`, { method: "DELETE" }),
+    privateClouds: () => request("/cloud/private-cloud"),
+    privateCloudDetail: (name: string) => request(`/cloud/private-cloud/${name}`),
   },
   orders: {
     list: () => request("/orders/"),

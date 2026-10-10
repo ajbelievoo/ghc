@@ -256,6 +256,21 @@ html.dark .bg-indigo-50,
 html.dark .bg-indigo-100 { background-color: #1a2151 !important; }
 html.dark .bg-orange-50,
 html.dark .bg-orange-100 { background-color: #431407 !important; }
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100 { background-color: rgba(6, 78, 59, 0.45) !important; }
+html.dark .bg-amber-50,
+html.dark .bg-amber-100 { background-color: rgba(69, 26, 3, 0.45) !important; }
+html.dark .bg-red-100 { background-color: rgba(69, 10, 10, 0.6) !important; }
+html.dark .text-emerald-600 { color: #34d399 !important; }
+html.dark .text-emerald-700 { color: #34d399 !important; }
+html.dark .text-amber-600 { color: #fbbf24 !important; }
+html.dark .text-amber-700 { color: #fbbf24 !important; }
+html.dark .text-amber-800 { color: #fcd34d !important; }
+html.dark .border-amber-300 { border-color: #78350f !important; }
+html.dark .border-red-300 { border-color: #7f1d1d !important; }
+html.dark .text-red-700 { color: #f87171 !important; }
+html.dark .bg-\[\#f8faff\] { background-color: #101623 !important; }
+html.dark .bg-\[\#e8f6ff\] { background-color: #0c2233 !important; }
 html.dark .bg-gray-50 { background-color: #0f0f0f !important; }
 html.dark .bg-gray-100 { background-color: #1a1a1a !important; }
 html.dark .bg-gray-200 { background-color: #1c2331 !important; }

@@ -56,7 +56,9 @@ const buildTree = (cd: Record<string, Leaf[]>): TreeNode[] => [
       { label: "Managed Private Registry", leaf: "svc:registry" },
     ],
   },
-  { label: "Databases", children: (cd["databases"] || []).map((s) => ({ label: s.title.replace("Managed ", ""), leaf: `svc:${s.id}` })) },
+  { label: "Databases", children: [{ label: "My databases", leaf: "svc:databases" }, ...(cd["databases"] || []).map((s) => ({ label: s.title.replace("Managed ", ""), leaf: `svc:${s.id}` }))] },
+  { label: "Hosted Private Cloud", leaf: "svc:pcc" },
+  { label: "Quotas & usage", leaf: "quota" },
   {
     label: "AI & Machine learning",
     children: [
@@ -177,6 +179,15 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
   const [registries, setRegistries] = useState<any[]>([]);
   const [kubeForm, setKubeForm] = useState({ name: "", region: "GRA11" });
   const [regForm, setRegForm] = useState({ name: "", region: "GRA" });
+  const [databases, setDatabases] = useState<any[]>([]);
+  const [dbCaps, setDbCaps] = useState<any>(null);
+  const [dbForm, setDbForm] = useState({ engine: "postgresql", version: "", plan: "essential", flavor: "db1-4", region: "GRA", nodes: 1, description: "" });
+  const [dbCreating, setDbCreating] = useState(false);
+  const [lbs, setLbs] = useState<any[]>([]);
+  const [lbForm, setLbForm] = useState({ name: "", region: "GRA" });
+  const [pccs, setPccs] = useState<any[]>([]);
+  const [quotaData, setQuotaData] = useState<any[]>([]);
+  const [usageData, setUsageData] = useState<any>(null);
 
   const cur = (wallet?.currency || currency || "INR").toUpperCase();
   const sym = getCurrencySymbol(cur);
@@ -219,6 +230,16 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
     if (active === "svc:sshkeys") api.cloud.sshKeys().then((v) => setSshKeys(Array.isArray(v) ? v : [])).catch(() => {});
     if (active === "svc:k8s") api.cloud.kubes().then((v) => setKubes(Array.isArray(v) ? v : [])).catch(() => {});
     if (active === "svc:registry") api.cloud.registries().then((v) => setRegistries(Array.isArray(v) ? v : [])).catch(() => {});
+    if (active === "svc:databases") {
+      api.cloud.databases().then((v) => setDatabases(Array.isArray(v) ? v : [])).catch(() => {});
+      api.cloud.databaseCapabilities().then(setDbCaps).catch(() => {});
+    }
+    if (active === "svc:loadbalancer") api.cloud.loadBalancers().then((v) => setLbs(Array.isArray(v) ? v : [])).catch(() => {});
+    if (active === "svc:pcc") api.cloud.privateClouds().then((v) => setPccs(Array.isArray(v) ? v : [])).catch(() => {});
+    if (active === "quota") {
+      api.cloud.quota().then((v) => setQuotaData(Array.isArray(v) ? v : [])).catch(() => {});
+      api.cloud.usage().then(setUsageData).catch(() => {});
+    }
   }, [active]);
 
   const tree = useMemo(() => buildTree(catData), [catData]);
@@ -977,6 +998,202 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
               </table>
             </div>
             <p className="mt-3 text-xs text-slate-400">Billed per hour inside your project while the resource exists.</p>
+          </div>
+        )}
+
+        {active === "svc:databases" && (
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-[#0f172a]">Managed databases</h2>
+                <p className="text-sm text-slate-500">Fully-managed database clusters billed per hour inside your project.</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5 mb-5">
+              <p className="text-sm font-bold text-[#0f172a] mb-3">Create a database</p>
+              <div className="grid sm:grid-cols-3 gap-3 mb-3">
+                <select value={dbForm.engine} onChange={(e) => {
+                  const eng = (dbCaps?.engines || []).find((x: any) => x.name === e.target.value);
+                  setDbForm({ ...dbForm, engine: e.target.value, version: eng?.defaultVersion || eng?.versions?.[0] || "" });
+                }} className={inputCls}>
+                  {(dbCaps?.engines || [{ name: "postgresql" }, { name: "mysql" }, { name: "mongodb" }, { name: "redis" }, { name: "kafka" }, { name: "opensearch" }, { name: "cassandra" }, { name: "m3db" }, { name: "m3aggregator" }]).map((e: any) => (
+                    <option key={e.name} value={e.name}>{e.name}</option>
+                  ))}
+                </select>
+                <select value={dbForm.version} onChange={(e) => setDbForm({ ...dbForm, version: e.target.value })} className={inputCls}>
+                  {(((dbCaps?.engines || []).find((x: any) => x.name === dbForm.engine)?.versions) || [dbForm.version || ""]).filter(Boolean).map((v: string) => <option key={v} value={v}>v{v}</option>)}
+                  {!dbForm.version && <option value="">version…</option>}
+                </select>
+                <select value={dbForm.plan} onChange={(e) => setDbForm({ ...dbForm, plan: e.target.value })} className={inputCls}>
+                  {(dbCaps?.plans || [{ name: "essential" }, { name: "business" }, { name: "enterprise" }]).map((pl: any) => <option key={pl.name} value={pl.name}>{pl.name}</option>)}
+                </select>
+              </div>
+              <div className="grid sm:grid-cols-4 gap-3 mb-3">
+                <select value={dbForm.flavor} onChange={(e) => setDbForm({ ...dbForm, flavor: e.target.value })} className={inputCls}>
+                  {(dbCaps?.flavors || [{ name: "db1-4" }, { name: "db1-7" }, { name: "db1-15" }]).map((f: any) => (
+                    <option key={f.name} value={f.name}>{f.name}{f.specifications ? ` (${f.specifications.core}C/${f.specifications.memory?.value}${f.specifications.memory?.unit || "GB"})` : ""}</option>
+                  ))}
+                </select>
+                <select value={dbForm.region} onChange={(e) => setDbForm({ ...dbForm, region: e.target.value })} className={inputCls}>
+                  {(dbCaps?.regions?.length ? dbCaps.regions : ["GRA", "DE", "BHS", "SBG", "WAW", "UK"]).map((r: string) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <input type="number" min={1} max={8} value={dbForm.nodes} onChange={(e) => setDbForm({ ...dbForm, nodes: parseInt(e.target.value) || 1 })} placeholder="Nodes" className={inputCls} />
+                <input value={dbForm.description} onChange={(e) => setDbForm({ ...dbForm, description: e.target.value })} placeholder="Name (optional)" className={inputCls} />
+              </div>
+              <button disabled={dbCreating || !dbForm.version} onClick={async () => {
+                setDbCreating(true);
+                try {
+                  await api.cloud.createDatabase(dbForm);
+                  showToast("Database creation started — it will appear below shortly", "success");
+                  api.cloud.databases().then((v) => setDatabases(Array.isArray(v) ? v : []));
+                } catch (e: any) { showToast(e.message, "error"); }
+                finally { setDbCreating(false); }
+              }} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-bold hover:bg-[#009fe0] disabled:opacity-40 flex items-center gap-2">
+                {dbCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />} Create database
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Name</th><th className={th}>Engine</th><th className={th}>Plan</th><th className={th}>Region</th><th className={th}>Status</th><th className={`${th} text-right`}></th></tr></thead>
+                <tbody>
+                  {databases.map((d: any) => (
+                    <tr key={d.id} className="border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm font-semibold">{d.description || d.id}</td>
+                      <td className="px-4 py-3 text-sm">{d.engine} {d.version || ""}</td>
+                      <td className="px-4 py-3 text-sm">{d.plan}</td>
+                      <td className="px-4 py-3 text-sm">{d.nodes?.[0]?.region || d.region || "—"}</td>
+                      <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${String(d.status).toUpperCase().includes("READY") || d.status === "RUNNING" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{d.status}</span></td>
+                      <td className="px-4 py-3 text-right"><button onClick={async () => { if (!confirm(`Delete database ${d.description || d.id}? All data will be lost.`)) return; try { await api.cloud.deleteDatabase(d.engine, d.id); setDatabases((p) => p.filter((x) => x.id !== d.id)); showToast("Database deleted", "success"); } catch (e: any) { showToast(e.message, "error"); } }} className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button></td>
+                    </tr>
+                  ))}
+                  {databases.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-400">No managed databases yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {active === "svc:loadbalancer" && (
+          <div>
+            <h2 className="text-xl font-bold text-[#0f172a]">Load Balancer</h2>
+            <p className="text-sm text-slate-500 mt-1 mb-5">Managed Octavia load balancers per activated region.</p>
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5 mb-5">
+              <p className="text-sm font-bold mb-3">Create a load balancer</p>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <input value={lbForm.name} onChange={(e) => setLbForm({ ...lbForm, name: e.target.value })} placeholder="Load balancer name" className={inputCls} />
+                <select value={lbForm.region} onChange={(e) => setLbForm({ ...lbForm, region: e.target.value })} className={inputCls}>
+                  {["GRA","GRA11","BHS","DE","SBG","WAW","UK","RBX"].map((r) => <option key={r}>{r}</option>)}
+                </select>
+                <button disabled={!lbForm.name} onClick={async () => {
+                  try {
+                    await api.cloud.createLoadBalancer(lbForm);
+                    showToast("Load balancer requested", "success");
+                    api.cloud.loadBalancers().then((v) => setLbs(Array.isArray(v) ? v : []));
+                  } catch (e: any) { showToast(e.message, "error"); }
+                }} className="rounded-lg bg-[#00b7ff] text-white px-4 py-2 text-sm font-bold hover:bg-[#009fe0] disabled:opacity-40">Create</button>
+              </div>
+              <p className="mt-2 text-[10px] text-slate-400">Requires an activated region — create any resource (instance/volume) in the region first.</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Name</th><th className={th}>Region</th><th className={th}>VIP</th><th className={th}>Status</th><th className={`${th} text-right`}></th></tr></thead>
+                <tbody>
+                  {lbs.map((l: any) => (
+                    <tr key={l.id} className="border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm font-semibold">{l.name || l.id}</td>
+                      <td className="px-4 py-3 text-sm">{l.region}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-slate-500">{l.vipAddress || "—"}</td>
+                      <td className="px-4 py-3 text-sm">{l.operatingStatus || l.provisioningStatus || l.status || "—"}</td>
+                      <td className="px-4 py-3 text-right"><button onClick={async () => { if (!confirm(`Delete load balancer ${l.name || l.id}?`)) return; try { await api.cloud.deleteLoadBalancer(l.region, l.id); setLbs((p) => p.filter((x) => x.id !== l.id)); showToast("Load balancer deleted", "success"); } catch (e: any) { showToast(e.message, "error"); } }} className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5" /></button></td>
+                    </tr>
+                  ))}
+                  {lbs.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-400">No load balancers yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {active === "svc:pcc" && (
+          <div>
+            <h2 className="text-xl font-bold text-[#0f172a]">Hosted Private Cloud</h2>
+            <p className="text-sm text-slate-500 mt-1 mb-5">Dedicated VMware infrastructure linked to your account.</p>
+            {pccs.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-10 text-center">
+                <Server className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="text-sm font-bold text-[#0f172a] mb-1">No private cloud yet</p>
+                <p className="text-xs text-slate-500 mb-4">Order a Hosted Private Cloud pack and it will appear here with host usage and your vCenter link.</p>
+                <a href="/private-cloud" className="rounded-lg bg-[#00b7ff] px-4 py-2 text-sm font-bold text-white hover:bg-[#009fe0]">Browse private cloud</a>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {pccs.map((p: any) => (
+                  <div key={p.serviceName} className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5">
+                    <p className="text-sm font-bold text-[#0f172a]">{p.description}</p>
+                    <p className="text-xs font-mono text-slate-400 mt-0.5">{p.serviceName}</p>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                      {[["Location", p.location], ["Datacenters", p.datacenters], ["Hosts", p.hosts]].map(([l, v]) => (
+                        <div key={l as string} className="rounded-lg bg-[#f8faff] py-2"><p className="text-sm font-bold">{v ?? "—"}</p><p className="text-[10px] text-slate-500">{l}</p></div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-xs text-slate-500">{p.commercialRange || ""} {p.version ? `· vSphere ${p.version}` : ""}</span>
+                      {p.vcenterUrl && <a href={p.vcenterUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-[#00b7ff] hover:underline">Open vCenter →</a>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {active === "quota" && (
+          <div>
+            <h2 className="text-xl font-bold text-[#0f172a]">Quotas & usage</h2>
+            <p className="text-sm text-slate-500 mt-1 mb-5">Per-region resource limits and your current hourly consumption.</p>
+
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Current usage (this hour)</p>
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden mb-6">
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-slate-200 bg-[#f8faff]"><th className={th}>Resource</th><th className={th}>Detail</th><th className={`${th} text-right`}>Cost/h</th></tr></thead>
+                <tbody>
+                  {(usageData?.hourlyUsage?.resourcesUsage || []).flatMap((g: any) => (g.resources || []).map((r: any, i: number) => (
+                    <tr key={`${g.type}-${i}`} className="border-b border-slate-100">
+                      <td className="px-4 py-3 text-sm font-semibold capitalize">{g.type}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500">{r.name || r.id || `${r.quantity || ""} ${r.unit || ""}`}</td>
+                      <td className="px-4 py-3 text-sm text-right">{fmtNoMargin(r.totalPrice)}</td>
+                    </tr>
+                  )))}
+                  {(usageData?.hourlyUsage?.resourcesUsage || []).length === 0 && <tr><td colSpan={3} className="px-4 py-6 text-center text-sm text-slate-400">No billable resources this hour.</td></tr>}
+                </tbody>
+                <tfoot><tr className="bg-[#f8faff]"><td className="px-4 py-3 text-sm font-bold" colSpan={2}>Total per hour</td><td className="px-4 py-3 text-sm font-bold text-right">{fmtNoMargin(usageData?.hourlyUsage?.totalPrice ?? 0)}</td></tr></tfoot>
+              </table>
+            </div>
+
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Regional quotas</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {quotaData.map((q: any) => {
+                const bar = (label: string, used: number, max: number) => (
+                  <div key={label} className="mb-2">
+                    <div className="flex justify-between text-[11px] mb-0.5"><span className="text-slate-500">{label}</span><span className="font-bold">{used}/{max}</span></div>
+                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className={`h-full rounded-full ${max && used / max > 0.8 ? "bg-red-400" : "bg-[#00b7ff]"}`} style={{ width: `${max ? Math.min(100, (used / max) * 100) : 0}%` }} /></div>
+                  </div>
+                );
+                return (
+                  <div key={q.region} className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5">
+                    <p className="text-sm font-bold mb-3">{q.region}</p>
+                    {q.instance && bar("Instances", q.instance.usedInstances || 0, q.instance.maxInstances || 0)}
+                    {q.instance && bar("vCPUs", q.instance.usedCores || 0, q.instance.maxCores || 0)}
+                    {q.instance && bar("RAM (MB)", q.instance.usedRAM || 0, q.instance.maxRam || 0)}
+                    {q.volume && bar("Volumes", q.volume.usedGigabytes || 0, q.volume.maxGigabytes || 0)}
+                    {q.keypair && bar("SSH keys", q.keypair.usedCount || 0, q.keypair.maxCount || 0)}
+                  </div>
+                );
+              })}
+              {quotaData.length === 0 && <p className="text-sm text-slate-400 col-span-2">No quota information yet — activate your cloud project first.</p>}
+            </div>
           </div>
         )}
 

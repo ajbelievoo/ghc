@@ -338,8 +338,47 @@ class OvhClient:
     def cloud_databases(self, service_name: str, engine: str) -> List[Dict[str, Any]]:
         return self.get(f"/cloud/project/{service_name}/database/{engine}")
 
-    def cloud_database_capabilities(self, service_name: str, engine: str) -> Dict[str, Any]:
-        return self.get(f"/cloud/project/{service_name}/capabilities/database/{engine}")
+    def cloud_database_capabilities(self, service_name: str, engine: str = "") -> Dict[str, Any]:
+        if engine:
+            return self.get(f"/cloud/project/{service_name}/capabilities/database/{engine}")
+        return self.get(f"/cloud/project/{service_name}/database/capabilities")
+
+    def cloud_database_detail(self, service_name: str, engine: str, db_id: str) -> Dict[str, Any]:
+        return self.get(f"/cloud/project/{service_name}/database/{engine}/{db_id}")
+
+    def cloud_create_database(self, service_name: str, engine: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/database/{engine}", **payload)
+
+    def cloud_delete_database(self, service_name: str, engine: str, db_id: str) -> Any:
+        return self.delete(f"/cloud/project/{service_name}/database/{engine}/{db_id}")
+
+    # Load Balancer (Octavia — per activated region)
+
+    def cloud_loadbalancers(self, service_name: str, region: str) -> List[Dict[str, Any]]:
+        return self.get(f"/cloud/project/{service_name}/region/{region}/loadbalancing/loadbalancer")
+
+    def cloud_create_loadbalancer(self, service_name: str, region: str, name: str) -> Dict[str, Any]:
+        return self.post(f"/cloud/project/{service_name}/region/{region}/loadbalancing/loadbalancer", name=name)
+
+    def cloud_delete_loadbalancer(self, service_name: str, region: str, lb_id: str) -> Any:
+        return self.delete(f"/cloud/project/{service_name}/region/{region}/loadbalancing/loadbalancer/{lb_id}")
+
+    # Hosted Private Cloud
+
+    def dedicated_clouds(self) -> List[str]:
+        return self.get("/dedicatedCloud") or []
+
+    def dedicated_cloud(self, name: str) -> Dict[str, Any]:
+        return self.get(f"/dedicatedCloud/{name}")
+
+    def dedicated_cloud_datacenters(self, name: str) -> List[str]:
+        return self.get(f"/dedicatedCloud/{name}/datacenter") or []
+
+    def dedicated_cloud_datacenter(self, name: str, dc_id: int) -> Dict[str, Any]:
+        return self.get(f"/dedicatedCloud/{name}/datacenter/{dc_id}")
+
+    def dedicated_cloud_hosts(self, name: str) -> List[str]:
+        return self.get(f"/dedicatedCloud/{name}/host") or []
 
 
 # ---------- Helpers ----------

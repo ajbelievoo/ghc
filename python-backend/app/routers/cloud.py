@@ -525,6 +525,219 @@ def get_usage(db: Session = Depends(get_db), user: User = Depends(get_current_us
         raise HTTPException(500, msg)
 
 
+# ---------- managed databases ----------
+
+@router.get("/database-capabilities")
+def database_capabilities(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        return get_ovh_client_from_db(db).cloud_database_capabilities(proj.upstream_project_id)
+    except CloudError as e:
+        raise _err(e)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/databases")
+def list_databases(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """All managed databases across engines, tagged with the engine name."""
+    try:
+        proj = ensure_active_project(db, user)
+        ovh = get_ovh_client_from_db(db)
+        caps = ovh.cloud_database_capabilities(proj.upstream_project_id) or {}
+        out: List[Dict[str, Any]] = []
+        for eng in (caps.get("engines") or []):
+            name = eng.get("name")
+            if not name:
+                continue
+            try:
+                for d in (ovh.cloud_databases(proj.upstream_project_id, name) or []):
+                    d["engine"] = name
+                    out.append(d)
+            except Exception:
+                continue
+        return out
+    except CloudError as e:
+        raise _err(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+class DatabaseCreate(BaseModel):
+    engine: str
+    version: str
+    plan: str
+    flavor: str
+    region: str
+    nodes: int = 1
+    description: Optional[str] = None
+
+
+@router.post("/databases")
+def create_database(payload: DatabaseCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        if payload.nodes < 1 or payload.nodes > 8:
+            raise HTTPException(400, "nodes must be between 1 and 8")
+        body: Dict[str, Any] = {
+            "plan": payload.plan,
+            "version": payload.version,
+            "nodesPattern": {"flavor": payload.flavor, "number": payload.nodes, "region": payload.region.upper()},
+        }
+        if payload.description:
+            body["description"] = payload.description
+        return get_ovh_client_from_db(db).cloud_create_database(proj.upstream_project_id, payload.engine, body)
+    except CloudError as e:
+        raise _err(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/databases/{engine}/{db_id}")
+def database_detail(engine: str, db_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        d = get_ovh_client_from_db(db).cloud_database_detail(proj.upstream_project_id, engine, db_id)
+        d["engine"] = engine
+        return d
+    except CloudError as e:
+        raise _err(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.delete("/databases/{engine}/{db_id}")
+def delete_database(engine: str, db_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        get_ovh_client_from_db(db).cloud_delete_database(proj.upstream_project_id, engine, db_id)
+        return {"ok": True}
+    except CloudError as e:
+        raise _err(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ---------- load balancer (Octavia) ----------
+
+@router.get("/loadbalancers")
+def list_loadbalancers(region: Optional[str] = None, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Octavia load balancers across activated regions (or one region if given)."""
+    try:
+        proj = ensure_active_project(db, user)
+        ovh = get_ovh_client_from_db(db)
+        regions = [region.upper()] if region else (ovh.cloud_regions(proj.upstream_project_id) or [])
+        out: List[Dict[str, Any]] = []
+        for r in regions:
+            try:
+                for lb in (ovh.cloud_loadbalancers(proj.upstream_project_id, r) or []):
+                    lb["region"] = r
+                    out.append(lb)
+            except Exception:
+                continue  # region not activated or LB not supported there
+        return out
+    except CloudError as e:
+        raise _err(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+class LoadBalancerCreate(BaseModel):
+    region: str
+    name: str
+
+
+@router.post("/loadbalancers")
+def create_loadbalancer(payload: LoadBalancerCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        return get_ovh_client_from_db(db).cloud_create_loadbalancer(
+            proj.upstream_project_id, payload.region.upper(), payload.name.strip())
+    except CloudError as e:
+        raise _err(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.delete("/loadbalancers/{region}/{lb_id}")
+def delete_loadbalancer(region: str, lb_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        proj = ensure_active_project(db, user)
+        get_ovh_client_from_db(db).cloud_delete_loadbalancer(proj.upstream_project_id, region.upper(), lb_id)
+        return {"ok": True}
+    except CloudError as e:
+        raise _err(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ---------- hosted private cloud ----------
+
+@router.get("/private-cloud")
+def list_private_cloud(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Hosted Private Cloud services on the upstream account (read-only mirror)."""
+    try:
+        ovh = get_ovh_client_from_db(db)
+        out: List[Dict[str, Any]] = []
+        for name in (ovh.dedicated_clouds() or []):
+            try:
+                info = ovh.dedicated_cloud(name) or {}
+                dcs = ovh.dedicated_cloud_datacenters(name) or []
+                hosts = ovh.dedicated_cloud_hosts(name) or []
+                out.append({
+                    "serviceName": name,
+                    "description": info.get("description") or name,
+                    "location": info.get("location"),
+                    "commercialRange": info.get("commercialRangeName") or info.get("commercialRange"),
+                    "version": info.get("version"),
+                    "datacenters": len(dcs),
+                    "hosts": len(hosts),
+                    "vcenterUrl": f"https://{name}/" if name.startswith("pcc-") else None,
+                })
+            except Exception:
+                out.append({"serviceName": name, "description": name})
+        return out
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/private-cloud/{name}")
+def private_cloud_detail(name: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        ovh = get_ovh_client_from_db(db)
+        info = ovh.dedicated_cloud(name)
+        dcs = []
+        for dc_id in (ovh.dedicated_cloud_datacenters(name) or []):
+            try:
+                dcs.append(ovh.dedicated_cloud_datacenter(name, dc_id))
+            except Exception:
+                dcs.append({"id": dc_id})
+        info["datacenterDetails"] = dcs
+        info["hosts"] = ovh.dedicated_cloud_hosts(name) or []
+        info["vcenterUrl"] = f"https://{name}/" if name.startswith("pcc-") else None
+        return info
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 # ---------- unified services ----------
 
 @router.get("/services")
