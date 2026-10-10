@@ -78,7 +78,34 @@ def gateway_ready(cfg: Dict[str, Any]) -> bool:
         return False
     key_id = cfg.get("keyId") or cfg.get("client_id") or cfg.get("merchant_key")
     key_secret = cfg.get("keySecret") or cfg.get("secret_key") or cfg.get("secret") or cfg.get("merchant_salt")
-    return not _is_placeholder(key_id) and not _is_placeholder(key_secret)
+    if _is_placeholder(key_id) or _is_placeholder(key_secret):
+        return False
+    kid = str(key_id)
+    if kid.startswith(("rzp_test_", "TEST", "test_")) or str(key_secret).startswith(("cfsk_test_", "sk_test_")):
+        return False
+    return True
+
+
+def gateway_issues(cfg: Dict[str, Any]) -> list:
+    """Human-readable reasons a gateway is/isn't production-ready."""
+    issues = []
+    if not cfg.get("isActive"):
+        return ["disabled"]
+    if cfg.get("manual") or cfg.get("wallet"):
+        return issues
+    env = str(cfg.get("env") or cfg.get("mode") or "production").lower()
+    key_id = str(cfg.get("keyId") or cfg.get("client_id") or cfg.get("merchant_key") or "")
+    if key_id.startswith("rzp_test_") and env == "production":
+        issues.append("TEST keys (rzp_test_*) while marked production — real payments will fail")
+    elif env in ("sandbox", "test"):
+        issues.append(f"gateway in {env} mode")
+    if _is_placeholder(cfg.get("keyId") or cfg.get("client_id") or cfg.get("merchant_key")):
+        issues.append("missing keyId")
+    if _is_placeholder(cfg.get("keySecret") or cfg.get("secret_key") or cfg.get("secret") or cfg.get("merchant_salt")):
+        issues.append("missing keySecret")
+    if not cfg.get("webhookSecret"):
+        issues.append("no webhookSecret (webhook path disabled)")
+    return issues
 
 
 # ---------- Payment session / fulfillment ----------
