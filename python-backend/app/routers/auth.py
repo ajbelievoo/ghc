@@ -1,11 +1,12 @@
 import base64
+from typing import Optional
 import io
 import logging
 
 import pyotp
 import requests
 import segno
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -20,7 +21,7 @@ from app.core.security import (
     rate_limit,
     verify_password,
 )
-from app.models.models import User, UserRole
+from app.models.models import LoginEvent, User, UserRole
 from app.schemas.auth import (
     ChangePassword,
     ForgotPassword,
@@ -160,11 +161,26 @@ def register(payload: UserCreate, response: Response, db: Session = Depends(get_
     return {**_issue_token(user, response), "verificationSent": email_sent}
 
 
+def _record_login(db: Session, user: Optional[User], method: str, request: Optional[Request], success: bool = True):
+    try:
+        db.add(LoginEvent(
+            user_id=user.id if user else None,
+            method=method,
+            ip_address=(request.client.host if request and request.client else None),
+            user_agent=(request.headers.get("user-agent") or "")[:400] if request else None,
+            success=success,
+        ))
+        db.commit()
+    except Exception:
+        logger.debug("login event write failed", exc_info=True)
+
+
 @router.post("/login", dependencies=[Depends(rate_limit(15, 60, "login"))])
-def login(payload: UserLogin, response: Response, db: Session = Depends(get_db)):
+def login(payload: UserLogin, response: Response, request: Request = None, db: Session = Depends(get_db)):
     _require_captcha(payload)
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
+        _record_login(db, user, "password", request, success=False)
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if user.is_suspended:
         raise HTTPException(status_code=403, detail="Account suspended")
@@ -173,11 +189,12 @@ def login(payload: UserLogin, response: Response, db: Session = Depends(get_db))
     if user.totp_enabled:
         return _start_2fa(user)
 
+    _record_login(db, user, "password", request)
     return _issue_token(user, response)
 
 
 @router.post("/login/2fa", dependencies=[Depends(rate_limit(15, 60, "login"))])
-def login_2fa(payload: Login2FA, response: Response, db: Session = Depends(get_db)):
+def login_2fa(payload: Login2FA, response: Response, request: Request = None, db: Session = Depends(get_db)):
     user_id = decode_purpose_token(payload.tempToken, "2fa")
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
     if not user or not user.totp_enabled or not user.totp_secret:
@@ -186,11 +203,12 @@ def login_2fa(payload: Login2FA, response: Response, db: Session = Depends(get_d
         raise HTTPException(status_code=401, detail="Invalid 2FA code")
     if user.is_suspended:
         raise HTTPException(status_code=403, detail="Account suspended")
+    _record_login(db, user, "2fa", request)
     return _issue_token(user, response)
 
 
 @router.post("/google", dependencies=[Depends(rate_limit(15, 60, "login"))])
-def google_login(payload: GoogleLogin, response: Response, db: Session = Depends(get_db)):
+def google_login(payload: GoogleLogin, response: Response, request: Request = None, db: Session = Depends(get_db)):
     client_id = _get_google_client_id(db)
     if not _google_enabled(db) or not client_id:
         raise HTTPException(status_code=400, detail="Google sign-in is not enabled")
@@ -232,6 +250,7 @@ def google_login(payload: GoogleLogin, response: Response, db: Session = Depends
         raise HTTPException(status_code=403, detail="Account suspended")
     if user.totp_enabled:
         return _start_2fa(user)
+    _record_login(db, user, "google", request)
     return _issue_token(user, response)
 
 

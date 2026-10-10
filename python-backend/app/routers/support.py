@@ -68,6 +68,7 @@ def _ticket_json(t: SupportTicket, with_replies: bool = False) -> dict:
         "name": t.name,
         "email": t.email,
         "category": t.category,
+        "priority": t.priority or "medium",
         "subject": t.subject,
         "status": t.status.value,
         "createdAt": t.created_at.isoformat(),
@@ -84,17 +85,22 @@ def create_ticket(
     email: EmailStr = Form(...),
     category: str = Form(...),
     subject: str = Form(...),
+    priority: str = Form(default="medium"),
     message: str = Form(...),
     files: List[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(get_optional_user),
 ):
+    prio = (priority or "medium").strip().lower()
+    if prio not in ("low", "medium", "high", "urgent"):
+        prio = "medium"
     ticket = SupportTicket(
         user_id=user.id if user else None,
         name=name,
         email=email,
         category=category,
         subject=subject,
+        priority=prio,
     )
     db.add(ticket)
     db.flush()
@@ -190,6 +196,21 @@ def add_ticket_reply(
         if ticket_user:
             create_notification(db, ticket_user, "New ticket reply", f"#{ticket.id[:8]}: {ticket.subject}", "info", "/dashboard?tab=support")
     return {"success": True, "reply": _reply_json(reply)}
+
+
+@router.post("/tickets/{ticket_id}/priority")
+def update_ticket_priority(ticket_id: str, priority: str = Form(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    prio = (priority or "").strip().lower()
+    if prio not in ("low", "medium", "high", "urgent"):
+        raise HTTPException(status_code=400, detail="Invalid priority")
+    if user.role != UserRole.ADMIN and ticket.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not allowed")
+    ticket.priority = prio
+    db.commit()
+    return {"success": True, "priority": ticket.priority}
 
 
 @router.get("/attachments/{attachment_id}")

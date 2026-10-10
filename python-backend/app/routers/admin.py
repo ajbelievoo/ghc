@@ -536,6 +536,26 @@ def system_logs(limit: int = 100, db: Session = Depends(get_db), admin: User = D
     } for l in logs]
 
 
+@router.get("/email-logs")
+def email_logs(to: str = None, status: str = None, limit: int = 100, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Outbound transactional email log — sent/failed/skipped."""
+    from app.models.models import EmailLog
+    q = db.query(EmailLog)
+    if to:
+        q = q.filter(EmailLog.to_email.ilike(f"%{to}%"))
+    if status:
+        q = q.filter(EmailLog.status == status)
+    logs = q.order_by(EmailLog.created_at.desc()).limit(min(limit, 500)).all()
+    return [{
+        "id": l.id,
+        "to": l.to_email,
+        "subject": l.subject,
+        "status": l.status,
+        "error": l.error,
+        "created_at": l.created_at.isoformat(),
+    } for l in logs]
+
+
 @router.get("/domains")
 def admin_list_customer_domains(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import DomainRegistration

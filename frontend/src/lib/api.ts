@@ -61,6 +61,7 @@ export const api = {
     updateNotifications: (body: object) => request("/user/notifications", { method: "PUT", body: JSON.stringify(body) }),
     notificationsList: () => request("/user/notifications-list"),
     paymentPreferences: () => request("/user/payment-preferences"),
+    loginHistory: () => request("/user/login-history"),
     updatePaymentPreferences: (body: { walletAutopay?: boolean; preferredGateway?: string | null }) =>
       request("/user/payment-preferences", { method: "PUT", body: JSON.stringify(body) }),
     markNotificationRead: (id: string) => request(`/user/notifications/${id}/read`, { method: "POST" }),
@@ -105,6 +106,8 @@ export const api = {
       request("/admin/settings", { method: "POST", body: JSON.stringify(body) }),
     updateGateway: (body: { name: string; isActive: boolean; config?: object }) =>
       request("/admin/gateways", { method: "POST", body: JSON.stringify(body) }),
+    emailLogs: (params?: { to?: string; status?: string; limit?: number }) =>
+      request(`/admin/email-logs?${new URLSearchParams(params as any).toString()}`),
     logs: (params?: { type?: string; limit?: number }) =>
       request(`/admin/logs?${new URLSearchParams(params as any).toString()}`),
     overrideServer: (serverId: string, action: string) =>

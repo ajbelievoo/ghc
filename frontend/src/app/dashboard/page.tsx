@@ -10,6 +10,7 @@ import ServerDetailCards from "@/components/ServerDetailCards";
 import DomainDnsPanel from "@/components/DomainDnsPanel";
 import SshKeysCard from "@/components/SshKeysCard";
 import OrderProgress from "@/components/OrderProgress";
+import LoginHistoryCard from "@/components/LoginHistoryCard";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import DashboardHeader from "@/components/DashboardHeader";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -154,6 +155,7 @@ export default function DashboardPage() {
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketSubject, setTicketSubject] = useState("");
   const [ticketCategory, setTicketCategory] = useState("GENERAL");
+  const [ticketPriority, setTicketPriority] = useState("medium");
   const [ticketMessage, setTicketMessage] = useState("");
   const [ticketSending, setTicketSending] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
@@ -573,6 +575,7 @@ export default function DashboardPage() {
       form.append("name", user?.name || user?.email || "Customer");
       form.append("email", user?.email || "");
       form.append("category", ticketCategory);
+      form.append("priority", ticketPriority);
       form.append("subject", ticketSubject.trim());
       form.append("message", ticketMessage.trim());
       if (ticketFiles) for (let i = 0; i < Math.min(ticketFiles.length, 3); i++) form.append("files", ticketFiles[i]);
@@ -581,6 +584,7 @@ export default function DashboardPage() {
       setTicketSubject("");
       setTicketMessage("");
       setTicketCategory("GENERAL");
+      setTicketPriority("medium");
       setTicketFiles(null);
       fetchTickets();
     } catch (e: any) { showToast("Ticket failed: " + e.message, "error"); }
@@ -1928,6 +1932,19 @@ export default function DashboardPage() {
                     ))}
                   </select>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Priority</span>
+                  {["low", "medium", "high", "urgent"].map((p) => (
+                    <button
+                      type="button"
+                      key={p}
+                      onClick={() => setTicketPriority(p)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium border transition-all ${ticketPriority === p ? (p === "urgent" ? "bg-red-500/10 border-red-400/40 text-red-500" : p === "high" ? "bg-amber-500/10 border-amber-400/40 text-amber-600" : "bg-[#00b7ff]/10 border-[#00b7ff]/40 text-[#00b7ff]") : "bg-slate-100 border-slate-200 text-slate-500 hover:text-[#0f172a]"}`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   value={ticketMessage}
                   onChange={(e) => setTicketMessage(e.target.value)}
@@ -1971,7 +1988,12 @@ export default function DashboardPage() {
                       <div className="flex items-center justify-between gap-4">
                         <div>
                           <p className="text-sm font-medium text-[#0f172a]">{t.subject}</p>
-                          <p className="text-xs text-slate-500">{t.category} · #{t.id.slice(0, 8)}</p>
+                          <p className="text-xs text-slate-500">
+                            {t.category} · #{t.id.slice(0, 8)}
+                            {t.priority && t.priority !== "medium" && (
+                              <span className={`ml-2 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${t.priority === "urgent" ? "bg-red-500/10 text-red-500" : t.priority === "high" ? "bg-amber-500/10 text-amber-600" : "bg-slate-200/60 text-slate-500"}`}>{t.priority}</span>
+                            )}
+                          </p>
                         </div>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${t.status === 'OPEN' ? 'bg-[#00ff88]/10 text-[#00ff88]' : t.status === 'IN_PROGRESS' ? 'bg-yellow-500/10 text-yellow-700' : 'bg-slate-100/50 text-slate-500'}`}>
                           {t.status}
@@ -2082,6 +2104,9 @@ export default function DashboardPage() {
 
             {/* SSH Keys */}
             <SshKeysCard />
+
+            {/* Recent sign-ins */}
+            <LoginHistoryCard />
 
             {/* Team Invitations Sent */}
             <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">

@@ -433,6 +433,7 @@ class SupportTicket(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False, index=True)
     category = Column(String(100), nullable=False)
+    priority = Column(String(20), default="medium", nullable=False)
     subject = Column(String(255), nullable=False)
     status = Column(Enum(TicketStatus), default=TicketStatus.OPEN, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -481,6 +482,29 @@ class TeamInvite(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     inviter = relationship("User")
+
+
+class LoginEvent(Base):
+    __tablename__ = "login_events"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    method = Column(String(20), nullable=False)  # password | 2fa | google
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(String(400), nullable=True)
+    success = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class EmailLog(Base):
+    __tablename__ = "email_logs"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    to_email = Column(String(255), nullable=False, index=True)
+    subject = Column(String(500), nullable=False)
+    status = Column(String(20), nullable=False)  # sent | failed | skipped
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
 class ServerPingMetric(Base):

@@ -82,6 +82,10 @@ def ensure_schema():
         if "suspension_reason" not in sub_cols:
             conn.execute(text("ALTER TABLE subscriptions ADD COLUMN suspension_reason VARCHAR(255)"))
             logger.info("Added subscriptions.suspension_reason column")
+        ticket_cols = {r[1] for r in conn.execute(text("PRAGMA table_info(support_tickets)"))}
+        if "priority" not in ticket_cols:
+            conn.execute(text("ALTER TABLE support_tickets ADD COLUMN priority VARCHAR(20) DEFAULT 'medium'"))
+            logger.info("Added support_tickets.priority column")
         conn.commit()
 
 

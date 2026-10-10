@@ -181,11 +181,21 @@ def render_email(
 </html>"""
 
 
+def _log_email(db: Session, to: str, subject: str, status: str, error: Optional[str] = None):
+    try:
+        from app.models.models import EmailLog
+        db.add(EmailLog(to_email=to, subject=subject[:500], status=status, error=(error or None) and str(error)[:2000]))
+        db.commit()
+    except Exception:
+        logger.debug("EmailLog write failed", exc_info=True)
+
+
 def send_email(db: Session, to: str, subject: str, html_body: str, text_body: Optional[str] = None, headers: Optional[dict] = None, attachments: Optional[List[tuple]] = None) -> bool:
     """Send a transactional email. Returns False (and logs) if SMTP is not configured or fails."""
     cfg = get_smtp_config(db)
     if not cfg:
         logger.warning(f"SMTP not configured; cannot send email to {to}: {subject}")
+        _log_email(db, to, subject, "skipped", "SMTP not configured")
         return False
 
     msg = MIMEMultipart("alternative")
@@ -241,9 +251,11 @@ def send_email(db: Session, to: str, subject: str, html_body: str, text_body: Op
                     server.login(cfg["user"], cfg["password"])
                 server.sendmail(envelope_from, [to], msg.as_string())
         logger.info(f"Email sent to {to}: {subject}")
+        _log_email(db, to, subject, "sent")
         return True
     except Exception as e:
         logger.exception(f"Failed to send email to {to}: {e}")
+        _log_email(db, to, subject, "failed", str(e))
         return False
 
 

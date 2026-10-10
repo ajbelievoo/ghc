@@ -112,7 +112,16 @@ export default function AdminPage() {
     try {
       if (t === "overview") { const s = await api.admin.stats(); setStats(s); const subs = await api.admin.getSubscriptions(); setSubscriptions(subs); }
       if (t === "settings") { const cfg = await api.admin.settings(); setSettings(cfg.settings || []); setGateways(cfg.gateways || []); }
-      if (t === "logs") { const params: any = {}; if (logFilter !== "ALL") params.type = logFilter; const lg = await api.admin.logs(params); setLogs(lg || []); }
+      if (t === "logs") {
+        if (logFilter === "EMAIL") {
+          const el = await api.admin.emailLogs({ limit: 200 }).catch(() => []);
+          setLogs((el || []).map((l: any) => ({ id: l.id, type: "EMAIL", message: `${l.status.toUpperCase()} → ${l.to} — ${l.subject}${l.error ? ` (${l.error.slice(0, 120)})` : ""}`, createdAt: l.created_at })));
+        } else {
+          const params: any = {}; if (logFilter !== "ALL") params.type = logFilter;
+          const lg = await api.admin.logs(params);
+          setLogs((lg || []).map((l: any) => ({ ...l, createdAt: l.createdAt || l.created_at })));
+        }
+      }
       if (t === "users") { const u = await api.admin.getUsers({ search: userSearch || undefined, page: usersPage, limit: 20 }); setUsers(u.users || []); setUsersTotal(u.total || 0); }
       if (t === "credentials") { const c = await api.admin.getCredentials(); setProvider({ provider_app_key: c.credentials.provider_app_key || "", provider_app_secret: c.credentials.provider_app_secret || "", provider_consumer_key: c.credentials.provider_consumer_key || "", provider_endpoint: c.credentials.provider_endpoint || "", provider_subsidiary: c.credentials.provider_subsidiary || "" }); setGoogleCreds({ google_client_id: c.credentials.google_client_id || "", google_client_secret: c.credentials.google_client_secret || "" }); setSmtp({ smtp_host: c.credentials.smtp_host || "", smtp_port: c.credentials.smtp_port || "", smtp_user: c.credentials.smtp_user || "", smtp_pass: c.credentials.smtp_pass || "" }); const gws: Record<string, any> = {}; (c.gateways || []).forEach((g: any) => { gws[g.name] = { ...(g.config || {}), isActive: g.isActive }; }); setGwInputs(gws); }
       if (t === "brand") { const b = await api.admin.getBrand(); setBrand(b); }
@@ -1210,7 +1219,7 @@ export default function AdminPage() {
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <select value={logFilter} onChange={(e) => setLogFilter(e.target.value)} className="rounded-lg bg-slate-100 border border-slate-200 pl-9 pr-4 py-2 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none">
-                  <option value="ALL">All Types</option><option value="INFO">Info</option><option value="ERROR">Error</option><option value="WARNING">Warning</option><option value="PAYMENT_WEBHOOK">Payment</option><option value="PROVIDER_API">Provider API</option><option value="CRON">Cron</option>
+                  <option value="ALL">All Types</option><option value="INFO">Info</option><option value="ERROR">Error</option><option value="WARNING">Warning</option><option value="PAYMENT_WEBHOOK">Payment</option><option value="PROVIDER_API">Provider API</option><option value="CRON">Cron</option><option value="EMAIL">Email sent</option>
                 </select>
               </div>
             </div>

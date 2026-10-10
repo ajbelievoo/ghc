@@ -760,6 +760,30 @@ def user_activity(limit: int = 10, db: Session = Depends(get_db), user: User = D
     return activities[:limit]
 
 
+@router.get("/user/login-history")
+def user_login_history(limit: int = 20, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Recent sign-in events for the security tab."""
+    from app.models.models import LoginEvent
+    events = (
+        db.query(LoginEvent)
+        .filter(LoginEvent.user_id == user.id)
+        .order_by(LoginEvent.created_at.desc())
+        .limit(min(limit, 50))
+        .all()
+    )
+    return [
+        {
+            "id": e.id,
+            "method": e.method,
+            "ipAddress": e.ip_address,
+            "userAgent": e.user_agent,
+            "success": e.success,
+            "createdAt": e.created_at.isoformat() if e.created_at else None,
+        }
+        for e in events
+    ]
+
+
 @router.get("/public/announcements")
 def public_announcements(db: Session = Depends(get_db)):
     row = db.query(AdminConfig).filter(AdminConfig.key == "public_announcements").first()
