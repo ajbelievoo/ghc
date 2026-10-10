@@ -756,3 +756,83 @@ def admin_subscription_reverse_dns(subscription_id: str, body: dict, db: Session
         return update_reverse_dns(ovh, ip, reverse)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/ovh-account-health")
+def admin_ovh_account_health(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Read-only upstream account diagnostics — why ordering might be blocked.
+
+    Surfaces: KYC state, registered payment means + expiry, agreements,
+    ordering validation flags. Never mutates anything upstream.
+    """
+    from app.services.ovh_client import get_ovh_client_from_db
+    try:
+        ovh = get_ovh_client_from_db(db)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH client unavailable: {e}")
+    out = {"ok": True, "issues": []}
+    try:
+        me = ovh.get("/me")
+        out["nichandle"] = me.get("nichandle")
+        out["email"] = me.get("email")
+        out["state"] = me.get("state")
+        out["kycValidated"] = me.get("kycValidated")
+        out["country"] = me.get("country")
+        out["currency"] = (me.get("currency") or {}).get("code")
+        if not me.get("kycValidated"):
+            out["issues"].append("KYC not validated — ordering may be blocked")
+    except Exception as e:
+        out["accountError"] = str(e)
+        out["issues"].append("Could not read account info")
+
+    means = []
+    for cid in (ovh.get("/me/paymentMean/creditCard") or []):
+        try:
+            c = ovh.get(f"/me/paymentMean/creditCard/{cid}")
+            means.append({
+                "id": cid, "type": "creditCard", "default": c.get("defaultPaymentMean"),
+                "expiration": c.get("expirationDate"), "state": c.get("state"),
+                "lastDigits": c.get("number") or c.get("description"),
+            })
+        except Exception:
+            means.append({"id": cid, "type": "creditCard", "error": "unreadable"})
+    out["paymentMeans"] = means
+    if not means:
+        out["issues"].append("No credit card registered")
+    elif not any(m.get("default") for m in means):
+        out["issues"].append("No default payment method set")
+    from datetime import date
+    today = date.today().isoformat()
+    for m in means:
+        exp = m.get("expiration")
+        if exp and exp <= today:
+            out["issues"].append(f"Card {m['id']} expired/expiring ({exp}) — likely blocks checkout")
+
+    try:
+        methods = ovh.get("/me/payment/method") or []
+        default_method = None
+        for mid in methods:
+            try:
+                md = ovh.get(f"/me/payment/method/{mid}")
+                if md.get("default"):
+                    default_method = {"id": mid, "created": md.get("creationDate")}
+            except Exception:
+                pass
+        out["defaultPaymentMethod"] = default_method
+        if not default_method:
+            out["issues"].append("No default payment method (new API)")
+    except Exception:
+        pass
+
+    try:
+        pending = [a for a in (ovh.get("/me/agreements") or [])
+                   if (ovh.get(f"/me/agreements/{a}") or {}).get("agreed") != "ok"]
+        out["agreementsPending"] = len(pending)
+        if pending:
+            out["issues"].append(f"{len(pending)} unsigned contract(s)")
+    except Exception:
+        out["agreementsPending"] = "unknown"
+
+    out["orderingLikelyBlocked"] = any("expired" in i.lower() or "no default" in i.lower()
+                                       or "kyc" in i.lower() for i in out["issues"])
+    return out
+

@@ -1104,7 +1104,11 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         _update_order_status(db, order, OrderStatus.PROVISIONING_FAILED, str(e))
         log_ovh_step(db, order.id, "CHECKOUT_FAILED", "", {}, {}, is_success=False, error_message=str(e))
         try:
-            send_admin_fulfillment_email(db, order, f"OVH checkout/provisioning error: {e}")
+            reason = f"OVH checkout/provisioning error: {e}"
+            if "not allowed" in str(e).lower():
+                reason += (" — account-level block: check the default OVH payment method is valid "
+                           "(card expiry) at /api/admin/ovh-account-health, or order manually via manager")
+            send_admin_fulfillment_email(db, order, reason)
         except Exception:
             logger.exception("Admin fulfillment email failed")
         raise
