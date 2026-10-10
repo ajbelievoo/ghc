@@ -183,6 +183,37 @@ def run_maintenance():
                     except Exception:
                         pass
 
+        # Price alerts — notify when a plan's lowest monthly price hits the target
+        try:
+            from app.models.models import PlanCatalog, PriceAlert
+            from app.services.notification_service import create_notification
+            active_alerts = db.query(PriceAlert).filter(PriceAlert.active == True).all()  # noqa: E712
+            for alert in active_alerts:
+                plan = db.query(PlanCatalog).filter(PlanCatalog.plan_code == alert.plan_code).first()
+                if not plan:
+                    continue
+                best = None
+                for d in plan.durations:
+                    months = (d.interval or 1) * {"month": 1, "year": 12}.get(d.interval_unit or "month", 1)
+                    m = (d.final_price or 0) / max(months, 1)
+                    best = m if best is None or m < best else best
+                if best is None or best > alert.target_price:
+                    continue
+                alert.active = False
+                alert.triggered_at = now
+                try:
+                    if alert.user:
+                        create_notification(
+                            db, alert.user, "Price alert — plan within your target",
+                            f"{plan.invoice_name} is now ~{alert.currency} {best:.2f}/mo — at or below your target of {alert.target_price:.2f}.",
+                            "success", f"/configure?plan={plan.plan_code}")
+                except Exception:
+                    pass
+                _log(db, LogType.CRON, f"Price alert triggered for user {alert.user_id} on {plan.plan_code}")
+            db.commit()
+        except Exception as e:
+            _log(db, LogType.ERROR, f"Price alert check failed: {e}")
+
         # Overdue invoice reminders — one email per unpaid invoice past due date
         overdue_invoices = db.query(Invoice).filter(
             Invoice.status == InvoiceStatus.UNPAID,

@@ -82,6 +82,10 @@ export const api = {
     loginHistory: () => request("/user/login-history"),
     updatePaymentPreferences: (body: { walletAutopay?: boolean; preferredGateway?: string | null }) =>
       request("/user/payment-preferences", { method: "PUT", body: JSON.stringify(body) }),
+    priceAlerts: () => request("/price-alerts"),
+    createPriceAlert: (body: { planCode: string; targetPrice: number; currency?: string }) =>
+      request("/price-alerts", { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
+    deletePriceAlert: (id: string) => request(`/price-alerts/${id}`, { method: "DELETE" }),
     markNotificationRead: (id: string) => request(`/user/notifications/${id}/read`, { method: "POST" }),
     forgotPassword: (body: { email: string; captchaId?: string; captchaAnswer?: string }) =>
       request("/auth/forgot-password", { method: "POST", body: JSON.stringify(body) }),
@@ -249,8 +253,8 @@ export const api = {
     details: (id: string) => request(`/server/${id}`),
     power: (id: string, action: string) =>
       request(`/server/${id}/power`, { method: "POST", body: JSON.stringify({ action }) }),
-    reinstall: (id: string, osTemplate: string, sshKeyName?: string) =>
-      request(`/server/${id}/reinstall`, { method: "POST", body: JSON.stringify({ osTemplate, sshKeyName: sshKeyName || undefined }) }),
+    reinstall: (id: string, osTemplate: string, sshKeyName?: string, extra?: { hostname?: string; userData?: string }) =>
+      request(`/server/${id}/reinstall`, { method: "POST", body: JSON.stringify({ osTemplate, sshKeyName: sshKeyName || undefined, hostname: extra?.hostname, userData: extra?.userData }) }),
     metrics: (id: string) => request(`/server/${id}/metrics`),
     metricsHistory: (id: string, range: string = "24h") => request(`/server/${id}/metrics/history?range=${range}`),
     uptime: (id: string) => request(`/server/${id}/uptime`),
@@ -312,8 +316,13 @@ export const api = {
     vpsBackups: (id: string) => request(`/server/${id}/vps/backups`),
     vpsSnapshot: (id: string, body: { action: "create" | "delete"; description?: string }) =>
       request(`/server/${id}/vps/snapshot`, { method: "POST", body: JSON.stringify(body) }),
+    vpsSnapshotInfo: (id: string) => request(`/server/${id}/vps/snapshot-info`),
+    vpsBackup: (id: string) => request(`/server/${id}/vps/backup`),
+    vpsBackupConfigure: (id: string, body: { backupFrequency?: string; backupHour?: number }) =>
+      request(`/server/${id}/vps/backup`, { method: "PUT", body: JSON.stringify(body) }),
     vpsBackupRestore: (id: string, restorePointId: string) =>
       request(`/server/${id}/vps/backup/restore`, { method: "POST", body: JSON.stringify({ restorePointId }) }),
+    upgradeOptions: (id: string) => request(`/server/${id}/upgrade-options`),
     vpsSecondaryDns: (id: string) => request(`/server/${id}/vps/secondary-dns`),
     vpsSecondaryDnsAction: (id: string, body: { action: "add" | "delete"; domain: string }) =>
       request(`/server/${id}/vps/secondary-dns`, { method: "POST", body: JSON.stringify(body) }),

@@ -559,6 +559,24 @@ class UserNotification(Base):
     user = relationship("User")
 
 
+class PriceAlert(Base):
+    """User-created alert: notify when a plan's monthly price drops to/below a target."""
+
+    __tablename__ = "price_alerts"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    plan_code = Column(String(255), nullable=False)
+    plan_name = Column(String(255), nullable=True)
+    target_price = Column(Float, nullable=False)
+    currency = Column(String(10), default="USD", nullable=False)
+    active = Column(Boolean, default=True, nullable=False, index=True)
+    triggered_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+
+
 class ScalingMetric(str, PyEnum):
     CPU = "cpu"
     RAM = "ram"

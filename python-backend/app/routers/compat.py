@@ -26,6 +26,7 @@ from app.models.models import (
     PaymentTransaction,
     PlanCatalog,
     MetricSample,
+    PriceAlert,
     ServerPingMetric,
     ServiceAlertRule,
     ServiceCategory,
@@ -1042,9 +1043,16 @@ def server_reinstall(server_id: str, body: dict, db: Session = Depends(get_db), 
         raise HTTPException(status_code=404, detail="Server not found")
     os_template = body.get("osTemplate")
     ssh_key_name = (body.get("sshKeyName") or "").strip() or None
+    hostname = (body.get("hostname") or "").strip() or None
+    user_data = (body.get("userData") or "").strip() or None
+    if hostname and len(hostname) > 253:
+        raise HTTPException(status_code=400, detail="hostname too long")
+    if user_data and len(user_data) > 65535:
+        raise HTTPException(status_code=400, detail="userData too long (max 64KB)")
     try:
         ovh = get_ovh_client_from_db(db)
-        return reinstall_os(db, ovh, sub, os_template, ssh_key_name=ssh_key_name)
+        return reinstall_os(db, ovh, sub, os_template, ssh_key_name=ssh_key_name,
+                            hostname=hostname, user_data=user_data)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2500,6 +2508,109 @@ def vps_option_order(server_id: str, body: dict, db: Session = Depends(get_db), 
         raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
 
 
+@router.get("/server/{server_id}/vps/backup")
+def vps_backup_info(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Automated backup schedule + restore points for a VPS (OVH autoBackup option)."""
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    service_name = sub.service_name or sub.ovh_resource_id
+    try:
+        data = ovh.get(f"/vps/{service_name}/automatedBackup")
+        if isinstance(data, dict):
+            return {"enabled": True, **data}
+        return {"enabled": True, "raw": data}
+    except Exception as e:
+        msg = str(e)
+        if "404" in msg or "NOT_FOUND" in msg.upper() or "not found" in msg.lower():
+            return {"enabled": False, "reason": "Automated backup option is not active on this VPS"}
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.put("/server/{server_id}/vps/backup")
+def vps_backup_configure(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Update automated backup schedule (backupFrequency, backupHour)."""
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    service_name = sub.service_name or sub.ovh_resource_id
+    allowed = {"backupFrequency", "backupHour"}
+    payload = {k: v for k, v in (body or {}).items() if k in allowed and v is not None}
+    if "backupHour" in payload:
+        try:
+            payload["backupHour"] = int(payload["backupHour"])
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="backupHour must be 0-23")
+        if not 0 <= payload["backupHour"] <= 23:
+            raise HTTPException(status_code=400, detail="backupHour must be 0-23")
+    if "backupFrequency" in payload and payload["backupFrequency"] not in ("daily",):
+        raise HTTPException(status_code=400, detail="backupFrequency must be 'daily'")
+    if not payload:
+        raise HTTPException(status_code=400, detail="Provide backupFrequency and/or backupHour")
+    try:
+        result = ovh.put(f"/vps/{service_name}/automatedBackup", **payload)
+        return {"success": True, "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/vps/snapshot-info")
+def vps_snapshot_info(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Current VPS snapshot metadata (description + creation date), if any."""
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    service_name = sub.service_name or sub.ovh_resource_id
+    try:
+        data = ovh.get(f"/vps/{service_name}/snapshot")
+        return {"exists": True, "snapshot": data}
+    except Exception as e:
+        msg = str(e)
+        if "404" in msg or "not found" in msg.lower() or "does not exist" in msg.lower():
+            return {"exists": False, "snapshot": None}
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/upgrade-options")
+def server_upgrade_options(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Higher-tier active plans in the same category — upgrade recommendations."""
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    plans = db.query(PlanCatalog).filter(PlanCatalog.is_active == True, PlanCatalog.category == sub.category).all()  # noqa: E712
+    current = (sub.plan_code or "").lower()
+    cur_cpu = cur_ram = cur_disk = None
+    for p in plans:
+        if p.plan_code.lower() == current:
+            cur_cpu, cur_ram, cur_disk = p.cpu_cores, p.ram_gb, p.disk_gb
+            break
+    def _num(v):
+        return float(v) if isinstance(v, (int, float)) else 0.0
+    def _price(p):
+        best = None
+        for d in p.durations:
+            m = _monthly_price(d.final_price, d.interval, d.interval_unit)
+            best = m if best is None or m < best else best
+        return best
+    options = []
+    for p in plans:
+        if p.plan_code.lower() == current:
+            continue
+        score = (_num(p.cpu_cores) - _num(cur_cpu)) + (_num(p.ram_gb) - _num(cur_ram)) + (_num(p.disk_gb) - _num(cur_disk)) / 40.0
+        if score <= 0:
+            continue
+        m = _price(p)
+        if m is None:
+            continue
+        options.append({
+            "planCode": p.plan_code,
+            "invoiceName": p.invoice_name,
+            "family": p.family,
+            "cpuCores": p.cpu_cores,
+            "ramGb": p.ram_gb,
+            "diskGb": p.disk_gb,
+            "monthlyPrice": round(m, 2),
+            "currency": p.currency,
+        })
+    options.sort(key=lambda x: x["monthlyPrice"])
+    return {"current": {"planCode": sub.plan_code, "cpuCores": cur_cpu, "ramGb": cur_ram, "diskGb": cur_disk},
+            "options": options[:6]}
+
+
 @router.get("/server/{server_id}/vps/ip-countries")
 def vps_ip_countries(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     sub, ovh = _vps_sub_and_client(db, user, server_id)
@@ -2781,6 +2892,51 @@ def update_payment_preferences(body: dict, db: Session = Depends(get_db), user: 
         user.preferred_gateway = gw
     db.commit()
     return {"walletAutopay": bool(user.wallet_autopay), "preferredGateway": user.preferred_gateway}
+
+
+@router.get("/price-alerts")
+def price_alerts_list(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    alerts = db.query(PriceAlert).filter(PriceAlert.user_id == user.id).order_by(PriceAlert.created_at.desc()).all()
+    return [{"id": a.id, "planCode": a.plan_code, "planName": a.plan_name, "targetPrice": a.target_price,
+             "currency": a.currency, "active": a.active,
+             "triggeredAt": a.triggered_at.isoformat() if a.triggered_at else None,
+             "createdAt": a.created_at.isoformat()} for a in alerts]
+
+
+@router.post("/price-alerts")
+def price_alert_create(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    plan_code = (body.get("planCode") or "").strip()
+    try:
+        target_price = float(body.get("targetPrice"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="targetPrice is required")
+    if target_price <= 0 or target_price > 10_000_000:
+        raise HTTPException(status_code=400, detail="targetPrice must be a positive amount")
+    plan = db.query(PlanCatalog).filter(PlanCatalog.plan_code == plan_code, PlanCatalog.is_active == True).first()  # noqa: E712
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    existing = db.query(PriceAlert).filter(PriceAlert.user_id == user.id, PriceAlert.plan_code == plan_code,
+                                         PriceAlert.active == True).count()  # noqa: E712
+    if existing >= 3:
+        raise HTTPException(status_code=400, detail="You already have active alerts for this plan")
+    if db.query(PriceAlert).filter(PriceAlert.user_id == user.id, PriceAlert.active == True).count() >= 25:  # noqa: E712
+        raise HTTPException(status_code=400, detail="Maximum 25 active price alerts")
+    currency = (body.get("currency") or get_settings().currency or "USD").upper()[:10]
+    alert = PriceAlert(user_id=user.id, plan_code=plan.plan_code, plan_name=plan.invoice_name,
+                       target_price=target_price, currency=currency)
+    db.add(alert)
+    db.commit()
+    return {"id": alert.id, "planCode": alert.plan_code, "targetPrice": alert.target_price, "currency": alert.currency}
+
+
+@router.delete("/price-alerts/{alert_id}")
+def price_alert_delete(alert_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    alert = db.query(PriceAlert).filter(PriceAlert.id == alert_id, PriceAlert.user_id == user.id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    db.delete(alert)
+    db.commit()
+    return {"deleted": True}
 
 
 @router.get("/server/{server_id}/ping")

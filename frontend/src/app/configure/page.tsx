@@ -69,6 +69,19 @@ function getDcRegion(code: string): keyof typeof regionLocations {
   return dcMeta[code]?.region || "Europe";
 }
 
+// Typical round-trip latency from Indian networks — helps pick a datacenter.
+const dcLatency: Record<string, { ms: string; good: boolean }> = {
+  "India - Mumbai": { ms: "~10 ms", good: true },
+  "Singapore - Singapore": { ms: "~60 ms", good: true },
+  "Australia - Sydney": { ms: "~120 ms", good: false },
+  "Canada East - Beauharnois": { ms: "~250 ms", good: false },
+};
+function getDcLatency(code: string) {
+  const name = getDcName(code);
+  if (dcLatency[name]) return dcLatency[name];
+  return getDcRegion(code) === "Europe" ? { ms: "~140 ms", good: false } : { ms: "~250 ms", good: false };
+}
+
 const imageFamilies = [
   { name: "Ubuntu", versions: ["26.04", "24.04", "22.04", "20.04"] },
   { name: "Debian", versions: ["13", "12", "11"] },
@@ -150,14 +163,27 @@ function ConfigurePageContent() {
   const [draftBanner, setDraftBanner] = useState<any>(null);
   const draftRef = useRef<any>(null);
 
-  // ---- cart draft persistence (configure → abandon → resume) ----
-  const DRAFT_KEY = "ghc-cart-draft";
-  const readDraft = () => { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch { return null; } };
+  // ---- saved configurations: one draft per plan (configure → abandon → resume) ----
+  const DRAFT_PREFIX = "ghc-cart-draft:";
+  const DRAFT_INDEX = "ghc-cart-drafts";
+  const draftKeyFor = (code: string) => `${DRAFT_PREFIX}${code}`;
+  const readDraftFor = (code: string) => { try { return JSON.parse(localStorage.getItem(draftKeyFor(code)) || "null"); } catch { return null; } };
+  const readDraftIndex = (): string[] => { try { return JSON.parse(localStorage.getItem(DRAFT_INDEX) || "[]"); } catch { return []; } };
+  const writeDraftIndex = (codes: string[]) => { try { localStorage.setItem(DRAFT_INDEX, JSON.stringify(codes)); } catch {} };
+  const freshEnough = (d: any) => d && (!d.savedAt || Date.now() - d.savedAt <= 30 * 864e5);
+
   useEffect(() => {
-    const d = readDraft();
-    if (!d?.planCode) return;
-    if (d.savedAt && Date.now() - d.savedAt > 30 * 864e5) { clearDraft(); return; } // stale draft
-    if (d.planCode === planCode && d.category === category) {
+    // migrate legacy single-slot draft once
+    try {
+      const legacy = JSON.parse(localStorage.getItem("ghc-cart-draft") || "null");
+      if (legacy?.planCode) {
+        localStorage.setItem(draftKeyFor(legacy.planCode), JSON.stringify(legacy));
+        writeDraftIndex(Array.from(new Set([legacy.planCode, ...readDraftIndex()])));
+      }
+      localStorage.removeItem("ghc-cart-draft");
+    } catch {}
+    const d = readDraftFor(planCode);
+    if (d?.planCode && freshEnough(d)) {
       // same plan — restore selections silently
       draftRef.current = d;
       if (d.durationLabel) setDurationLabel(d.durationLabel);
@@ -174,24 +200,36 @@ function ConfigurePageContent() {
       if (d.selectedApp) setSelectedApp(d.selectedApp);
       if (d.couponCode) setCouponCode(d.couponCode);
     } else {
-      setDraftBanner(d); // different plan — offer resume
+      // another plan has a saved config — offer resume (most recent first)
+      const others = readDraftIndex()
+        .map((code) => readDraftFor(code))
+        .filter((x) => x?.planCode && x.planCode !== planCode && freshEnough(x))
+        .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+      if (others[0]) setDraftBanner(others[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // save draft whenever selection changes (after first paint)
   useEffect(() => {
-    if (loading) return;
+    if (loading || !planCode) return;
     const t = setTimeout(() => {
       try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        localStorage.setItem(draftKeyFor(planCode), JSON.stringify({
           planCode, category, subCategory, durationLabel, datacenter, image, imageVersion, imageTab,
           region, gateway, quantity, backup, snapshot, storage, selectedApp, couponCode, savedAt: Date.now(),
         }));
+        const idx = readDraftIndex();
+        if (!idx.includes(planCode)) writeDraftIndex([...idx, planCode]);
       } catch {}
     }, 400);
     return () => clearTimeout(t);
   }, [planCode, category, subCategory, durationLabel, datacenter, image, imageVersion, imageTab, region, gateway, quantity, backup, snapshot, storage, selectedApp, couponCode, loading]);
-  const clearDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch {} };
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(draftKeyFor(planCode));
+      writeDraftIndex(readDraftIndex().filter((c) => c !== planCode));
+    } catch {}
+  };
 
   useEffect(() => {
     let alive = true;
@@ -404,7 +442,13 @@ function ConfigurePageContent() {
                 >
                   Resume
                 </button>
-                <button onClick={() => { clearDraft(); setDraftBanner(null); }} className="text-xs text-amber-600 hover:text-amber-800">Discard</button>
+                <button onClick={() => {
+                  try {
+                    localStorage.removeItem(draftKeyFor(draftBanner.planCode));
+                    writeDraftIndex(readDraftIndex().filter((c) => c !== draftBanner.planCode));
+                  } catch {}
+                  setDraftBanner(null);
+                }} className="text-xs text-amber-600 hover:text-amber-800">Discard</button>
               </div>
             </div>
           )}
@@ -485,7 +529,7 @@ function ConfigurePageContent() {
                       <span className="text-lg">{getFlag(name)}</span>
                       <div className="flex-1">
                         <p className="text-xs font-bold text-[#0f172a]">{name}</p>
-                        <p className="text-[10px] text-green-600">🟢 Available now</p>
+                        <p className="text-[10px] text-green-600">🟢 Available now <span className="text-slate-400">• {getDcLatency(dc).ms} from India</span></p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-black text-[#0f172a]">{fmtCurrency(selectedDuration?.monthlyPrice, planCurrency)}</p>
@@ -691,6 +735,33 @@ function ConfigurePageContent() {
                 Continue order →
               </button>
               {providerDatacenters.length > 0 && !datacenter && <p className="mt-2 text-center text-[10px] text-slate-500">Select a datacenter to continue</p>}
+              <p className="mt-2 text-center text-[10px] text-slate-400">
+                ⏱ Estimated provisioning: {
+                  (plan?.category || category) === "DEDICATED" ? "up to 2 hours (automated install)"
+                  : (plan?.category || category) === "WEB_HOSTING" ? "a few minutes after payment"
+                  : (plan?.category || category) === "DOMAINS" ? "minutes after payment"
+                  : "usually a few minutes"
+                }
+              </p>
+              {user && plan?.planCode && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const cur = (selectedDuration?.monthlyPrice || 0).toFixed(2);
+                    const v = prompt(`Get notified when ${plan.invoiceName || plan.planCode} drops to a monthly price at or below your target.\n\nCurrent: ${fmtCurrency(selectedDuration?.monthlyPrice, planCurrency)}/mo`, cur);
+                    if (v === null) return;
+                    const t = parseFloat(v);
+                    if (!t || t <= 0) { showToast("Enter a valid target price", "error"); return; }
+                    try {
+                      await api.auth.createPriceAlert({ planCode: plan.planCode, targetPrice: t, currency: planCurrency });
+                      showToast("Price alert saved — we'll notify you on a drop", "success");
+                    } catch (e: any) { showToast(e.message || "Could not save alert", "error"); }
+                  }}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded border border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-500 hover:border-[#00b7ff]/40 hover:text-[#00b7ff]"
+                >
+                  🔔 Alert me on price drop
+                </button>
+              )}
 
               {manualPayment && (
                 <div className="mt-4 rounded-xl border border-dashed border-[#00b7ff] bg-[#f8fcff] p-4 text-sm">

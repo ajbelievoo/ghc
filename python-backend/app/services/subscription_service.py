@@ -153,7 +153,8 @@ def lifecycle_action(db: Session, ovh: OvhClient, sub: Subscription, action: str
     return sub
 
 
-def reinstall_os(db: Session, ovh: OvhClient, sub: Subscription, os_template: str, ssh_key_name: Optional[str] = None) -> Dict[str, Any]:
+def reinstall_os(db: Session, ovh: OvhClient, sub: Subscription, os_template: str, ssh_key_name: Optional[str] = None,
+                 hostname: Optional[str] = None, user_data: Optional[str] = None) -> Dict[str, Any]:
     """Request OS reinstallation on VPS or dedicated server."""
     resource_id = _get_real_resource_id(sub)
     if not resource_id:
@@ -184,6 +185,10 @@ def reinstall_os(db: Session, ovh: OvhClient, sub: Subscription, os_template: st
             payload = {"templateName": os_template}
             if ssh_key_name:
                 payload["sshKeyName"] = ssh_key_name
+            if hostname:
+                payload["hostname"] = hostname
+            if user_data:
+                payload["userData"] = user_data
             ovh.request("POST", f"/dedicated/server/{resource_id}/install/start", **payload)
 
         sub.os_template = os_template

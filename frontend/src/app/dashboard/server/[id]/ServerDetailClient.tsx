@@ -555,24 +555,31 @@ function BackupSummary({ serverId, isVps }: { serverId: string; isVps: boolean }
 function UpgradeBanner({ serverId, isVps }: { serverId: string; isVps: boolean }) {
   const { showToast } = useToast();
   const [opts, setOpts] = useState<any>(null);
+  const [recs, setRecs] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (isVps) api.server.vpsOptions(serverId).then(setOpts).catch(() => setOpts({ upgrades: [] }));
+    api.server.upgradeOptions(serverId).then((d: any) => setRecs(d.options || [])).catch(() => {});
   }, [serverId, isVps]);
 
-  if (!isVps || !opts || !opts.upgrades?.length) return null;
+  const ovhUpgrades = isVps ? (opts?.upgrades || []) : [];
+  if (!ovhUpgrades.length && !recs.length) return null;
   return (
     <>
       <div className="mt-3 rounded-lg border border-[#00b7ff]/30 bg-[#00b7ff]/5 p-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-[#00b7ff]" />
-          <p className="text-xs font-medium text-[#0f172a]">{opts.upgrades.length} upgrade{opts.upgrades.length > 1 ? "s" : ""} available for this VPS</p>
+          <p className="text-xs font-medium text-[#0f172a]">
+            {ovhUpgrades.length
+              ? `${ovhUpgrades.length} upgrade${ovhUpgrades.length > 1 ? "s" : ""} available for this VPS`
+              : `${recs.length} higher-tier plan${recs.length > 1 ? "s" : ""} recommended`}
+          </p>
         </div>
         <button onClick={() => setOpen(true)} className="rounded-lg bg-[#00b7ff] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#0090cc]">
           Upgrade
         </button>
       </div>
-      {open && <UpgradeModal serverId={serverId} upgrades={opts.upgrades} onClose={() => setOpen(false)} />}
+      {open && <UpgradeModal serverId={serverId} upgrades={ovhUpgrades} recs={recs} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -663,6 +670,9 @@ function BackupTab({ server }: { server: ServerInstance }) {
   }, [server.id]);
   useEffect(load, [load]);
 
+  const [schedBusy, setSchedBusy] = useState(false);
+  const [schedHour, setSchedHour] = useState<number | "">("");
+
   const snapshot = async (action: "create" | "delete") => {
     setBusy(action);
     try {
@@ -673,6 +683,19 @@ function BackupTab({ server }: { server: ServerInstance }) {
       showToast(e.message || "Snapshot action failed", "error");
     } finally {
       setBusy(null);
+    }
+  };
+
+  const saveSchedule = async () => {
+    setSchedBusy(true);
+    try {
+      await api.server.vpsBackupConfigure(server.id, { backupHour: schedHour === "" ? undefined : Number(schedHour) });
+      showToast("Backup schedule updated", "success");
+      setTimeout(load, 1500);
+    } catch (e: any) {
+      showToast(e.message || "Schedule update failed", "error");
+    } finally {
+      setSchedBusy(false);
     }
   };
 
@@ -704,6 +727,26 @@ function BackupTab({ server }: { server: ServerInstance }) {
             <Row label="Status" value={<Badge ok>Enabled</Badge>} />
             {backup.rotation != null && <Row label="Retention" value={`${backup.rotation} days`} />}
             {backup.schedule && <Row label="Schedule" value={backup.schedule} />}
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200">
+              <label className="text-[10px] text-slate-500">Backup window (hour UTC)</label>
+              <select
+                value={schedHour === "" ? "" : schedHour}
+                onChange={(e) => setSchedHour(e.target.value === "" ? "" : Number(e.target.value))}
+                className="rounded-lg bg-slate-100 border border-slate-200 px-2 py-1 text-xs text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+              >
+                <option value="">— pick hour —</option>
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+                ))}
+              </select>
+              <button
+                onClick={saveSchedule}
+                disabled={schedBusy || schedHour === ""}
+                className="rounded-lg border border-[#00b7ff]/30 px-3 py-1 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/10 disabled:opacity-50"
+              >
+                {schedBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+              </button>
+            </div>
             <h3 className="text-xs font-semibold text-slate-500 mt-4 mb-2">Restore points</h3>
             {bk.restorePoints?.length ? (
               <div className="space-y-2">
@@ -844,13 +887,13 @@ function DiskTab({ server }: { server: ServerInstance }) {
 
 /* ================= UPGRADE MODAL ================= */
 
-function UpgradeModal({ serverId, upgrades, onClose }: { serverId: string; upgrades: any[]; onClose: () => void }) {
+function UpgradeModal({ serverId, upgrades, recs, onClose }: { serverId: string; upgrades: any[]; recs?: any[]; onClose: () => void }) {
   const [order, setOrder] = useState<any>(null);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-2xl rounded-2xl bg-white border border-slate-200 p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-[#0f172a] flex items-center gap-2"><Zap className="w-5 h-5 text-[#00b7ff]" /> Upgrade your VPS</h2>
+          <h2 className="text-lg font-bold text-[#0f172a] flex items-center gap-2"><Zap className="w-5 h-5 text-[#00b7ff]" /> Upgrade your server</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-[#0f172a]"><X className="w-5 h-5" /></button>
         </div>
         <div className="space-y-2">
@@ -875,6 +918,29 @@ function UpgradeModal({ serverId, upgrades, onClose }: { serverId: string; upgra
             </button>
           ))}
         </div>
+        {recs && recs.length > 0 && (
+          <div className="mt-5">
+            <h3 className="text-xs font-semibold text-slate-500 mb-2">{upgrades.length ? "Or order a higher-tier plan" : "Recommended plans"}</h3>
+            <div className="space-y-2">
+              {recs.map((r) => (
+                <a
+                  key={r.planCode}
+                  href={`/configure?plan=${encodeURIComponent(r.planCode)}`}
+                  className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 hover:border-[#00b7ff]/50 hover:bg-[#00b7ff]/5 transition"
+                >
+                  <div>
+                    <p className="text-sm font-bold text-[#0f172a]">{r.invoiceName}</p>
+                    <p className="text-xs text-slate-500">
+                      {[r.cpuCores && `${r.cpuCores} vCores`, r.ramGb && `${r.ramGb} GB RAM`, r.diskGb && `${r.diskGb} GB disk`].filter(Boolean).join(" • ")}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-[#00b7ff]">{getCurrencySymbol(r.currency)}{r.monthlyPrice?.toFixed(2)}<span className="text-[10px] text-slate-500 font-normal">/mo</span></p>
+                </a>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-2">Ordering a new plan provisions a fresh server — data does not migrate automatically.</p>
+          </div>
+        )}
       </div>
       {order && <OptionOrderModal serverId={serverId} option={order} onClose={() => setOrder(null)} onDone={() => { setOrder(null); onClose(); }} />}
     </div>
@@ -1539,6 +1605,8 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
   const [cancelText, setCancelText] = useState("");
   const [sshKeys, setSshKeys] = useState<any[]>([]);
   const [sshKeyName, setSshKeyName] = useState("");
+  const [installHostname, setInstallHostname] = useState("");
+  const [installScript, setInstallScript] = useState("");
 
   useEffect(() => {
     api.auth.sshKeys().then((r: any) => setSshKeys(r.keys || [])).catch(() => {});
@@ -1568,7 +1636,8 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
     if (!confirm(`Reinstall OS to ${osTemplate}? This will wipe all data.`)) return;
     setActionLoading("reinstall");
     try {
-      const res = await api.server.reinstall(server.id, osTemplate, sshKeyName || undefined);
+      const res = await api.server.reinstall(server.id, osTemplate, sshKeyName || undefined,
+        isVps ? undefined : { hostname: installHostname || undefined, userData: installScript || undefined });
       showToast(sshKeyName ? `OS reinstall initiated with SSH key "${sshKeyName}"` : "OS reinstall initiated", "success");
     } catch (err: any) {
       showToast(err.message || "Reinstall failed", "error");
@@ -1758,6 +1827,29 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
             {actionLoading === "reinstall" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reinstall OS"}
           </button>
         </div>
+        {!isVps && (
+          <div className="grid gap-3 sm:grid-cols-2 mt-3">
+            <div>
+              <label className="text-[10px] text-slate-500 block mb-1">Hostname (optional)</label>
+              <input
+                value={installHostname}
+                onChange={(e) => setInstallHostname(e.target.value)}
+                placeholder="server1.example.com"
+                className="w-full rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-500 block mb-1">Post-install script / cloud-init (optional)</label>
+              <textarea
+                value={installScript}
+                onChange={(e) => setInstallScript(e.target.value)}
+                placeholder="#!/bin/bash&#10;apt update && apt install -y nginx"
+                rows={2}
+                className="w-full rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-xs font-mono text-[#0f172a] focus:border-[#00b7ff]/50 outline-none resize-none"
+              />
+            </div>
+          </div>
+        )}
         {sshKeys.length === 0 && (
           <p className="text-[10px] text-slate-400 mt-2">
             Add an SSH key under Dashboard → Security → SSH Keys to log in without a password after reinstall.

@@ -454,6 +454,8 @@ export default function DashboardPage() {
       setActiveGateways(active);
       const prefs = await api.auth.paymentPreferences().catch(() => null);
       if (prefs) setPayPrefs(prefs);
+      const alerts = await api.auth.priceAlerts().catch(() => []);
+      if (alerts) setPayPrefs((p: any) => ({ ...(p || {}), priceAlerts: alerts }));
       const preferred = prefs?.preferredGateway && active.includes(prefs.preferredGateway) ? prefs.preferredGateway : active[0];
       if (preferred) setGateway(preferred);
     } catch (e) { console.error(e); }
@@ -1710,6 +1712,9 @@ export default function DashboardPage() {
                             {(o.status === "PENDING" || o.status === "PENDING_PAYMENT") && (
                               <button onClick={async () => { try { await api.orders.payWallet(o.id); showToast("Payment applied", "success"); fetchData(); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20">Pay with wallet</button>
                             )}
+                            {o.plan_code && (
+                              <a href={`/configure?plan=${encodeURIComponent(o.plan_code)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-[#0f172a] hover:border-slate-400" aria-label={`Reorder ${o.display_name || o.plan_code}`}>Reorder</a>
+                            )}
                             <ChevronDown className={`inline w-4 h-4 ml-2 text-slate-400 transition-transform ${expandedOrder === o.id ? "rotate-180" : ""}`} />
                           </td>
                         </tr>
@@ -1872,6 +1877,23 @@ export default function DashboardPage() {
                     <option value="">No preference</option>
                     {activeGateways.map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">Price alerts</p>
+                  {(payPrefs?.priceAlerts || []).length === 0 ? (
+                    <p className="text-[11px] text-slate-400">No alerts — set one from any plan's configure page ("Alert me on price drop").</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {payPrefs.priceAlerts.map((a: any) => (
+                        <div key={a.id} className="flex items-center justify-between rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5">
+                          <p className="text-xs text-[#0f172a]"><b>{a.planName || a.planCode}</b> ≤ {getCurrencySymbol(a.currency)}{a.targetPrice.toFixed(2)}/mo
+                            {!a.active && <span className="ml-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">triggered</span>}
+                          </p>
+                          <button onClick={async () => { try { await api.auth.deletePriceAlert(a.id); setPayPrefs((p: any) => ({ ...(p || {}), priceAlerts: (p?.priceAlerts || []).filter((x: any) => x.id !== a.id) })); } catch (e: any) { showToast(e.message, "error"); } }} className="text-[10px] text-red-500 hover:text-red-400" aria-label={`Delete price alert for ${a.planName || a.planCode}`}>remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
