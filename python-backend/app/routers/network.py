@@ -31,11 +31,16 @@ def _svc_name(sub: Subscription) -> Optional[str]:
     return sub.service_name or None
 
 
+def _esc(ip: str) -> str:
+    """CIDR-safe path segment — OVH expects /ip/{ip} with the '/' percent-encoded."""
+    return (ip or "").replace("/", "%2F")
+
+
 def _assert_ip_routed_to(ovh, ip: str, sub: Subscription) -> Dict[str, Any]:
     """The IP must currently be routed to this subscription's service —
     prevents operating on IPs that belong to other services/accounts."""
     try:
-        data = ovh.get(f"/ip/{ip}")
+        data = ovh.get(f"/ip/{_esc(ip)}")
     except Exception:
         raise HTTPException(status_code=404, detail="IP not found on account")
     routed = (data.get("routedTo") or {}).get("serviceName")
@@ -139,7 +144,7 @@ def move_failover_ip(server_id: str, ip: str, body: dict, db: Session = Depends(
     if target not in _user_service_names(db, user.id):
         raise HTTPException(status_code=403, detail="Target must be one of your services")
     try:
-        return ovh.post(f"/ip/{ip}/move", to=target)
+        return ovh.post(f"/ip/{_esc(ip)}/move", to=target)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -155,9 +160,9 @@ def ddos_status(server_id: str, ip: str, db: Session = Depends(get_db), user: Us
     _assert_ip_routed_to(ovh, ip, sub)
     out = {"ip": ip, "mitigations": [], "events": []}
     try:
-        for m in ovh.get(f"/ip/{ip}/mitigation") or []:
+        for m in ovh.get(f"/ip/{_esc(ip)}/mitigation") or []:
             try:
-                out["mitigations"].append(ovh.get(f"/ip/{ip}/mitigation/{m}"))
+                out["mitigations"].append(ovh.get(f"/ip/{_esc(ip)}/mitigation/{m}"))
             except Exception:
                 out["mitigations"].append({"ipOnMitigation": m})
     except Exception:
@@ -180,7 +185,7 @@ def set_mitigation(server_id: str, ip: str, body: dict, db: Session = Depends(ge
     on_ip = body.get("ipOnMitigation") or ip.split("/")[0]
     try:
         return ovh.post(
-            f"/ip/{ip}/mitigation",
+            f"/ip/{_esc(ip)}/mitigation",
             ipOnMitigation=on_ip,
             permanent=bool(body.get("permanent", False)),
             auto=bool(body.get("auto", True)),
@@ -197,7 +202,7 @@ def delete_mitigation(server_id: str, ip: str, on_ip: str, db: Session = Depends
     ovh = _ovh(db)
     _assert_ip_routed_to(ovh, ip, sub)
     try:
-        return ovh.delete(f"/ip/{ip}/mitigation/{on_ip}")
+        return ovh.delete(f"/ip/{_esc(ip)}/mitigation/{on_ip}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -214,14 +219,14 @@ def firewall_list(server_id: str, ip: str, db: Session = Depends(get_db), user: 
     on_ip = ip.split("/")[0]
     out = {"ip": ip, "enabled": False, "rules": []}
     try:
-        fw_ips = ovh.get(f"/ip/{ip}/firewall") or []
+        fw_ips = ovh.get(f"/ip/{_esc(ip)}/firewall") or []
         out["enabled"] = on_ip in fw_ips or bool(fw_ips)
         if fw_ips:
             on_ip = fw_ips[0] if on_ip not in fw_ips else on_ip
-            rule_ids = ovh.get(f"/ip/{ip}/firewall/{on_ip}/rule") or []
+            rule_ids = ovh.get(f"/ip/{_esc(ip)}/firewall/{on_ip}/rule") or []
             for rid in rule_ids:
                 try:
-                    out["rules"].append(ovh.get(f"/ip/{ip}/firewall/{on_ip}/rule/{rid}"))
+                    out["rules"].append(ovh.get(f"/ip/{_esc(ip)}/firewall/{on_ip}/rule/{rid}"))
                 except Exception:
                     continue
     except Exception as e:
@@ -238,9 +243,9 @@ def firewall_enable(server_id: str, ip: str, body: dict, db: Session = Depends(g
     _assert_ip_routed_to(ovh, ip, sub)
     try:
         if body.get("enabled", True):
-            return ovh.post(f"/ip/{ip}/firewall", ipOnFirewall=ip.split("/")[0])
+            return ovh.post(f"/ip/{_esc(ip)}/firewall", ipOnFirewall=ip.split("/")[0])
         else:
-            return ovh.delete(f"/ip/{ip}/firewall/{ip.split('/')[0]}")
+            return ovh.delete(f"/ip/{_esc(ip)}/firewall/{ip.split('/')[0]}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -261,7 +266,7 @@ def firewall_add_rule(server_id: str, ip: str, body: dict, db: Session = Depends
         raise HTTPException(status_code=400, detail="action must be permit or deny")
     payload = {k: v for k, v in body.items() if k in _RULE_FIELDS and v is not None}
     try:
-        return ovh.post(f"/ip/{ip}/firewall/{on_ip}/rule", **payload)
+        return ovh.post(f"/ip/{_esc(ip)}/firewall/{on_ip}/rule", **payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -274,7 +279,7 @@ def firewall_delete_rule(server_id: str, ip: str, rule_seq: int, db: Session = D
     ovh = _ovh(db)
     _assert_ip_routed_to(ovh, ip, sub)
     try:
-        return ovh.delete(f"/ip/{ip}/firewall/{ip.split('/')[0]}/rule/{rule_seq}")
+        return ovh.delete(f"/ip/{_esc(ip)}/firewall/{ip.split('/')[0]}/rule/{rule_seq}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

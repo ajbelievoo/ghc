@@ -1102,13 +1102,15 @@ function NetworkTab({ server, detail, isVps }: any) {
   const [testResult, setTestResult] = useState<any>(null);
   const [testing, setTesting] = useState(false);
 
+  const bip = (s: string) => (s || "").split("/")[0];
+
   const reload = () => {
     api.server.network(server.id).then((n: any) => {
       setNet(n);
       (n.ips || []).forEach((i: any) => {
         if (!i.ip) return;
-        api.server.ddos(server.id, i.ip).then((d: any) => setDdos((p) => ({ ...p, [i.ip]: d }))).catch(() => {});
-        api.server.firewall(server.id, i.ip).then((f: any) => setFw((p) => ({ ...p, [i.ip]: f }))).catch(() => {});
+        api.server.ddos(server.id, bip(i.ip)).then((d: any) => setDdos((p) => ({ ...p, [i.ip]: d }))).catch(() => {});
+        api.server.firewall(server.id, bip(i.ip)).then((f: any) => setFw((p) => ({ ...p, [i.ip]: f }))).catch(() => {});
       });
     }).catch((e: any) => showToast(e.message || "Failed to load network", "error")).finally(() => setLoading(false));
   };
@@ -1120,7 +1122,7 @@ function NetworkTab({ server, detail, isVps }: any) {
   };
 
   const saveRdns = (ip: string) => run(
-    () => api.server.rdnsBulk(server.id, [{ ip, reverse: rdnsVal || null }]),
+    () => api.server.rdnsBulk(server.id, [{ ip: bip(ip), reverse: rdnsVal || null }]),
     rdnsVal ? "Reverse DNS set" : "Reverse DNS cleared"
   );
 
@@ -1179,7 +1181,7 @@ function NetworkTab({ server, detail, isVps }: any) {
                             <option value="">target…</option>
                             {moveTargets.map((t: string) => <option key={t} value={t}>{t}</option>)}
                           </select>
-                          <button onClick={() => run(() => api.server.moveIp(server.id, i.ip, moveTarget), "IP move requested").then(() => setMoveIp(null))}
+                          <button onClick={() => run(() => api.server.moveIp(server.id, bip(i.ip), moveTarget), "IP move requested").then(() => setMoveIp(null))}
                             className="rounded bg-[#00b7ff] px-2 py-1 text-[10px] font-bold text-white">MOVE</button>
                           <button onClick={() => setMoveIp(null)} className="text-slate-400"><X className="w-3.5 h-3.5" /></button>
                         </span>
@@ -1212,11 +1214,11 @@ function NetworkTab({ server, detail, isVps }: any) {
                 </div>
                 <div className="flex gap-2">
                   {!perm && (
-                    <button onClick={() => run(() => api.server.setMitigation(server.id, i.ip, { ipOnMitigation: i.ip.split("/")[0], permanent: true, auto: true }), "Permanent mitigation enabled")}
+                    <button onClick={() => run(() => api.server.setMitigation(server.id, bip(i.ip), { ipOnMitigation: bip(i.ip), permanent: true, auto: true }), "Permanent mitigation enabled")}
                       className="rounded bg-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-300">Enable permanent</button>
                   )}
                   {perm && (
-                    <button onClick={() => run(() => api.server.deleteMitigation(server.id, i.ip, i.ip.split("/")[0]), "Permanent mitigation removed")}
+                    <button onClick={() => run(() => api.server.deleteMitigation(server.id, bip(i.ip), bip(i.ip)), "Permanent mitigation removed")}
                       className="rounded bg-red-500/10 px-2.5 py-1 text-[10px] font-bold text-red-600 hover:bg-red-500/20">Disable permanent</button>
                   )}
                 </div>
@@ -1246,7 +1248,7 @@ function NetworkTab({ server, detail, isVps }: any) {
                     <button onClick={() => setFwIp(fwIp === i.ip ? null : i.ip)} className="rounded bg-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700">
                       {fwIp === i.ip ? "Close" : "Rules"}
                     </button>
-                    <button onClick={() => run(() => api.server.setFirewall(server.id, i.ip, !(f?.enabled)), f?.enabled ? "Firewall disabled" : "Firewall enabled")}
+                    <button onClick={() => run(() => api.server.setFirewall(server.id, bip(i.ip), !(f?.enabled)), f?.enabled ? "Firewall disabled" : "Firewall enabled")}
                       className={`rounded px-2.5 py-1 text-[10px] font-bold ${f?.enabled ? "bg-red-500/10 text-red-600" : "bg-[#00b7ff] text-white"}`}>
                       {f?.enabled ? "Disable" : "Enable"}
                     </button>
@@ -1259,7 +1261,7 @@ function NetworkTab({ server, detail, isVps }: any) {
                         <span className="font-mono text-slate-600">
                           #{r.sequence} {r.action} {r.protocol} {r.source || "*"}:{r.sourcePort || "*"} → {r.destination || "*"}:{r.destinationPort || "*"}
                         </span>
-                        <button onClick={() => run(() => api.server.deleteFwRule(server.id, i.ip, r.sequence), "Rule deleted")} className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => run(() => api.server.deleteFwRule(server.id, bip(i.ip), r.sequence), "Rule deleted")} className="text-red-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     ))}
                     {!f.rules?.length && <p className="text-[10px] text-slate-400">No rules — firewall allows all traffic until you add rules.</p>}
@@ -1273,7 +1275,7 @@ function NetworkTab({ server, detail, isVps }: any) {
                       <input value={newRule.source} onChange={(e) => setNewRule({ ...newRule, source: e.target.value })} placeholder="src IP/CIDR (blank=any)" className="w-36 rounded border border-slate-300 px-2 py-1.5 text-[10px]" />
                       <input value={newRule.destinationPort} onChange={(e) => setNewRule({ ...newRule, destinationPort: e.target.value })} placeholder="dst port" className="w-20 rounded border border-slate-300 px-2 py-1.5 text-[10px]" />
                       <input type="number" value={newRule.sequence} onChange={(e) => setNewRule({ ...newRule, sequence: Number(e.target.value) })} className="w-16 rounded border border-slate-300 px-2 py-1.5 text-[10px]" title="sequence" />
-                      <button onClick={() => run(() => api.server.addFwRule(server.id, i.ip, { ...newRule, source: newRule.source || undefined, destinationPort: newRule.destinationPort || undefined }), "Rule added")}
+                      <button onClick={() => run(() => api.server.addFwRule(server.id, bip(i.ip), { ...newRule, source: newRule.source || undefined, destinationPort: newRule.destinationPort || undefined }), "Rule added")}
                         className="rounded bg-[#00b7ff] px-3 py-1.5 text-[10px] font-bold text-white">Add rule</button>
                       <button onClick={() => {
                         const blob = new Blob([JSON.stringify({ rules: f.rules }, null, 2)], { type: "application/json" });

@@ -649,18 +649,19 @@ def update_reverse_dns(ovh: OvhClient, ip_address: str, reverse: str) -> Dict[st
 
     last_error = None
     for ip in candidates:
+        ip_path = ip.replace("/", "%2F")
         try:
             # Delete existing reverse records first
             try:
-                existing = ovh.get(f"/ip/{ip}/reverse") or []
+                existing = ovh.get(f"/ip/{ip_path}/reverse") or []
                 for rev in existing:
                     try:
-                        ovh.delete(f"/ip/{ip}/reverse/{rev}")
+                        ovh.delete(f"/ip/{ip_path}/reverse/{rev}")
                     except Exception:
                         pass
             except Exception:
                 pass
-            ovh.post(f"/ip/{ip}/reverse", ipReverse=ip_address, reverse=reverse)
+            ovh.post(f"/ip/{ip_path}/reverse", ipReverse=ip_address.split("/")[0], reverse=reverse)
             return {"success": True, "ip": ip_address, "reverse": reverse}
         except Exception as e:
             last_error = e
@@ -680,11 +681,12 @@ def delete_reverse_dns(ovh: OvhClient, ip_address: str) -> Dict[str, Any]:
 
     last_error = None
     for ip in candidates:
+        ip_path = ip.replace("/", "%2F")
         try:
-            existing = ovh.get(f"/ip/{ip}/reverse") or []
+            existing = ovh.get(f"/ip/{ip_path}/reverse") or []
             for rev in existing:
                 try:
-                    ovh.delete(f"/ip/{ip}/reverse/{rev}")
+                    ovh.delete(f"/ip/{ip_path}/reverse/{rev}")
                 except Exception:
                     pass
             return {"success": True, "ip": ip_address}
