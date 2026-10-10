@@ -11,7 +11,7 @@ import requests
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.models.models import AdditionalIp, AdminConfig, CustomerOrder, DomainRegistration, DomainStatus, GatewayConfig, PaymentStatus, PaymentTransaction, User
+from app.models.models import AdditionalIp, AdminConfig, CustomerOrder, DomainRegistration, DomainStatus, GatewayConfig, Invoice, InvoiceStatus, OrderStatus, PaymentStatus, PaymentTransaction, User
 from app.services.order_service import execute_checkout
 from app.services.email_service import send_order_payment_email, send_wallet_topup_email
 from app.services.notification_service import create_notification
@@ -164,6 +164,26 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 execute_checkout(db, ovh, tx.order_id)
             except Exception as e:
                 logger.exception(f"Auto-provision after payment failed for order {tx.order_id}: {e}")
+    elif meta.get("type") == "INVOICE_PAYMENT" or meta.get("invoice_id"):
+        invoice_id = meta.get("invoice_id") or meta.get("invoiceId")
+        if invoice_id:
+            invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+            if invoice and invoice.status != InvoiceStatus.PAID:
+                invoice.status = InvoiceStatus.PAID
+                if invoice.order_id:
+                    order = db.query(CustomerOrder).filter(CustomerOrder.id == invoice.order_id).first()
+                    if order and order.status != OrderStatus.COMPLETED:
+                        order.status = OrderStatus.COMPLETED
+                db.commit()
+                try:
+                    from app.services.subscription_service import reactivate_after_invoice_payment
+                    reactivate_after_invoice_payment(db, invoice)
+                except Exception:
+                    logger.exception(f"Reactivation after invoice {invoice_id} payment failed")
+                try:
+                    create_notification(db, invoice.user, "Invoice paid", f"Invoice #{invoice.invoice_number or invoice.id[:8].upper()} paid successfully.", "success", "/dashboard?tab=invoices")
+                except Exception:
+                    pass
     elif meta.get("type") == "DOMAIN_RENEWAL" or meta.get("domainRenewalId"):
         domain_id = meta.get("domainId") or meta.get("domainRenewalId")
         if domain_id:

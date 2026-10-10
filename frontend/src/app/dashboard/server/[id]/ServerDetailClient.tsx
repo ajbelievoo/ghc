@@ -60,6 +60,8 @@ interface ServerInstance {
   currency?: string;
   autoRenew?: boolean;
   expiresAt: string;
+  suspensionReason?: string | null;
+  suspension_reason?: string | null;
 }
 
 const TABS = [
@@ -209,6 +211,40 @@ export default function ServerDetailClient() {
             </span>
           </div>
         </div>
+
+        {/* Suspension reason / grace period banner */}
+        {server.status === "SUSPENDED" && (
+          <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-700">Service suspended</p>
+                <p className="text-xs text-red-600 mt-0.5">
+                  {server.suspensionReason || server.suspension_reason || "This service is currently suspended."}
+                </p>
+              </div>
+            </div>
+            <Link href="/dashboard?tab=invoices" className="shrink-0 rounded-lg bg-red-500 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-red-600">
+              Pay outstanding invoice
+            </Link>
+          </div>
+        )}
+        {server.status === "ACTIVE" && server.nextBillDate && new Date(server.nextBillDate) < new Date() && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-start gap-2">
+              <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Payment overdue — grace period</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Due {new Date(server.nextBillDate).toLocaleDateString()} — service may be suspended ~12h after the due date.
+                </p>
+              </div>
+            </div>
+            <Link href="/dashboard?tab=invoices" className="shrink-0 rounded-lg bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-amber-600">
+              Pay now
+            </Link>
+          </div>
+        )}
 
         {tab === "home" && (
           <HomeTab server={server} detail={detail} metrics={metrics} additionalIps={additionalIps} setTab={setTab} />
@@ -1754,6 +1790,12 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
             <p className="text-xs font-medium text-red-600 mb-2">
               Type <span className="font-mono font-bold">CANCEL</span> to confirm. The service will terminate at its expiry date — this cannot be undone from the panel.
             </p>
+            <div className="rounded-lg bg-red-100/60 border border-red-200 px-3 py-2 mb-3">
+              <p className="text-[11px] font-semibold text-red-700">⚠ Before cancelling — back up your data</p>
+              <p className="text-[10px] text-red-600 mt-0.5">
+                All data on this service will be permanently deleted at termination and cannot be recovered. Download your files, databases and any snapshots before the expiry date.
+              </p>
+            </div>
             <div className="flex gap-2">
               <input
                 value={cancelText}

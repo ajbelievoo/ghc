@@ -1,4 +1,5 @@
 import io
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -93,6 +94,7 @@ from app.services.subscription_service import (
     update_reverse_dns,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["compat"])
 
 
@@ -263,6 +265,7 @@ def _subscription_to_server(s: Subscription) -> dict:
         "osTemplate": s.os_template,
         "datacenter": s.datacenter,
         "status": s.status.value,
+        "suspensionReason": s.suspension_reason,
         "billingCycle": s.billing_cycle.value,
         "autoRenew": s.auto_renew,
         "nextBillDate": s.next_bill_date.isoformat() if s.next_bill_date else None,
@@ -1349,6 +1352,11 @@ def pay_invoice(invoice_id: str, body: dict, db: Session = Depends(get_db), user
             if order:
                 order.status = OrderStatus.COMPLETED
         db.commit()
+        try:
+            from app.services.subscription_service import reactivate_after_invoice_payment
+            reactivate_after_invoice_payment(db, invoice)
+        except Exception:
+            logger.exception(f"Reactivation after invoice {invoice.id} wallet payment failed")
         return {"paid": True, "invoiceId": invoice.id, "message": "Paid from wallet"}
     session = create_payment_session(db, user, invoice.amount, invoice.currency, gateway, "INVOICE_PAYMENT", {"invoice_id": invoice.id})
     return {"paid": False, "checkoutUrl": session.checkout_url, "sessionId": session.id}

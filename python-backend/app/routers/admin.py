@@ -278,20 +278,18 @@ def admin_sales_report(
 
 
 # Owner accounts whose upstream services must NEVER be mutated (see AGENTS.md).
-PROTECTED_OWNER_EMAILS = {"ajaykumarsinghup24@gmail.com"}
-
-
 def _is_protected_subscription(sub: Subscription) -> bool:
-    email = (sub.user.email if sub.user else "") or ""
-    return email.strip().lower() in PROTECTED_OWNER_EMAILS
+    from app.services.subscription_service import is_protected_subscription
+    return is_protected_subscription(sub)
 
 
 @router.post("/subscriptions/{subscription_id}/suspend")
-def admin_suspend_subscription(subscription_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def admin_suspend_subscription(subscription_id: str, body: dict = None, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     """Suspend a subscription (e.g. overdue). Refuses protected owner accounts."""
     from app.services.ovh_client import get_ovh_client_from_db
     from app.services.subscription_service import lifecycle_action
 
+    reason = (body or {}).get("reason") or "manual suspension by administrator"
     sub = db.query(Subscription).filter(Subscription.id == subscription_id).first()
     if not sub:
         raise HTTPException(status_code=404, detail="Subscription not found")
@@ -299,8 +297,8 @@ def admin_suspend_subscription(subscription_id: str, db: Session = Depends(get_d
         raise HTTPException(status_code=403, detail="Protected account — upstream mutation not allowed")
     try:
         ovh = get_ovh_client_from_db(db)
-        sub = lifecycle_action(db, ovh, sub, "suspend")
-        db.add(SystemLog(type=LogType.INFO, message=f"Admin {admin.email} suspended subscription {sub.id}", details={"admin_id": admin.id, "subscription_id": sub.id}))
+        sub = lifecycle_action(db, ovh, sub, "suspend", reason=reason)
+        db.add(SystemLog(type=LogType.INFO, message=f"Admin {admin.email} suspended subscription {sub.id}", details={"admin_id": admin.id, "subscription_id": sub.id, "reason": reason}))
         db.commit()
         return {"success": True, "status": sub.status.value if hasattr(sub.status, "value") else str(sub.status)}
     except HTTPException:

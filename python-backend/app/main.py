@@ -77,6 +77,9 @@ def ensure_schema():
             conn.execute(text("ALTER TABLE domain_registrations ADD COLUMN is_transfer BOOLEAN DEFAULT 0"))
             conn.execute(text("ALTER TABLE domain_registrations ADD COLUMN transfer_auth_code VARCHAR(255)"))
             logger.info("Added domain_registrations transfer columns")
+        if "suspension_reason" not in sub_cols:
+            conn.execute(text("ALTER TABLE subscriptions ADD COLUMN suspension_reason VARCHAR(255)"))
+            logger.info("Added subscriptions.suspension_reason column")
         conn.commit()
 
 
@@ -142,7 +145,7 @@ def run_maintenance():
                     from app.services.ovh_client import get_ovh_client_from_db
                     from app.services.subscription_service import lifecycle_action
                     ovh = get_ovh_client_from_db(db)
-                    lifecycle_action(db, ovh, sub, "suspend")
+                    lifecycle_action(db, ovh, sub, "suspend", reason="overdue invoice — payment pending")
                     _log(db, LogType.CRON, f"Auto-suspended overdue subscription {sub.id}")
                     try:
                         if sub.user:

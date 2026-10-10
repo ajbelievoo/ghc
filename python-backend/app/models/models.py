@@ -261,6 +261,7 @@ class Subscription(Base):
     os_template = Column(String(255), nullable=True)
     datacenter = Column(String(50), nullable=True)
     status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.PENDING, nullable=False)
+    suspension_reason = Column(String(255), nullable=True)
     monitoring_enabled = Column(Boolean, default=True, nullable=False)
     billing_cycle = Column(Enum(BillingCycle), default=BillingCycle.MONTHLY, nullable=False)
     auto_renew = Column(Boolean, default=True, nullable=False)

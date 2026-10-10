@@ -9,6 +9,7 @@ import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
 import ServerDetailCards from "@/components/ServerDetailCards";
 import DomainDnsPanel from "@/components/DomainDnsPanel";
 import SshKeysCard from "@/components/SshKeysCard";
+import OrderProgress from "@/components/OrderProgress";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import DashboardHeader from "@/components/DashboardHeader";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -80,6 +81,8 @@ interface ServerInstance {
   priceAmount: number;
   expiresAt: string;
   additional_ips?: any[];
+  suspensionReason?: string | null;
+  suspension_reason?: string | null;
 }
 
 export default function DashboardPage() {
@@ -142,6 +145,7 @@ export default function DashboardPage() {
   const [transferDomain, setTransferDomain] = useState("");
   const [transferCode, setTransferCode] = useState("");
   const [transferLoading, setTransferLoading] = useState(false);
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [tickets, setTickets] = useState<any[]>([]);
   const [ticketsTotal, setTicketsTotal] = useState(0);
   const [ticketsPage, setTicketsPage] = useState(1);
@@ -1083,6 +1087,12 @@ export default function DashboardPage() {
                         <span className="text-[10px] text-slate-500">•</span>
                         <p className="text-xs text-slate-500">Exp {new Date(srv.expiresAt).toLocaleDateString()}</p>
                       </div>
+                      {srv.status === "SUSPENDED" && (srv.suspensionReason || srv.suspension_reason) && (
+                        <p className="text-[10px] text-red-500 mt-1.5">⚠ {srv.suspensionReason || srv.suspension_reason}</p>
+                      )}
+                      {srv.status === "ACTIVE" && srv.nextBillDate && new Date(srv.nextBillDate) < new Date() && (
+                        <p className="text-[10px] text-amber-600 mt-1.5">⚠ Payment overdue — grace period</p>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1485,18 +1495,28 @@ export default function DashboardPage() {
                   </tr></thead>
                   <tbody>
                     {ordersList.slice(0, 10).map((o) => (
-                      <tr key={o.id} className="border-b border-slate-100 hover:bg-slate-50/60">
-                        <td className="px-6 py-3 text-xs font-mono text-slate-500">#{o.id.slice(0, 8).toUpperCase()}</td>
-                        <td className="px-6 py-3 text-sm font-medium text-[#0f172a]">{o.displayName || o.planCode || o.category}</td>
-                        <td className="px-6 py-3 text-sm">{getCurrencySymbol(o.currency || currency)}{Number(o.totalAmount || o.amount || 0).toFixed(2)}</td>
-                        <td className="px-6 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${o.status === "COMPLETED" || o.status === "DELIVERED" ? "bg-emerald-100 text-emerald-700" : o.status === "PENDING" ? "bg-amber-100 text-amber-700" : o.status === "FAILED" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"}`}>{o.status}</span></td>
-                        <td className="px-6 py-3 text-xs text-slate-500">{o.createdAt ? new Date(o.createdAt).toLocaleDateString() : "—"}</td>
-                        <td className="px-6 py-3 text-right">
-                          {(o.status === "PENDING" || o.status === "PENDING_PAYMENT") && (
-                            <button onClick={async () => { try { await api.orders.payWallet(o.id); showToast("Payment applied", "success"); fetchData(); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20">Pay with wallet</button>
-                          )}
-                        </td>
-                      </tr>
+                      <>
+                        <tr key={o.id} onClick={() => setExpandedOrder(expandedOrder === o.id ? null : o.id)} className="border-b border-slate-100 hover:bg-slate-50/60 cursor-pointer">
+                          <td className="px-6 py-3 text-xs font-mono text-slate-500">#{o.id.slice(0, 8).toUpperCase()}</td>
+                          <td className="px-6 py-3 text-sm font-medium text-[#0f172a]">{o.display_name || o.plan_code || o.category}</td>
+                          <td className="px-6 py-3 text-sm">{getCurrencySymbol(o.currency || currency)}{Number(o.customer_amount ?? o.total_amount ?? 0).toFixed(2)}</td>
+                          <td className="px-6 py-3"><span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${o.status === "COMPLETED" || o.status === "DELIVERED" ? "bg-emerald-100 text-emerald-700" : o.status === "PENDING" ? "bg-amber-100 text-amber-700" : o.status === "FAILED" ? "bg-red-100 text-red-700" : o.status === "PAYMENT_RECEIVED" || o.status === "PROVISIONING" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"}`}>{o.status}</span></td>
+                          <td className="px-6 py-3 text-xs text-slate-500">{o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}</td>
+                          <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            {(o.status === "PENDING" || o.status === "PENDING_PAYMENT") && (
+                              <button onClick={async () => { try { await api.orders.payWallet(o.id); showToast("Payment applied", "success"); fetchData(); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20">Pay with wallet</button>
+                            )}
+                            <ChevronDown className={`inline w-4 h-4 ml-2 text-slate-400 transition-transform ${expandedOrder === o.id ? "rotate-180" : ""}`} />
+                          </td>
+                        </tr>
+                        {expandedOrder === o.id && (
+                          <tr key={o.id + "-detail"} className="border-b border-slate-100 bg-slate-50/40">
+                            <td colSpan={6} className="px-6 py-4">
+                              <OrderProgress orderId={o.id} onRetryDone={fetchData} />
+                            </td>
+                          </tr>
+                        )}
+                      </>
                     ))}
                   </tbody>
                 </table>

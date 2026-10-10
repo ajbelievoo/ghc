@@ -88,9 +88,20 @@ def perform_power_action(db: Session, ovh: OvhClient, sub: Subscription, action:
         raise
 
 
-def lifecycle_action(db: Session, ovh: OvhClient, sub: Subscription, action: str) -> Subscription:
+PROTECTED_OWNER_EMAILS = {"ajaykumarsinghup24@gmail.com"}
+
+
+def is_protected_subscription(sub: Subscription) -> bool:
+    email = (sub.user.email if sub.user else "") or ""
+    return email.strip().lower() in PROTECTED_OWNER_EMAILS
+
+
+def lifecycle_action(db: Session, ovh: OvhClient, sub: Subscription, action: str, reason: Optional[str] = None) -> Subscription:
     updates = {}
-    resource_id = _get_real_resource_id(sub)
+    # Never fire upstream power/terminate calls for services owned by the
+    # protected production account - local status still changes.
+    upstream_allowed = not is_protected_subscription(sub)
+    resource_id = _get_real_resource_id(sub) if upstream_allowed else None
 
     if action == "renew":
         cycle_days = 30
@@ -101,10 +112,14 @@ def lifecycle_action(db: Session, ovh: OvhClient, sub: Subscription, action: str
         updates = {
             "next_bill_date": datetime.utcnow() + timedelta(days=cycle_days),
             "status": SubscriptionStatus.ACTIVE,
+            "suspension_reason": None,
         }
 
     elif action == "suspend":
-        updates = {"status": SubscriptionStatus.SUSPENDED}
+        updates = {
+            "status": SubscriptionStatus.SUSPENDED,
+            "suspension_reason": reason or "Suspended",
+        }
         if resource_id and sub.category in (ServiceCategory.VPS, ServiceCategory.DEDICATED):
             try:
                 perform_power_action(db, ovh, sub, "shutdown")
@@ -112,7 +127,7 @@ def lifecycle_action(db: Session, ovh: OvhClient, sub: Subscription, action: str
                 logger.warning(f"Suspend power action failed: {e}")
 
     elif action == "unsuspend":
-        updates = {"status": SubscriptionStatus.ACTIVE}
+        updates = {"status": SubscriptionStatus.ACTIVE, "suspension_reason": None}
         if resource_id and sub.category == ServiceCategory.VPS:
             try:
                 perform_power_action(db, ovh, sub, "start")
@@ -959,3 +974,55 @@ def request_service_termination(db: Session, ovh: OvhClient, sub: Subscription) 
     db.commit()
     _log_action(db, sub, "terminate_requested", True)
     return {"success": True, "task": result, "message": "Termination requested — the service will end at its expiry date"}
+
+
+def reactivate_after_invoice_payment(db: Session, invoice, ovh: Optional[OvhClient] = None) -> Optional[Subscription]:
+    """A renewal invoice was paid — push the subscription's next bill date out one
+    cycle and lift a payment suspension. Returns the subscription if it changed."""
+    if not getattr(invoice, "order_id", None):
+        return None
+    from app.models.models import Subscription, SubscriptionStatus, BillingCycle, Invoice
+    sub = db.query(Subscription).filter(Subscription.order_id == invoice.order_id).first()
+    if not sub or sub.status in (SubscriptionStatus.PENDING, SubscriptionStatus.TERMINATED, SubscriptionStatus.CANCELLED):
+        return None
+
+    now = datetime.utcnow()
+    cycle_days = 365 if sub.billing_cycle == BillingCycle.YEARLY else 90 if sub.billing_cycle == BillingCycle.QUARTERLY else 30
+    changed = False
+
+    # Extend only when this invoice covers the current period (its due date is
+    # the stored next_bill_date, give or take a couple of days) — avoids
+    # double-extending when an old stray invoice gets settled.
+    if sub.next_bill_date:
+        invoice_due = getattr(invoice, "due_date", None)
+        covers_period = invoice_due and abs((invoice_due - sub.next_bill_date).days) <= 2
+        was_suspended = sub.status == SubscriptionStatus.SUSPENDED
+        if covers_period or was_suspended:
+            base = sub.next_bill_date if sub.next_bill_date > now else now
+            sub.next_bill_date = base + timedelta(days=cycle_days)
+            sub.updated_at = func.now()
+            changed = True
+
+    if sub.status == SubscriptionStatus.SUSPENDED:
+        try:
+            if ovh is None:
+                ovh = get_ovh_client_from_db(db)
+            lifecycle_action(db, ovh, sub, "unsuspend")
+        except Exception as e:
+            logger.warning(f"Unsuspend after payment failed for {sub.id}: {e} — status lifted locally")
+            sub.status = SubscriptionStatus.ACTIVE
+            sub.suspension_reason = None
+            sub.updated_at = func.now()
+        changed = True
+        try:
+            from app.services.notification_service import create_notification
+            create_notification(db, sub.user, "Service reactivated",
+                                "Payment received — your service is active again.", "success", "/dashboard")
+        except Exception:
+            pass
+
+    if changed:
+        db.commit()
+        db.refresh(sub)
+        return sub
+    return None
