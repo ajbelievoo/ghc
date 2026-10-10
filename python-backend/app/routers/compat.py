@@ -2520,7 +2520,7 @@ def vps_backup_info(server_id: str, db: Session = Depends(get_db), user: User = 
         return {"enabled": True, "raw": data}
     except Exception as e:
         msg = str(e)
-        if "404" in msg or "NOT_FOUND" in msg.upper() or "not found" in msg.lower():
+        if "404" in msg or "NOT_FOUND" in msg.upper() or "not found" in msg.lower() or "does not exist" in msg.lower():
             return {"enabled": False, "reason": "Automated backup option is not active on this VPS"}
         raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
 
