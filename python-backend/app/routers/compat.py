@@ -62,6 +62,7 @@ from app.services.order_service import (
     get_vps_option_catalog,
     pay_order_with_wallet,
     _resolve_plan_code,
+    log_ovh_step,
 )
 from app.services.ovh_client import get_ovh_client_from_db, apply_margin
 from app.services.subscription_service import (
@@ -1823,6 +1824,27 @@ def admin_orders(status: Optional[str] = None, page: int = 1, limit: int = 50, d
             for o in orders
         ],
     }
+
+
+@router.put("/admin/orders/{order_id}/config")
+def admin_update_order_config(order_id: str, body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Update an order's configuration payload (e.g. fix a bad datacenter) before retrying
+    provisioning. Only allowed while the order isn't ACTIVE."""
+    order = db.query(CustomerOrder).filter(CustomerOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status == OrderStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Cannot change config on an active order")
+    allowed = {"datacenter", "os", "image", "region", "display_name", "hostname"}
+    updates = {k: v for k, v in (body or {}).items() if k in allowed and v}
+    if not updates:
+        raise HTTPException(status_code=400, detail=f"No valid fields — allowed: {sorted(allowed)}")
+    cfg = dict(order.configuration_payload or {})
+    cfg.update(updates)
+    order.configuration_payload = cfg
+    db.commit()
+    log_ovh_step(db, order.id, "ADMIN_CONFIG_EDIT", "", updates, {}, is_success=True)
+    return {"ok": True, "orderId": order.id, "configuration": cfg}
 
 
 @router.post("/admin/orders/{order_id}/retry-provision")
