@@ -258,6 +258,33 @@ def run_maintenance():
         except Exception as e:
             _log(db, LogType.ERROR, f"Abandoned order cleanup failed: {e}")
 
+        # Email deliverability check — alert admin when failures spike so an
+        # SMTP outage doesn't silently swallow verification/reset/billing mails.
+        try:
+            from app.models.models import EmailLog, UserRole
+            from app.services.notification_service import create_notification
+            day_ago = now - timedelta(hours=24)
+            recent = db.query(EmailLog).filter(EmailLog.created_at >= day_ago).all()
+            failed = [e for e in recent if e.status == "failed"]
+            if len(failed) >= 5:
+                already = db.query(SystemLog).filter(
+                    SystemLog.type == LogType.CRON,
+                    SystemLog.message.like("Email failure spike alert%"),
+                    SystemLog.created_at >= day_ago,
+                ).first()
+                if not already:
+                    _log(db, LogType.CRON, f"Email failure spike alert: {len(failed)} failed / {len(recent)} in 24h")
+                    admins = db.query(User).filter(User.role == UserRole.ADMIN).all()
+                    for adm in admins:
+                        try:
+                            create_notification(db, adm, "Email delivery problems",
+                                                f"{len(failed)} of {len(recent)} emails failed in the last 24h — check SMTP config.",
+                                                "warning", "/admin?tab=email")
+                        except Exception:
+                            pass
+        except Exception as e:
+            _log(db, LogType.ERROR, f"Email health check failed: {e}")
+
         # Overdue invoice reminders — one email per unpaid invoice past due date
         overdue_invoices = db.query(Invoice).filter(
             Invoice.status == InvoiceStatus.UNPAID,
