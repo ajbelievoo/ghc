@@ -998,7 +998,7 @@ export default function DashboardPage() {
               const soon = Date.now() + 14 * 24 * 3600 * 1000;
               const expiring = [
                 ...servers.filter((s) => s.expiresAt && new Date(s.expiresAt).getTime() < soon && s.status === "ACTIVE")
-                  .map((s) => ({ name: s.displayName || s.serviceName || s.planCode || s.id, when: new Date(s.expiresAt!), kind: "service", id: s.id })),
+                  .map((s) => ({ name: s.displayName || s.name || s.planCode || s.id, when: new Date(s.expiresAt!), kind: "service", id: s.id })),
                 ...safeDomains.filter((d) => d.expiresAt && new Date(d.expiresAt).getTime() < soon)
                   .map((d) => ({ name: d.domain, when: new Date(d.expiresAt), kind: "domain", id: d.id })),
               ].sort((a, b) => a.when.getTime() - b.when.getTime());
