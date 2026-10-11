@@ -100,6 +100,26 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
   const [open, setOpen] = useState<Record<string, boolean>>({ Compute: true });
   const [os, setOs] = useState<"linux" | "windows">("linux");
   const [search, setSearch] = useState("");
+  const [region, setRegion] = useState("GRA");
+  const [savings, setSavings] = useState(0); // committed-use discount fraction
+
+  const REGIONS = [
+    { code: "GRA", label: "GRA — Gravelines (FR)" }, { code: "SBG", label: "SBG — Strasbourg (FR)" },
+    { code: "RBX", label: "RBX — Roubaix (FR)" }, { code: "WAW", label: "WAW — Warsaw (PL)" },
+    { code: "DE", label: "DE — Frankfurt (DE)" }, { code: "UK", label: "UK — London (UK)" },
+    { code: "BHS", label: "BHS — Beauharnois (CA)" }, { code: "VIN", label: "VIN — Vint Hill (US)" },
+    { code: "HIL", label: "HIL — Hillsboro (US)" }, { code: "SGP", label: "SGP — Singapore (SG)" },
+    { code: "SYD", label: "SYD — Sydney (AU)" }, { code: "MUM", label: "MUM — Mumbai (IN)" },
+    { code: "EU-WEST-PAR", label: "Paris 3-AZ (FR)" }, { code: "EU-SOUTH-MIL", label: "Milan 3-AZ (IT)" },
+    { code: "MAD", label: "Madrid LZ (ES)" }, { code: "BRU", label: "Brussels LZ (BE)" },
+    { code: "AMS", label: "Amsterdam LZ (NL)" }, { code: "PRG", label: "Prague LZ (CZ)" },
+    { code: "LIS", label: "Lisbon LZ (PT)" }, { code: "ZRH", label: "Zurich LZ (CH)" },
+  ];
+  const SAVINGS = [
+    { v: 0, label: "None — pay as you go" }, { v: 0.05, label: "1 month (−5%)" },
+    { v: 0.10, label: "3 months (−10%)" }, { v: 0.15, label: "6 months (−15%)" },
+    { v: 0.20, label: "12 months (−20%)" }, { v: 0.30, label: "24 months (−30%)" },
+  ];
 
   useEffect(() => {
     let on = true;
@@ -142,7 +162,7 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
 
   const fmt = (v?: number | null) => {
     if (typeof v !== "number") return "—";
-    const p = v * MARGIN * rate;
+    const p = v * MARGIN * rate * (1 - savings);
     const dec = p >= 100 ? 0 : p >= 1 ? 2 : p >= 0.01 ? 4 : 6;
     return `${sym}${p.toLocaleString("en-IN", { maximumFractionDigits: dec })}`;
   };
@@ -186,7 +206,7 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
                   <td className="px-4 py-3 text-xs text-slate-500">{i.specs?.["private-network"] || "—"}</td>
                   <td className="px-4 py-3 text-sm font-bold text-[#0f172a]">{fmt(i.hour)}</td>
                   <td className="px-4 py-3 text-sm text-slate-500">~{fmt(i.month)}</td>
-                  <td className="px-4 py-3"><Link href={`/dashboard?view=public-cloud&launch=${i.code}`} className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Launch</Link></td>
+                  <td className="px-4 py-3"><Link href={`/dashboard?view=public-cloud&launch=${i.code}&region=${region}&os=${os}`} className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Launch</Link></td>
                 </tr>
               ))}
             </tbody>
@@ -215,7 +235,7 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
                 <td className="px-4 py-3 text-sm font-bold text-[#00b7ff]">{i.name !== i.code ? i.name : i.code}</td>
                 <td className="px-4 py-3 text-sm font-bold text-[#0f172a]">{i.hourFmt ? fmt(i.hour) : "—"}</td>
                 <td className="px-4 py-3 text-sm text-slate-500">{i.monthFmt ? `~${fmt(i.month)}` : "—"}</td>
-                <td className="px-4 py-3"><Link href={`/dashboard?view=public-cloud&launch=svc-${sec.id}`} className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Enable</Link></td>
+                <td className="px-4 py-3"><Link href={`/dashboard?view=public-cloud&launch=svc-${sec.id}&region=${region}`} className="rounded bg-[#ff3d00] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Enable</Link></td>
               </tr>
             ))}
             {items.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-400">No items found.</td></tr>}
@@ -291,8 +311,19 @@ export default function PublicCloudClient({ initialPlans }: { initialPlans?: any
         <div className="min-w-0">
           {/* Filters row */}
           <div className="mb-6 flex flex-wrap items-center gap-4 text-xs border-b border-slate-100 pb-4">
-            <span className="flex items-center gap-1.5 text-slate-500"><span className="font-bold uppercase">Locations</span><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">All regions ▾</span></span>
-            <span className="flex items-center gap-1.5 text-slate-500"><span className="font-bold uppercase">Savings Plan</span><span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">None ▾</span></span>
+            <label className="flex items-center gap-1.5 text-slate-500">
+              <span className="font-bold uppercase">Locations</span>
+              <select value={region} onChange={(e) => setRegion(e.target.value)} className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700 font-semibold outline-none cursor-pointer hover:bg-slate-200 transition">
+                {REGIONS.map((r) => <option key={r.code} value={r.code}>{r.label}</option>)}
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5 text-slate-500">
+              <span className="font-bold uppercase">Savings Plan</span>
+              <select value={savings} onChange={(e) => setSavings(parseFloat(e.target.value))} className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-700 font-semibold outline-none cursor-pointer hover:bg-slate-200 transition">
+                {SAVINGS.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
+              </select>
+              {savings > 0 && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">−{Math.round(savings * 100)}% applied</span>}
+            </label>
             <span className="flex items-center gap-2 text-slate-500"><span className="font-bold uppercase">Operating system</span>
               <label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={os === "linux"} onChange={() => setOs("linux")} className="accent-[#00b7ff]" />Linux</label>
               <label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={os === "windows"} onChange={() => setOs("windows")} className="accent-[#00b7ff]" />Windows</label>

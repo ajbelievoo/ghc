@@ -278,6 +278,13 @@ export default function PublicCloudPanel({ wallet, user, onTab, launch }: { wall
   useEffect(() => {
     if (launch) {
       const leafId = launch.replace(/^svc[:-]/, "");
+      const q = new URLSearchParams(window.location.search);
+      const preRegion = q.get("region");
+      if (preRegion) {
+        const mode = Object.keys(REGIONS).find((m) => REGIONS[m].some((r) => r.code === preRegion));
+        if (mode) setDeployMode(mode);
+        setRegion(preRegion);
+      }
       if (launch.startsWith("svc") && leafLookup[leafId]) {
         setActive(`svc:${leafId}`);
       } else {
