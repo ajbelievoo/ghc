@@ -52,7 +52,7 @@ export const api = {
       request("/auth/login", { method: "POST", body: JSON.stringify(body) }),
     login2FA: (body: { tempToken: string; code: string }) =>
       request("/auth/login/2fa", { method: "POST", body: JSON.stringify(body) }),
-    register: (body: { name: string; email: string; password: string; captchaId?: string; captchaAnswer?: string }) =>
+    register: (body: { name: string; email: string; password: string; ref?: string; captchaId?: string; captchaAnswer?: string }) =>
       request("/auth/register", { method: "POST", body: JSON.stringify(body) }),
     verifyEmail: (body: { token: string }) =>
       request("/auth/verify-email", { method: "POST", body: JSON.stringify(body) }),

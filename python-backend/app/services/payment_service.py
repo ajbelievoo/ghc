@@ -252,6 +252,40 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 ip.payment_transaction_id = tx.id
                 db.commit()
 
+    # Referral reward — referrer earns 10% wallet credit on the referred user's
+    # first completed payment. Skips WALLET_DEPOSIT top-ups (order purchases only).
+    try:
+        if meta.get("type") != "WALLET_DEPOSIT":
+            payer = db.query(User).filter(User.id == tx.user_id).first()
+            if payer and payer.referred_by:
+                prior_completed = db.query(PaymentTransaction).filter(
+                    PaymentTransaction.user_id == payer.id,
+                    PaymentTransaction.status == PaymentStatus.COMPLETED,
+                    PaymentTransaction.id != tx.id,
+                ).count()
+                if prior_completed == 0 and not tx.payment_metadata.get("referral_rewarded"):
+                    referrer = db.query(User).filter(User.id == payer.referred_by).first()
+                    if referrer:
+                        reward = round(float(tx.amount or 0) * 0.10, 2)
+                        if reward > 0:
+                            credit_wallet(
+                                db, referrer.id, reward,
+                                description=f"Referral reward — 10% of {payer.name or payer.email}'s first payment",
+                                gateway="referral",
+                                metadata={"referred_user_id": payer.id, "payment_transaction_id": tx.id},
+                                currency=tx.currency,
+                            )
+                            tx.payment_metadata = {**tx.payment_metadata, "referral_rewarded": True}
+                            db.commit()
+                            try:
+                                create_notification(db, referrer, "Referral reward",
+                                                    f"{tx.currency} {reward:.2f} credited — your referral made their first payment.",
+                                                    "success", "/dashboard?tab=wallet")
+                            except Exception:
+                                pass
+    except Exception:
+        logger.exception(f"Referral reward failed for tx {tx.id}")
+
     return tx
 
 

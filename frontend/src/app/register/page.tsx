@@ -17,8 +17,14 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [refCode, setRefCode] = useState<string | null>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
   const { captcha, setCaptcha, image: captchaImage, refresh: refreshCaptcha } = useCaptcha();
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) setRefCode(ref.trim().toUpperCase());
+  }, []);
 
   useEffect(() => {
     api.auth.getConfig()
@@ -85,7 +91,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      const res = await api.auth.register({ name: name.trim(), email: email.trim(), password, captchaId: captcha.captchaId, captchaAnswer: captcha.captchaAnswer });
+      const res = await api.auth.register({ name: name.trim(), email: email.trim(), password, ref: refCode || undefined, captchaId: captcha.captchaId, captchaAnswer: captcha.captchaAnswer });
       if (res.token) {
         localStorage.setItem("token", res.token);
         localStorage.setItem("user", JSON.stringify(res.user));
