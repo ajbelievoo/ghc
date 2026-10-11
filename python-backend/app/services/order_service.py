@@ -1072,6 +1072,30 @@ def reconcile_provider_order(db: Session, ovh: OvhClient, order: CustomerOrder) 
         return "failed-upstream-gone"
 
 
+def spawn_provisioning(order_id: str) -> None:
+    """Run execute_checkout in a daemon thread with its own DB session.
+
+    OVH delivery polling can take minutes — longer than the web tier's request
+    timeout (Cloudflare ~100s). Callers return immediately; the order row shows
+    PROVISIONING and the UI polls for the final state.
+    """
+    import threading
+
+    def _run() -> None:
+        from app.core.database import SessionLocal
+        from app.services.ovh_client import get_ovh_client_from_db
+        db = SessionLocal()
+        try:
+            ovh = get_ovh_client_from_db(db)
+            execute_checkout(db, ovh, order_id)
+        except Exception:
+            logger.exception(f"Background provisioning failed for order {order_id}")
+        finally:
+            db.close()
+
+    threading.Thread(target=_run, name=f"provision-{order_id[:8]}", daemon=True).start()
+
+
 def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrder:
     """
     Full automated loop:
@@ -1093,6 +1117,7 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         OrderStatus.OVH_CART_CREATED,
         OrderStatus.OVH_ORDER_PLACED,
         OrderStatus.OVH_PAID,
+        OrderStatus.PROVISIONING,
         OrderStatus.PROVISIONING_FAILED,
         OrderStatus.FAILED,
     ):

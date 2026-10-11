@@ -79,8 +79,10 @@ def pay_invoice_with_wallet(db: Session, user, invoice) -> dict:
     invoice.status = InvoiceStatus.PAID
     if invoice.order_id:
         order = db.query(CustomerOrder).filter(CustomerOrder.id == invoice.order_id).first()
-        if order:
-            order.status = OrderStatus.ACTIVE
+        if order and order.status == OrderStatus.PENDING:
+            # invoice payment == order payment only when the order was never paid;
+            # renewals/failed orders keep their real status (provisioning/reconcile handles the rest)
+            order.status = OrderStatus.PAYMENT_RECEIVED
     db.commit()
     try:
         from app.services.subscription_service import reactivate_after_invoice_payment

@@ -1297,15 +1297,16 @@ def billing_wallet_pay(body: dict, db: Session = Depends(get_db), user: User = D
             coupon_code=body.get("couponCode") or body.get("coupon_code"),
         )
         order = pay_order_with_wallet(db, user.id, order.id)
-        # Auto-provision
+        # Auto-provision in background — delivery polling outlives request timeouts
         try:
-            ovh = get_ovh_client_from_db(db)
-            execute_checkout(db, ovh, order.id)
+            from app.services.order_service import spawn_provisioning
+            order.status = OrderStatus.PROVISIONING
+            db.commit()
+            spawn_provisioning(order.id)
         except Exception as e:
-            # Wallet paid, but OVH provisioning failed
             return {
                 "order": {"id": order.id, "status": order.status.value},
-                "message": "Paid with wallet. OVH provisioning failed: " + str(e),
+                "message": "Paid with wallet. Provisioning kickoff failed: " + str(e),
             }
         db.refresh(order)
         return {
@@ -1523,8 +1524,10 @@ def payments_checkout(body: dict, db: Session = Depends(get_db), user: User = De
             order.status = OrderStatus.PAYMENT_RECEIVED
             db.commit()
             try:
-                ovh = get_ovh_client_from_db(db)
-                execute_checkout(db, ovh, order.id)
+                from app.services.order_service import spawn_provisioning
+                order.status = OrderStatus.PROVISIONING
+                db.commit()
+                spawn_provisioning(order.id)
             except Exception as e:
                 return {"id": tx.id, "amount": tx.amount, "currency": tx.currency, "gateway": tx.gateway, "status": tx.status.value, "paid": True, "message": f"Paid — provisioning pending: {e}"}
         return {"id": tx.id, "amount": tx.amount, "currency": tx.currency, "gateway": tx.gateway, "status": tx.status.value, "paid": True}
@@ -1855,9 +1858,14 @@ def admin_retry_provision(order_id: str, db: Session = Depends(get_db), admin: U
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     try:
-        ovh = get_ovh_client_from_db(db)
-        execute_checkout(db, ovh, order.id)
-        return {"success": True, "orderId": order.id, "status": order.status.value}
+        from app.services.order_service import spawn_provisioning
+        from datetime import datetime, timedelta
+        if order.status == OrderStatus.PROVISIONING and order.updated_at and order.updated_at > datetime.utcnow() - timedelta(minutes=15):
+            raise HTTPException(status_code=409, detail="Provisioning already running — wait for it to finish or retry after it goes stale")
+        order.status = OrderStatus.PROVISIONING
+        db.commit()
+        spawn_provisioning(order.id)
+        return {"success": True, "orderId": order.id, "status": order.status.value, "message": "Provisioning started — status updates automatically"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Provisioning retry failed: {str(e)}")
 

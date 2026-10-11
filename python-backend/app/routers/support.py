@@ -23,21 +23,34 @@ UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..",
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
+_ALLOWED_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".txt", ".log", ".zip", ".doc", ".docx", ".xls", ".xlsx", ".csv"}
+_MAX_UPLOAD = 10 * 1024 * 1024  # 10 MB per file
+
+
 def _save_attachments(files: List[UploadFile], reply_id: str) -> List[dict]:
     attachments = []
     for f in files or []:
         if not f.filename:
             continue
         ext = os.path.splitext(f.filename)[1].lower()
+        if ext not in _ALLOWED_EXT:
+            raise HTTPException(status_code=400, detail=f"File type {ext or '?'} is not allowed")
         safe_name = f"{reply_id}_{uuid.uuid4().hex[:8]}{ext}"
         file_path = os.path.join(UPLOAD_DIR, safe_name)
+        size = 0
         with open(file_path, "wb") as out:
-            shutil.copyfileobj(f.file, out)
+            while chunk := f.file.read(1024 * 1024):
+                size += len(chunk)
+                if size > _MAX_UPLOAD:
+                    out.close()
+                    os.remove(file_path)
+                    raise HTTPException(status_code=400, detail=f"{f.filename} exceeds the 10 MB limit")
+                out.write(chunk)
         attachments.append({
-            "filename": f.filename,
+            "filename": f.filename[:200],
             "file_path": file_path,
-            "mime_type": f.content_type or mimetypes.guess_type(f.filename)[0] or "application/octet-stream",
-            "file_size": os.path.getsize(file_path),
+            "mime_type": mimetypes.guess_type(f.filename)[0] or "application/octet-stream",
+            "file_size": size,
         })
     return attachments
 

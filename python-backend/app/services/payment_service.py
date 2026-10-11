@@ -186,11 +186,14 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 logger.exception("Order payment email failed")
             order_label = (order.configuration_payload or {}).get("display_name") or order.plan_code or "order"
             create_notification(db, order.user, "Payment received", f"Payment for {order_label} confirmed.", "success", "/dashboard")
+            # Provision in background — OVH delivery polling outlives request timeouts
             try:
-                ovh = get_ovh_client_from_db(db)
-                execute_checkout(db, ovh, tx.order_id)
+                from app.services.order_service import spawn_provisioning
+                order.status = OrderStatus.PROVISIONING
+                db.commit()
+                spawn_provisioning(tx.order_id)
             except Exception as e:
-                logger.exception(f"Auto-provision after payment failed for order {tx.order_id}: {e}")
+                logger.exception(f"Auto-provision kickoff failed for order {tx.order_id}: {e}")
     elif meta.get("type") == "INVOICE_PAYMENT" or meta.get("invoice_id") or meta.get("invoice_ids"):
         ids = meta.get("invoice_ids") or ([meta.get("invoice_id") or meta.get("invoiceId")] if (meta.get("invoice_id") or meta.get("invoiceId")) else [])
         for invoice_id in ids:
@@ -199,8 +202,10 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 invoice.status = InvoiceStatus.PAID
                 if invoice.order_id:
                     order = db.query(CustomerOrder).filter(CustomerOrder.id == invoice.order_id).first()
-                    if order and order.status != OrderStatus.ACTIVE:
-                        order.status = OrderStatus.ACTIVE
+                    if order and order.status == OrderStatus.PENDING:
+                        # invoice payment == order payment only for a never-paid order;
+                        # renewals/provisioning failures keep their real status
+                        order.status = OrderStatus.PAYMENT_RECEIVED
                 db.commit()
                 try:
                     from app.services.subscription_service import reactivate_after_invoice_payment

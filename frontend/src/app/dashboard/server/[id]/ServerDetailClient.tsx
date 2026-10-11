@@ -1786,7 +1786,48 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
               {ov?.netbootMode === "rescue" ? "Exit rescue mode" : "Boot rescue mode"}
             </button>
           )}
+          {!isVps && (
+            <button
+              onClick={async () => {
+                if (!confirm("Reboot the server into rescue mode?")) return;
+                setActionLoading("rescue");
+                try {
+                  await api.server.rescue(server.id, { enabled: true, reboot: true });
+                  showToast("Rescue mode enabled — rebooting", "success");
+                } catch (e: any) {
+                  showToast(e.message || "Rescue mode failed", "error");
+                } finally {
+                  setActionLoading(null);
+                }
+              }}
+              disabled={actionLoading === "rescue"}
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-xs font-medium text-[#0f172a] hover:bg-slate-100 disabled:opacity-50"
+            >
+              {actionLoading === "rescue" ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4 text-[#ff3d00]" />}
+              Rescue mode
+            </button>
+          )}
         </div>
+        {!isVps && (
+          <button
+            onClick={async () => {
+              setActionLoading("normalboot");
+              try {
+                await api.server.rescue(server.id, { enabled: false });
+                showToast("Normal disk boot restored", "success");
+              } catch (e: any) {
+                showToast(e.message || "Boot change failed", "error");
+              } finally {
+                setActionLoading(null);
+              }
+            }}
+            disabled={actionLoading === "normalboot"}
+            className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+          >
+            {actionLoading === "normalboot" ? <Loader2 className="w-4 h-4 animate-spin" /> : <HardDrive className="w-4 h-4" />}
+            Boot from disk (exit rescue)
+          </button>
+        )}
       </Card>
 
       {/* OS reinstall */}

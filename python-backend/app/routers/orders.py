@@ -5,7 +5,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.models import CustomerOrder, Invoice, InvoiceStatus, OrderStatus, PaymentStatus, PaymentTransaction, User
 from app.schemas.order import OrderCreate, OrderResponse, OrderWithLogs
-from app.services.order_service import create_customer_order, execute_checkout, pay_order_with_wallet
+from app.services.order_service import create_customer_order, execute_checkout, pay_order_with_wallet, spawn_provisioning
 from app.services.ovh_client import get_ovh_client_from_db
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
@@ -59,15 +59,16 @@ def provision_order(order_id: str, db: Session = Depends(get_db), user: User = D
     )
     if not paid:
         raise HTTPException(status_code=400, detail="Order is not paid yet")
+    if order.status == OrderStatus.PROVISIONING:
+        # already spawning/running — idempotent no-op so a double-click can't
+        # create a second upstream cart/order
+        return order
     if order.status not in (OrderStatus.PAYMENT_RECEIVED, OrderStatus.PENDING, OrderStatus.FAILED, OrderStatus.PROVISIONING_FAILED, OrderStatus.OVH_ORDER_PLACED, OrderStatus.OVH_PAID):
         raise HTTPException(status_code=400, detail=f"Order status is {order.status.value}")
-    try:
-        ovh = get_ovh_client_from_db(db)
-        execute_checkout(db, ovh, order_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # Delivery polling can take minutes — run it in the background; the UI polls order status.
+    order.status = OrderStatus.PROVISIONING
+    db.commit()
+    spawn_provisioning(order_id)
     db.refresh(order)
     return order
 
