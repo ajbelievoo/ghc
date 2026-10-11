@@ -150,6 +150,15 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
     if tx.status == PaymentStatus.COMPLETED:
         return tx
 
+    # Underpayment guard — never fulfill for less than the expected amount.
+    if amount + 0.01 < float(tx.amount or 0):
+        logger.error(
+            f"Underpayment on tx {tx.id}: expected {tx.amount} {tx.currency}, gateway reported {amount} — not fulfilling"
+        )
+        tx.payment_metadata = {**(tx.payment_metadata or {}), "underpaid_amount": amount, **(metadata or {})}
+        db.commit()
+        return None
+
     tx.status = PaymentStatus.COMPLETED
     tx.payment_metadata = {**(tx.payment_metadata or {}), **(metadata or {})}
     db.commit()
