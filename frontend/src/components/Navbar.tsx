@@ -28,25 +28,72 @@ const megaMenu: MegaEntry[] = [
   {
     label: "Public Cloud",
     href: "/public-cloud",
-    cols: 3,
+    cols: 4,
     columns: [
-      { title: "Compute & Containers", items: [
-        { label: "Compute", href: "/public-cloud?s=vm", desc: "VM, GPU, and Metal instances" },
-        { label: "Containers", href: "/public-cloud?s=k8s", desc: "Managed Kubernetes, registry, and Rancher" },
-        { label: "Storage", href: "/public-cloud?s=object", desc: "Object, Block, and File storage" },
-        { label: "Network", href: "/public-cloud?s=loadbalancer", desc: "Load Balancer, Floating IPs, Gateway, vRack" },
+      { groups: [
+        { title: "Compute", items: [
+          { label: "Virtual Machine Instances", href: "/public-cloud?s=vm" },
+          { label: "Cloud GPU", href: "/public-cloud?s=gpu" },
+          { label: "Metal Instances", href: "/public-cloud?s=metal" },
+          { label: "Instance Backup", href: "/public-cloud?s=backup" },
+          { label: "Image Catalogs", href: "/public-cloud?s=public-images" },
+        ]},
+        { title: "Containers & Orchestration", items: [
+          { label: "Managed Kubernetes", href: "/public-cloud?s=k8s" },
+          { label: "Managed Private Registry", href: "/public-cloud?s=registry" },
+          { label: "Managed Rancher", href: "/public-cloud?s=rancher" },
+        ]},
       ]},
-      { title: "Data & Analytics", items: [
-        { label: "Databases", href: "/public-cloud?s=db-mysql", desc: "MySQL, PostgreSQL, MongoDB, Redis, Kafka" },
-        { label: "Analytics", href: "/public-cloud?s=analytics", desc: "Data ingestion, processing, and visualisation" },
-        { label: "Data Platform", href: "/public-cloud?s=dp", desc: "Managed data pipelines" },
+      { groups: [
+        { title: "Storage", items: [
+          { label: "Block Storage", href: "/public-cloud?s=block" },
+          { label: "Object Storage", href: "/public-cloud?s=object" },
+          { label: "File Storage", href: "/public-cloud?s=file" },
+          { label: "Local Storage", href: "/public-cloud?s=local" },
+        ]},
+        { title: "Network", items: [
+          { label: "Load Balancer", href: "/public-cloud?s=loadbalancer" },
+          { label: "Floating IP", href: "/public-cloud?s=floatingip" },
+          { label: "Gateway", href: "/public-cloud?s=gateway" },
+          { label: "Private Network (vRack)", href: "/public-cloud?s=vrack" },
+        ]},
       ]},
-      { title: "AI, Quantum & Ops", items: [
-        { label: "AI & Machine Learning", href: "/public-cloud?s=ai-notebooks", desc: "Notebooks, Training, Deploy, Endpoints" },
-        { label: "Quantum", href: "/public-cloud?s=q-notebooks", desc: "Quantum Notebooks and QPUs" },
-        { label: "Security & identity", href: "/security", desc: "Access control and protection" },
-        { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
+      { groups: [
+        { title: "Databases", items: [
+          { label: "MySQL", href: "/public-cloud?s=db-mysql" },
+          { label: "PostgreSQL", href: "/public-cloud?s=db-postgresql" },
+          { label: "MongoDB", href: "/public-cloud?s=db-mongodb" },
+          { label: "Redis™*", href: "/public-cloud?s=db-redis" },
+          { label: "Kafka", href: "/public-cloud?s=db-kafka" },
+          { label: "All databases", href: "/public-cloud?s=db-mysql" },
+        ]},
+        { title: "Data & Analytics", items: [
+          { label: "Analytics", href: "/public-cloud?s=analytics" },
+          { label: "Data Platform", href: "/public-cloud?s=dp" },
+        ]},
       ]},
+      { groups: [
+        { title: "AI & Machine Learning", items: [
+          { label: "AI Notebooks", href: "/public-cloud?s=ai-notebooks" },
+          { label: "AI Training", href: "/public-cloud?s=ai-training" },
+          { label: "AI Deploy", href: "/public-cloud?s=ai-deploy" },
+          { label: "AI Endpoints", href: "/public-cloud?s=ai-endpoints" },
+        ]},
+        { title: "Quantum", items: [
+          { label: "Quantum Notebooks", href: "/public-cloud?s=q-notebooks" },
+          { label: "Quantum Processing Units", href: "/public-cloud?s=qpu" },
+        ]},
+        { title: "Management", items: [
+          { label: "Pricing model", href: "/public-cloud?s=pricing" },
+          { label: "Security & identity", href: "/security" },
+          { label: "Operations", href: "/operations" },
+        ]},
+      ]},
+    ],
+    footerLinks: [
+      { label: "Prices", href: "/public-cloud?s=pricing" },
+      { label: "Guides & Documentation", href: "/kb" },
+      { label: "Roadmap & Changelog", href: "/status" },
     ],
   },
   {

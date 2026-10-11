@@ -1,9 +1,10 @@
 import io
 import logging
+import re as _re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -1865,6 +1866,80 @@ def admin_update_order_config(order_id: str, body: dict, db: Session = Depends(g
     return {"ok": True, "orderId": order.id, "configuration": cfg}
 
 
+@router.get("/admin/ovh-account")
+def admin_ovh_account(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """OVH account overview: registered payment methods + live service counts."""
+    ovh = get_ovh_client_from_db(db)
+    out: Dict[str, Any] = {"paymentMethods": 0, "services": {}, "connected": True}
+    try:
+        out["paymentMethods"] = len(ovh.get("/me/payment/method") or [])
+    except Exception:
+        out["paymentMethods"] = None
+    for label, ep in [("vps", "/vps"), ("dedicated", "/dedicated/server"), ("cloud", "/cloud/project"), ("domains", "/domain/zone")]:
+        try:
+            out["services"][label] = len(ovh.get(ep) or [])
+        except Exception as e:
+            out["services"][label] = f"err: {str(e)[:60]}"
+    return out
+
+
+@router.get("/admin/reconcile")
+def admin_reconcile(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Compare local subscriptions against live OVH services — flags stale entries."""
+    ovh = get_ovh_client_from_db(db)
+    live: Dict[str, Any] = {}
+    for label, ep in [("VPS", "/vps"), ("DEDICATED", "/dedicated/server"), ("DOMAINS", "/domain/zone")]:
+        try:
+            live[label] = set(ovh.get(ep) or [])
+        except Exception:
+            live[label] = set()
+    rows = []
+    subs = db.query(Subscription).filter(Subscription.category.in_([ServiceCategory.VPS, ServiceCategory.DEDICATED])).all()
+    for s in subs:
+        name = s.service_name or s.ovh_resource_id
+        in_ovh = name in live.get(s.category.value, set()) if name else False
+        rows.append({
+            "id": s.id,
+            "serviceName": name,
+            "displayName": s.display_name,
+            "category": s.category.value,
+            "status": s.status.value,
+            "inOvh": bool(in_ovh),
+            "stale": bool(name and not in_ovh),
+            "missingResource": not bool(name),
+        })
+    return {
+        "subscriptions": rows,
+        "ovhServices": {k: sorted(v) for k, v in live.items()},
+        "staleCount": sum(1 for r in rows if r["stale"]),
+        "untracked": [n for k in ("VPS", "DEDICATED") for n in live.get(k, set()) if not any(r["serviceName"] == n for r in rows)],
+    }
+
+
+@router.get("/admin/sales-summary")
+def admin_sales_summary(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Revenue + order counts for the admin dashboard widget."""
+    from sqlalchemy import func as _f
+    done_states = [OrderStatus.ACTIVE, OrderStatus.OVH_PAID, OrderStatus.OVH_ORDER_PLACED, OrderStatus.PROVISIONING]
+    paid = db.query(_f.count(CustomerOrder.id), _f.coalesce(_f.sum(CustomerOrder.customer_amount), 0), _f.coalesce(_f.sum(CustomerOrder.commission_amount), 0)).filter(CustomerOrder.status.in_(done_states)).first()
+    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month = db.query(_f.count(CustomerOrder.id), _f.coalesce(_f.sum(CustomerOrder.customer_amount), 0)).filter(CustomerOrder.status.in_(done_states), CustomerOrder.created_at >= month_start).first()
+    by_cat = dict(
+        db.query(CustomerOrder.category, _f.count(CustomerOrder.id))
+        .filter(CustomerOrder.status.in_(done_states))
+        .group_by(CustomerOrder.category)
+        .all()
+    )
+    return {
+        "totalOrders": paid[0] or 0,
+        "totalRevenue": round(paid[1] or 0, 2),
+        "totalMargin": round(paid[2] or 0, 2),
+        "monthOrders": month[0] or 0,
+        "monthRevenue": round(month[1] or 0, 2),
+        "byCategory": {k.value: v for k, v in by_cat.items()},
+    }
+
+
 @router.post("/admin/orders/{order_id}/retry-provision")
 def admin_retry_provision(order_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.services.ovh_client import get_ovh_client_from_db
@@ -3092,6 +3167,112 @@ def dedicated_monitoring_update(server_id: str, body: dict, db: Session = Depend
     monitoring = body.get("monitoring")
     no_intervention = body.get("noIntervention")
     return _ovh_call(lambda: set_dedicated_monitoring(ovh, sub, monitoring=monitoring, no_intervention=no_intervention))
+
+
+# ---------- SSH keys (OVH /me/sshKey) ----------
+
+@router.get("/account/ssh-keys")
+def list_ssh_keys(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    ovh = get_ovh_client_from_db(db)
+    try:
+        names = ovh.get("/me/sshKey") or []
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+    keys = []
+    for name in names:
+        try:
+            k = ovh.get(f"/me/sshKey/{name}")
+            keys.append({"keyName": name, "key": (k or {}).get("key"), "default": (k or {}).get("default")})
+        except Exception:
+            keys.append({"keyName": name})
+    return {"keys": keys}
+
+
+@router.post("/account/ssh-keys")
+def create_ssh_key(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    key_name = (body.get("keyName") or "").strip()
+    key = (body.get("key") or "").strip()
+    if not key_name or not key:
+        raise HTTPException(status_code=400, detail="keyName and key are required")
+    if not _re.match(r"^(ssh-(rsa|ed25519|dss)|ecdsa-\S+)\s+\S+", key):
+        raise HTTPException(status_code=400, detail="Invalid SSH public key format")
+    ovh = get_ovh_client_from_db(db)
+    try:
+        ovh.post("/me/sshKey", keyName=key_name, key=key)
+        return {"success": True, "keyName": key_name}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.delete("/account/ssh-keys/{key_name}")
+def delete_ssh_key(key_name: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    ovh = get_ovh_client_from_db(db)
+    try:
+        ovh.delete(f"/me/sshKey/{key_name}")
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+# ---------- Service order history ----------
+
+@router.get("/server/{server_id}/orders")
+def server_orders(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    orders = (
+        db.query(CustomerOrder)
+        .filter(CustomerOrder.user_id == user.id)
+        .order_by(CustomerOrder.created_at.desc())
+        .all()
+    )
+    linked = []
+    for o in orders:
+        cfg = o.configuration_payload or {}
+        if o.id == sub.order_id or cfg.get("subscription_id") == sub.id or (cfg.get("service_option") or {}).get("subscriptionId") == sub.id:
+            linked.append({
+                "id": o.id,
+                "label": cfg.get("display_name") or o.plan_code or "Order",
+                "kind": (cfg.get("service_option") or {}).get("kind") or "service",
+                "amount": o.customer_amount,
+                "currency": o.currency,
+                "status": o.status.value,
+                "createdAt": o.created_at.isoformat() if o.created_at else None,
+            })
+    return {"orders": linked}
+
+
+@router.get("/server/{server_id}/invoices")
+def server_invoices(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    linked_order_ids = {sub.order_id} if sub.order_id else set()
+    for o in db.query(CustomerOrder).filter(CustomerOrder.user_id == user.id).all():
+        cfg = o.configuration_payload or {}
+        if cfg.get("subscription_id") == sub.id or (cfg.get("service_option") or {}).get("subscriptionId") == sub.id:
+            linked_order_ids.add(o.id)
+    if not linked_order_ids:
+        return {"invoices": []}
+    invoices = (
+        db.query(Invoice)
+        .filter(Invoice.user_id == user.id, Invoice.order_id.in_(linked_order_ids))
+        .order_by(Invoice.created_at.desc())
+        .all()
+    )
+    out = []
+    for inv in invoices:
+        out.append({
+                "id": inv.id,
+                "invoiceNumber": inv.invoice_number,
+                "amount": inv.amount,
+                "currency": inv.currency,
+                "status": inv.status.value,
+                "dueDate": inv.due_date.isoformat() if inv.due_date else None,
+                "createdAt": inv.created_at.isoformat() if inv.created_at else None,
+            })
+    return {"invoices": out}
 
 
 @router.get("/server/{server_id}/ping")

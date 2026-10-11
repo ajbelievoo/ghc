@@ -194,6 +194,9 @@ export const api = {
       request(`/admin/orders?${new URLSearchParams(params as any).toString()}`),
     retryProvision: (orderId: string) =>
       request(`/admin/orders/${orderId}/retry-provision`, { method: "POST" }),
+    ovhAccount: () => request("/admin/ovh-account"),
+    reconcile: () => request("/admin/reconcile"),
+    salesSummary: () => request("/admin/sales-summary"),
     // Invoices
     getInvoices: (params?: { status?: string; userId?: string }) =>
       request(`/admin/invoices?${new URLSearchParams(params as any).toString()}`),
@@ -341,6 +344,33 @@ export const api = {
       request(`/server/${id}/auto-renew`, { method: "POST", body: JSON.stringify({ enabled }) }),
     cancelService: (id: string) =>
       request(`/server/${id}/cancel`, { method: "POST", body: JSON.stringify({ confirm: true }) }),
+    renewNow: (id: string, gateway?: string) =>
+      request(`/server/${id}/renew`, { method: "POST", body: JSON.stringify({ gateway }) }),
+    serviceOrders: (id: string) => request(`/server/${id}/orders`),
+    serviceInvoices: (id: string) => request(`/server/${id}/invoices`),
+    dedicatedTasks: (id: string) => request(`/server/${id}/dedicated/tasks`),
+    dedicatedBoots: (id: string) => request(`/server/${id}/dedicated/boots`),
+    dedicatedVrack: (id: string) => request(`/server/${id}/dedicated/vrack`),
+    dedicatedOptions: (id: string) => request(`/server/${id}/dedicated/options`),
+    dedicatedInterventions: (id: string) => request(`/server/${id}/dedicated/interventions`),
+    dedicatedIpmi: (id: string) => request(`/server/${id}/dedicated/ipmi`),
+    dedicatedIpmiAccess: (id: string, type?: string) =>
+      request(`/server/${id}/dedicated/ipmi-access`, { method: "POST", body: JSON.stringify({ type: type || "kvmipHtml5URL" }) }),
+    dedicatedBackupFtp: (id: string) => request(`/server/${id}/dedicated/backup-ftp`),
+    dedicatedBackupFtpActivate: (id: string) => request(`/server/${id}/dedicated/backup-ftp`, { method: "POST" }),
+    dedicatedFirewall: (id: string) => request(`/server/${id}/dedicated/firewall`),
+    dedicatedFirewallAction: (id: string, body: { ip: string; enabled?: boolean }) =>
+      request(`/server/${id}/dedicated/firewall`, { method: "POST", body: JSON.stringify(body) }),
+    dedicatedMonitoring: (id: string) => request(`/server/${id}/dedicated/monitoring`),
+    dedicatedSetMonitoring: (id: string, body: { monitoring?: boolean; noIntervention?: boolean }) =>
+      request(`/server/${id}/dedicated/monitoring`, { method: "POST", body: JSON.stringify(body) }),
+  },
+  account: {
+    sshKeys: () => request("/account/ssh-keys"),
+    addSshKey: (body: { keyName: string; key: string }) =>
+      request("/account/ssh-keys", { method: "POST", body: JSON.stringify(body) }),
+    deleteSshKey: (keyName: string) =>
+      request(`/account/ssh-keys/${encodeURIComponent(keyName)}`, { method: "DELETE" }),
   },
   billing: {
     createOrder: (body: { planCode: string; durationLabel: string; gateway: string; category: string; currency?: string }) =>

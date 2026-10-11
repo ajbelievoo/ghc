@@ -393,8 +393,30 @@ def _paypal_access_token(cfg: dict) -> tuple:
     return resp.json()["access_token"], base
 
 
+# Currencies a PayPal business account can actually receive — anything else
+# (e.g. INR for international merchant accounts) is converted to USD.
+PAYPAL_SUPPORTED_CURRENCIES = {
+    "AUD", "BRL", "CAD", "CNY", "CZK", "DKK", "EUR", "HKD", "HUF", "ILS",
+    "JPY", "MYR", "MXN", "TWD", "NZD", "NOK", "PHP", "PLN", "GBP", "RUB",
+    "SGD", "SEK", "CHF", "THB", "USD",
+}
+
+
 def _paypal_checkout(db: Session, tx: PaymentTransaction, user: User, cfg: dict) -> dict:
+    from app.services.currency_service import convert
     token, base = _paypal_access_token(cfg)
+    charge_currency = (tx.currency or "USD").upper()
+    charge_amount = float(tx.amount)
+    if charge_currency not in PAYPAL_SUPPORTED_CURRENCIES:
+        charge_amount = round(convert(db, charge_amount, charge_currency, "USD"), 2)
+        charge_currency = "USD"
+        if charge_amount <= 0:
+            raise ValueError("Could not convert amount for PayPal")
+        tx.payment_metadata = {
+            **(tx.payment_metadata or {}),
+            "paypal_charged": {"amount": charge_amount, "currency": charge_currency},
+        }
+        db.commit()
     resp = requests.post(
         f"{base}/v2/checkout/orders",
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
@@ -402,7 +424,7 @@ def _paypal_checkout(db: Session, tx: PaymentTransaction, user: User, cfg: dict)
             "intent": "CAPTURE",
             "purchase_units": [{
                 "reference_id": tx.id,
-                "amount": {"currency_code": tx.currency, "value": f"{float(tx.amount):.2f}"},
+                "amount": {"currency_code": charge_currency, "value": f"{charge_amount:.2f}"},
             }],
             "application_context": {
                 "return_url": f"{settings.site_url}/api/payments/paypal/capture?tx={tx.id}",

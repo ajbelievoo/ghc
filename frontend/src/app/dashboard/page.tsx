@@ -491,6 +491,8 @@ export default function DashboardPage() {
         fetchWallet();
       } else if (res.checkoutUrl) {
         window.location.href = res.checkoutUrl;
+      } else if (res.id) {
+        window.location.href = `/payment/?tx=${res.id}&gateway=${gateway}`;
       } else {
         showToast("Could not initiate payment. No checkout URL returned.", "error");
       }
@@ -1000,7 +1002,12 @@ export default function DashboardPage() {
             {/* Getting-started checklist — hidden once everything is done */}
             {(() => {
               const steps = [
-                { label: "Verify your email", done: !!user?.email_verified, action: () => setTab("profile"), cta: "Profile" },
+                { label: "Verify your email", done: !!user?.email_verified, action: async () => {
+                    try {
+                      await api.auth.resendVerification({ email: user?.email });
+                      showToast(`Verification email sent to ${user?.email} — check your inbox`, "success");
+                    } catch (e: any) { showToast(e.message || "Could not send verification email", "error"); }
+                  }, cta: "Send link" },
                 { label: "Add funds to your wallet", done: (wallet?.balance || 0) > 0, action: () => setTab("wallet"), cta: "Top up" },
                 { label: "Deploy your first service", done: servers.length > 0, action: () => setActiveView("order"), cta: "Order" },
                 { label: "Enable two-factor auth", done: !!user?.totp_enabled, action: () => setTab("security"), cta: "Security" },
@@ -2446,6 +2453,21 @@ export default function DashboardPage() {
               <div>
                 <label className="block text-xs text-slate-500 mb-1.5">Email</label>
                 <input value={user?.email || ""} disabled className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-slate-500 cursor-not-allowed" />
+                {user?.email_verified ? (
+                  <p className="mt-1.5 text-[11px] font-semibold text-green-600 flex items-center gap-1"><Check className="w-3 h-3" /> Email verified</p>
+                ) : (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-yellow-300/60 bg-yellow-50 px-3 py-2">
+                    <p className="text-[11px] font-semibold text-yellow-700 flex items-center gap-1"><ShieldAlert className="w-3.5 h-3.5" /> Email not verified</p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try { await api.auth.resendVerification({ email: user?.email }); showToast(`Verification link sent to ${user?.email}`, "success"); }
+                        catch (e: any) { showToast(e.message || "Could not send email", "error"); }
+                      }}
+                      className="text-[10px] font-bold text-[#00b7ff] hover:underline"
+                    >Resend verification email →</button>
+                  </div>
+                )}
               </div>
               <button type="submit" disabled={savingProfile} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2.5 text-sm font-medium text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all disabled:opacity-50">{savingProfile ? "Saving..." : "Save Profile"}</button>
             </form>
