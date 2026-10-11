@@ -182,15 +182,17 @@ def _plan_to_frontend(p: PlanCatalog, currency: Optional[str] = None, db: Sessio
     plan_currency = (p.currency or target).upper()
     if db and plan_currency != target:
         from app.services.currency_service import convert
+        # one rate lookup per plan, not per duration
+        rate = convert(db, 1.0, plan_currency, target)
         converted_durations = []
         for d in p.durations:
             converted_durations.append({
                 "durationLabel": d.duration_label,
                 "interval": d.interval,
                 "intervalUnit": d.interval_unit,
-                "rawPrice": round(convert(db, d.raw_price, plan_currency, target), 2),
-                "finalPrice": round(convert(db, d.final_price, plan_currency, target), 2),
-                "monthlyPrice": round(convert(db, _monthly_price(d.final_price, d.interval, d.interval_unit), plan_currency, target), 2),
+                "rawPrice": round(d.raw_price * rate, 2),
+                "finalPrice": round(d.final_price * rate, 2),
+                "monthlyPrice": round(_monthly_price(d.final_price, d.interval, d.interval_unit) * rate, 2),
                 "currency": target,
             })
         durations = converted_durations
@@ -3928,3 +3930,31 @@ def chat_send(body: dict, db: Session = Depends(get_db), user: User = Depends(ge
         sess.subject = text[:80]
     db.commit()
     return {"ok": True, "message": _chat_msg_json(msg)}
+
+
+@router.get("/marketplace")
+def marketplace_public(db: Session = Depends(get_db)):
+    from app.models.models import MarketplaceProduct
+    items = (
+        db.query(MarketplaceProduct)
+        .filter(MarketplaceProduct.is_active == True)
+        .order_by(MarketplaceProduct.sort_order, MarketplaceProduct.name)
+        .all()
+    )
+    return {
+        "items": [
+            {
+                "slug": p.slug,
+                "name": p.name,
+                "vendor": p.vendor,
+                "category": p.category,
+                "description": p.description,
+                "icon": p.icon,
+                "price": p.price,
+                "currency": p.currency,
+                "billingCycle": p.billing_cycle,
+                "planCode": p.plan_code,
+            }
+            for p in items
+        ]
+    }

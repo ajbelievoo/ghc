@@ -500,7 +500,8 @@ def sync_all_catalogs(db: Session, ovh: OvhClient) -> List[Dict[str, Any]]:
 
 
 def get_active_plans(db: Session, category: Optional[ServiceCategory] = None) -> List[PlanCatalog]:
-    query = db.query(PlanCatalog).filter(PlanCatalog.is_active == True)
+    from sqlalchemy.orm import joinedload
+    query = db.query(PlanCatalog).options(joinedload(PlanCatalog.durations)).filter(PlanCatalog.is_active == True)
     if category:
         query = query.filter(PlanCatalog.category == category)
     return query.all()

@@ -896,3 +896,185 @@ def admin_ovh_account_health(db: Session = Depends(get_db), admin: User = Depend
     out["paymentGateways"] = gw
     return out
 
+
+
+# ---------- Live chat (admin) ----------
+
+@router.get("/admin/chat/sessions")
+def admin_chat_sessions(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import ChatSession
+    sessions = db.query(ChatSession).order_by(ChatSession.last_message_at.desc().nullslast(), ChatSession.created_at.desc()).limit(200).all()
+    return {
+        "sessions": [
+            {
+                "id": s.id,
+                "subject": s.subject,
+                "status": s.status,
+                "unreadForAdmin": s.unread_for_admin,
+                "lastMessageAt": s.last_message_at.isoformat() if s.last_message_at else None,
+                "createdAt": s.created_at.isoformat() if s.created_at else None,
+                "user": {"id": s.user.id, "name": s.user.name, "email": s.user.email} if s.user else None,
+            }
+            for s in sessions
+        ]
+    }
+
+
+@router.get("/admin/chat/sessions/{session_id}/messages")
+def admin_chat_messages(session_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import ChatSession, ChatMessage
+    sess = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session not found")
+    msgs = db.query(ChatMessage).filter(ChatMessage.session_id == sess.id).order_by(ChatMessage.created_at).limit(500).all()
+    sess.unread_for_admin = 0
+    db.commit()
+    return {
+        "session": {
+            "id": sess.id,
+            "subject": sess.subject,
+            "status": sess.status,
+            "user": {"id": sess.user.id, "name": sess.user.name, "email": sess.user.email} if sess.user else None,
+        },
+        "messages": [
+            {"id": m.id, "sender": m.sender, "senderName": m.sender_name, "body": m.body, "createdAt": m.created_at.isoformat() if m.created_at else None}
+            for m in msgs
+        ],
+    }
+
+
+@router.post("/admin/chat/sessions/{session_id}/messages")
+def admin_chat_reply(session_id: str, body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import ChatSession, ChatMessage
+    sess = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session not found")
+    text = (body.get("body") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Message is required")
+    if len(text) > 4000:
+        raise HTTPException(status_code=400, detail="Message too long")
+    if sess.status != "open":
+        sess.status = "open"
+    msg = ChatMessage(
+        session_id=sess.id,
+        sender="admin",
+        sender_name=admin.name or "Support",
+        body=text,
+    )
+    db.add(msg)
+    from datetime import datetime
+    sess.last_message_at = datetime.utcnow()
+    sess.unread_for_user = (sess.unread_for_user or 0) + 1
+    db.commit()
+    try:
+        from app.services.notification_service import create_notification
+        create_notification(db, sess.user, "Support replied", text[:120], "info", "/dashboard?chat=open")
+    except Exception:
+        pass
+    return {"ok": True, "message": {"id": msg.id, "sender": msg.sender, "senderName": msg.sender_name, "body": msg.body, "createdAt": msg.created_at.isoformat()}}
+
+
+@router.post("/admin/chat/sessions/{session_id}/status")
+def admin_chat_status(session_id: str, body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import ChatSession
+    sess = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not sess:
+        raise HTTPException(status_code=404, detail="Session not found")
+    status = (body.get("status") or "").lower()
+    if status not in ("open", "closed"):
+        raise HTTPException(status_code=400, detail="status must be open or closed")
+    sess.status = status
+    db.commit()
+    return {"ok": True, "status": status}
+
+
+# ---------- Marketplace (admin CRUD + public list) ----------
+
+def _mp_json(p) -> dict:
+    return {
+        "id": p.id,
+        "slug": p.slug,
+        "name": p.name,
+        "vendor": p.vendor,
+        "category": p.category,
+        "description": p.description,
+        "icon": p.icon,
+        "price": p.price,
+        "currency": p.currency,
+        "billingCycle": p.billing_cycle,
+        "planCode": p.plan_code,
+        "isActive": p.is_active,
+        "sortOrder": p.sort_order,
+    }
+
+
+@router.get("/admin/marketplace")
+def admin_marketplace_list(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import MarketplaceProduct
+    items = db.query(MarketplaceProduct).order_by(MarketplaceProduct.sort_order, MarketplaceProduct.name).all()
+    return {"items": [_mp_json(p) for p in items]}
+
+
+@router.post("/admin/marketplace")
+def admin_marketplace_create(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import MarketplaceProduct
+    name = (body.get("name") or "").strip()
+    import re
+    slug = (body.get("slug") or "").strip().lower() or re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    if not name:
+        raise HTTPException(status_code=400, detail="name is required")
+    if db.query(MarketplaceProduct).filter(MarketplaceProduct.slug == slug).first():
+        raise HTTPException(status_code=400, detail="slug already exists")
+    p = MarketplaceProduct(
+        slug=slug,
+        name=name,
+        vendor=body.get("vendor"),
+        category=body.get("category"),
+        description=body.get("description"),
+        icon=body.get("icon"),
+        price=float(body.get("price") or 0),
+        currency=(body.get("currency") or "USD").upper(),
+        billing_cycle=body.get("billingCycle") or "monthly",
+        plan_code=body.get("planCode"),
+        is_active=body.get("isActive", True),
+        sort_order=int(body.get("sortOrder") or 0),
+    )
+    db.add(p)
+    db.commit()
+    return {"ok": True, "item": _mp_json(p)}
+
+
+@router.put("/admin/marketplace/{item_id}")
+def admin_marketplace_update(item_id: str, body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import MarketplaceProduct
+    p = db.query(MarketplaceProduct).filter(MarketplaceProduct.id == item_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Item not found")
+    for attr, key in [
+        ("name", "name"), ("vendor", "vendor"), ("category", "category"), ("description", "description"),
+        ("icon", "icon"), ("plan_code", "planCode"), ("billing_cycle", "billingCycle"),
+    ]:
+        if key in body:
+            setattr(p, attr, body[key])
+    if "price" in body:
+        p.price = float(body["price"] or 0)
+    if "currency" in body:
+        p.currency = (body["currency"] or "USD").upper()
+    if "isActive" in body:
+        p.is_active = bool(body["isActive"])
+    if "sortOrder" in body:
+        p.sort_order = int(body["sortOrder"] or 0)
+    db.commit()
+    return {"ok": True, "item": _mp_json(p)}
+
+
+@router.delete("/admin/marketplace/{item_id}")
+def admin_marketplace_delete(item_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.models.models import MarketplaceProduct
+    p = db.query(MarketplaceProduct).filter(MarketplaceProduct.id == item_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Item not found")
+    db.delete(p)
+    db.commit()
+    return {"ok": True}
