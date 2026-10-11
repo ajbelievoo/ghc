@@ -616,6 +616,122 @@ def set_normal_boot(db: Session, ovh: OvhClient, sub: Subscription) -> Dict[str,
     return {"success": True, "bootId": hd_id}
 
 
+# ---------- Dedicated server management (OVH Manager parity) ----------
+
+def _require_dedicated_name(sub: Subscription) -> str:
+    resource_id = _get_real_resource_id(sub)
+    if not resource_id:
+        raise ValueError("No OVH resource attached to subscription")
+    if sub.category != ServiceCategory.DEDICATED:
+        raise ValueError("This section is available for dedicated servers only")
+    return resource_id
+
+
+def get_dedicated_tasks(ovh: OvhClient, sub: Subscription, limit: int = 20) -> List[Dict[str, Any]]:
+    sn = _require_dedicated_name(sub)
+    task_ids = _safe_ovh_get(ovh, f"/dedicated/server/{sn}/task") or []
+    tasks = []
+    for tid in task_ids[:limit]:
+        t = _safe_ovh_get(ovh, f"/dedicated/server/{sn}/task/{tid}", {})
+        if t:
+            tasks.append(t)
+    return tasks
+
+
+def get_dedicated_boots(ovh: OvhClient, sub: Subscription) -> List[Dict[str, Any]]:
+    sn = _require_dedicated_name(sub)
+    ids = _safe_ovh_get(ovh, f"/dedicated/server/{sn}/boot") or []
+    return [b for bid in ids if (b := _safe_ovh_get(ovh, f"/dedicated/server/{sn}/boot/{bid}", {}))]
+
+
+def get_dedicated_vrack(ovh: OvhClient, sub: Subscription) -> List[str]:
+    sn = _require_dedicated_name(sub)
+    return _safe_ovh_get(ovh, f"/dedicated/server/{sn}/vrack") or []
+
+
+def get_dedicated_options(ovh: OvhClient, sub: Subscription) -> List[Dict[str, Any]]:
+    sn = _require_dedicated_name(sub)
+    return _safe_ovh_get(ovh, f"/dedicated/server/{sn}/option") or []
+
+
+def get_dedicated_interventions(ovh: OvhClient, sub: Subscription) -> List[Dict[str, Any]]:
+    sn = _require_dedicated_name(sub)
+    ids = _safe_ovh_get(ovh, f"/dedicated/server/{sn}/intervention") or []
+    return [i for iid in ids if (i := _safe_ovh_get(ovh, f"/dedicated/server/{sn}/intervention/{iid}", {}))]
+
+
+def get_dedicated_ipmi(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    sn = _require_dedicated_name(sub)
+    feat = _safe_ovh_get(ovh, f"/dedicated/server/{sn}/features/ipmi", {})
+    return feat or {"activated": False, "supported": False}
+
+
+def create_dedicated_ipmi_access(ovh: OvhClient, sub: Subscription, client_ip: str, access_type: str = "kvmipHtml5URL") -> Dict[str, Any]:
+    sn = _require_dedicated_name(sub)
+    allowed = {"kvmipHtml5URL", "kvmipJnlp", "serialOverLanURL", "serialOverLanSshKey"}
+    if access_type not in allowed:
+        raise ValueError(f"Invalid IPMI access type. Allowed: {', '.join(sorted(allowed))}")
+    ovh.post(f"/dedicated/server/{sn}/features/ipmi/access", ipToAllow=client_ip, ttl=15, type=access_type)
+    session = _safe_ovh_get(ovh, f"/dedicated/server/{sn}/features/ipmi/access", {"type": access_type}, type=access_type)
+    return {"type": access_type, "session": session}
+
+
+def get_dedicated_backup_ftp(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    sn = _require_dedicated_name(sub)
+    return _safe_ovh_get(ovh, f"/dedicated/server/{sn}/features/backupFTP", {}) or {}
+
+
+def activate_dedicated_backup_ftp(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    sn = _require_dedicated_name(sub)
+    return {"task": ovh.post(f"/dedicated/server/{sn}/features/backupFTP", backupftp=True)}
+
+
+def get_dedicated_backup_ftp_access(ovh: OvhClient, sub: Subscription) -> List[Dict[str, Any]]:
+    sn = _require_dedicated_name(sub)
+    return _safe_ovh_get(ovh, f"/dedicated/server/{sn}/features/backupFTP/access") or []
+
+
+def get_dedicated_firewall(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    """Firewall model + per-IP firewall status."""
+    sn = _require_dedicated_name(sub)
+    ips = _safe_ovh_get(ovh, f"/dedicated/server/{sn}/ips") or []
+    entries = []
+    for ip in ips:
+        fw = _safe_ovh_get(ovh, f"/dedicated/server/{sn}/firewall/{ip}")
+        entries.append({"ip": ip, "firewall": fw})
+    return {"ips": entries}
+
+
+def create_dedicated_firewall(ovh: OvhClient, sub: Subscription, ip: str) -> Dict[str, Any]:
+    sn = _require_dedicated_name(sub)
+    return {"task": ovh.post(f"/dedicated/server/{sn}/firewall", ipOnFirewall=ip)}
+
+
+def toggle_dedicated_firewall(ovh: OvhClient, sub: Subscription, ip: str, enabled: bool) -> Dict[str, Any]:
+    sn = _require_dedicated_name(sub)
+    ovh.put(f"/dedicated/server/{sn}/firewall/{ip}", enabled=enabled)
+    return {"success": True, "ip": ip, "enabled": enabled}
+
+
+def get_dedicated_monitoring(ovh: OvhClient, sub: Subscription) -> Dict[str, Any]:
+    sn = _require_dedicated_name(sub)
+    info = _safe_ovh_get(ovh, f"/dedicated/server/{sn}", {}) or {}
+    return {"monitoring": info.get("monitoring"), "noIntervention": info.get("noIntervention"), "state": info.get("state")}
+
+
+def set_dedicated_monitoring(ovh: OvhClient, sub: Subscription, monitoring: Optional[bool] = None, no_intervention: Optional[bool] = None) -> Dict[str, Any]:
+    sn = _require_dedicated_name(sub)
+    payload = {}
+    if monitoring is not None:
+        payload["monitoring"] = monitoring
+    if no_intervention is not None:
+        payload["noIntervention"] = no_intervention
+    if not payload:
+        raise ValueError("Nothing to update")
+    ovh.put(f"/dedicated/server/{sn}", **payload)
+    return {"success": True, **payload}
+
+
 def get_console_url(ovh: OvhClient, sub: Subscription, client_ip: str) -> Dict[str, Any]:
     """Get a one-time remote console URL for a server."""
     resource_id = _get_real_resource_id(sub)

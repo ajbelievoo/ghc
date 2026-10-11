@@ -67,12 +67,25 @@ from app.services.order_service import (
 from app.services.ovh_client import get_ovh_client_from_db, apply_margin
 from app.services.subscription_service import (
     add_vps_secondary_dns,
+    activate_dedicated_backup_ftp,
     change_vps_ip_geolocation,
+    create_dedicated_firewall,
+    create_dedicated_ipmi_access,
     create_vps_snapshot,
     delete_reverse_dns,
     delete_vps_secondary_dns,
     delete_vps_snapshot,
     get_console_url,
+    get_dedicated_backup_ftp,
+    get_dedicated_backup_ftp_access,
+    get_dedicated_boots,
+    get_dedicated_firewall,
+    get_dedicated_interventions,
+    get_dedicated_ipmi,
+    get_dedicated_monitoring,
+    get_dedicated_options,
+    get_dedicated_tasks,
+    get_dedicated_vrack,
     get_server_bandwidth,
     get_server_details,
     get_service_metrics,
@@ -91,8 +104,10 @@ from app.services.subscription_service import (
     rename_vps,
     request_service_termination,
     reset_vps_password,
+    set_dedicated_monitoring,
     set_normal_boot,
     set_service_auto_renew,
+    toggle_dedicated_firewall,
     set_rescue_mode,
     set_vps_netboot,
     update_reverse_dns,
@@ -2967,6 +2982,116 @@ def price_alert_delete(alert_id: str, db: Session = Depends(get_db), user: User 
     db.delete(alert)
     db.commit()
     return {"deleted": True}
+
+
+def _dedi_sub_and_client(db: Session, user: User, server_id: str):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Server not found")
+    if sub.category != ServiceCategory.DEDICATED:
+        raise HTTPException(status_code=400, detail="This section is available for dedicated servers only")
+    return sub, get_ovh_client_from_db(db)
+
+
+def _ovh_call(fn):
+    try:
+        return fn()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/dedicated/tasks")
+def dedicated_tasks(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return {"tasks": _ovh_call(lambda: get_dedicated_tasks(ovh, sub))}
+
+
+@router.get("/server/{server_id}/dedicated/boots")
+def dedicated_boots(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return {"boots": _ovh_call(lambda: get_dedicated_boots(ovh, sub))}
+
+
+@router.get("/server/{server_id}/dedicated/vrack")
+def dedicated_vrack(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return {"vracks": _ovh_call(lambda: get_dedicated_vrack(ovh, sub))}
+
+
+@router.get("/server/{server_id}/dedicated/options")
+def dedicated_options(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return {"options": _ovh_call(lambda: get_dedicated_options(ovh, sub))}
+
+
+@router.get("/server/{server_id}/dedicated/interventions")
+def dedicated_interventions(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return {"interventions": _ovh_call(lambda: get_dedicated_interventions(ovh, sub))}
+
+
+@router.get("/server/{server_id}/dedicated/ipmi")
+def dedicated_ipmi(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return _ovh_call(lambda: get_dedicated_ipmi(ovh, sub))
+
+
+@router.post("/server/{server_id}/dedicated/ipmi-access")
+def dedicated_ipmi_access(server_id: str, body: dict, request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    client_ip = request.client.host if request.client else "0.0.0.0"
+    access_type = (body.get("type") or "kvmipHtml5URL").strip()
+    return _ovh_call(lambda: create_dedicated_ipmi_access(ovh, sub, client_ip, access_type))
+
+
+@router.get("/server/{server_id}/dedicated/backup-ftp")
+def dedicated_backup_ftp(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    info = _ovh_call(lambda: get_dedicated_backup_ftp(ovh, sub))
+    try:
+        info["access"] = get_dedicated_backup_ftp_access(ovh, sub)
+    except Exception:
+        info["access"] = []
+    return info or {"activated": False}
+
+
+@router.post("/server/{server_id}/dedicated/backup-ftp")
+def dedicated_backup_ftp_activate(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return _ovh_call(lambda: activate_dedicated_backup_ftp(ovh, sub))
+
+
+@router.get("/server/{server_id}/dedicated/firewall")
+def dedicated_firewall(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return _ovh_call(lambda: get_dedicated_firewall(ovh, sub))
+
+
+@router.post("/server/{server_id}/dedicated/firewall")
+def dedicated_firewall_update(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    ip = (body.get("ip") or "").strip()
+    if not ip:
+        raise HTTPException(status_code=400, detail="ip is required")
+    if "enabled" in body:
+        return _ovh_call(lambda: toggle_dedicated_firewall(ovh, sub, ip, bool(body.get("enabled"))))
+    return _ovh_call(lambda: create_dedicated_firewall(ovh, sub, ip))
+
+
+@router.get("/server/{server_id}/dedicated/monitoring")
+def dedicated_monitoring(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return _ovh_call(lambda: get_dedicated_monitoring(ovh, sub))
+
+
+@router.post("/server/{server_id}/dedicated/monitoring")
+def dedicated_monitoring_update(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    monitoring = body.get("monitoring")
+    no_intervention = body.get("noIntervention")
+    return _ovh_call(lambda: set_dedicated_monitoring(ovh, sub, monitoring=monitoring, no_intervention=no_intervention))
 
 
 @router.get("/server/{server_id}/ping")

@@ -215,6 +215,44 @@ def run_maintenance():
         except Exception as e:
             _log(db, LogType.ERROR, f"Price alert check failed: {e}")
 
+        # Expire abandoned checkouts — a payment session is only meaningful for a
+        # short window; stale PENDING rows let a late webhook resurrect dead carts.
+        try:
+            tx_cutoff = now - timedelta(hours=48)
+            stale_txs = db.query(PaymentTransaction).filter(
+                PaymentTransaction.status == PaymentStatus.PENDING,
+                PaymentTransaction.created_at < tx_cutoff,
+            ).all()
+            for tx in stale_txs:
+                tx.status = PaymentStatus.FAILED
+            if stale_txs:
+                db.commit()
+                _log(db, LogType.CRON, f"Expired {len(stale_txs)} stale payment session(s)")
+        except Exception as e:
+            _log(db, LogType.ERROR, f"Stale payment cleanup failed: {e}")
+
+        try:
+            order_cutoff = now - timedelta(days=7)
+            stale_orders = db.query(CustomerOrder).filter(
+                CustomerOrder.status == "PENDING",
+                CustomerOrder.created_at < order_cutoff,
+            ).all()
+            cancelled = 0
+            for order in stale_orders:
+                paid_tx = db.query(PaymentTransaction).filter(
+                    PaymentTransaction.order_id == order.id,
+                    PaymentTransaction.status == PaymentStatus.COMPLETED,
+                ).first()
+                if paid_tx:
+                    continue
+                order.status = "FAILED"
+                cancelled += 1
+            if cancelled:
+                db.commit()
+                _log(db, LogType.CRON, f"Marked {cancelled} abandoned order(s) as failed")
+        except Exception as e:
+            _log(db, LogType.ERROR, f"Abandoned order cleanup failed: {e}")
+
         # Overdue invoice reminders — one email per unpaid invoice past due date
         overdue_invoices = db.query(Invoice).filter(
             Invoice.status == InvoiceStatus.UNPAID,
