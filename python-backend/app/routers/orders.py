@@ -73,6 +73,28 @@ def provision_order(order_id: str, db: Session = Depends(get_db), user: User = D
     return order
 
 
+@router.post("/{order_id}/cancel", response_model=OrderResponse)
+def cancel_order(order_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Customer cancels their own unpaid order — before any payment/provisioning."""
+    order = db.query(CustomerOrder).filter(CustomerOrder.id == order_id, CustomerOrder.user_id == user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status != OrderStatus.PENDING:
+        raise HTTPException(status_code=400, detail=f"Only unpaid orders can be cancelled (status: {order.status.value})")
+    paid_tx = db.query(PaymentTransaction).filter(
+        PaymentTransaction.order_id == order.id,
+        PaymentTransaction.status == PaymentStatus.COMPLETED,
+    ).first()
+    if paid_tx:
+        raise HTTPException(status_code=400, detail="Order is already paid — contact support for refunds")
+    order.status = OrderStatus.CANCELLED
+    for inv in db.query(Invoice).filter(Invoice.order_id == order.id, Invoice.status == InvoiceStatus.UNPAID).all():
+        inv.status = InvoiceStatus.CANCELLED
+    db.commit()
+    db.refresh(order)
+    return order
+
+
 @router.get("/", response_model=list[OrderResponse])
 def list_orders(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return db.query(CustomerOrder).filter(CustomerOrder.user_id == user.id).order_by(CustomerOrder.created_at.desc()).all()

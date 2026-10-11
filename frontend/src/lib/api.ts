@@ -468,6 +468,7 @@ export const api = {
     list: () => request("/orders/"),
     get: (id: string) => request(`/orders/${id}`),
     payWallet: (id: string) => request(`/orders/${id}/pay-wallet`, { method: "POST" }),
+    cancel: (id: string) => request(`/orders/${id}/cancel`, { method: "POST" }),
     provision: (id: string) => request(`/orders/${id}/provision`, { method: "POST" }),
   },
   payments: {

@@ -1113,6 +1113,7 @@ function MonitoringTab({ server, detail, metrics }: any) {
   const [history, setHistory] = useState<any[]>([]);
   const [monEnabled, setMonEnabled] = useState<boolean | null>(null);
   const [rules, setRules] = useState<any[]>([]);
+  const [bw, setBw] = useState<any>(null);
   const [newRule, setNewRule] = useState({ metric: "latency", operator: "gt", threshold: 200 });
   const { showToast } = useToast();
 
@@ -1123,6 +1124,7 @@ function MonitoringTab({ server, detail, metrics }: any) {
     api.server.ping(server.id).then(setPing).catch(() => {});
     api.server.pingHistory(server.id).then(setPingHistory).catch(() => {});
     api.server.uptime(server.id).then((u: any) => { setUptime(u); setMonEnabled(u.monitoringEnabled); }).catch(() => {});
+    api.server.bandwidth(server.id).then((b: any) => { if (b?.available) setBw(b); }).catch(() => {});
     reloadRules();
     reloadHistory(histRange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1208,6 +1210,39 @@ function MonitoringTab({ server, detail, metrics }: any) {
           </div>
         )}
       </Card>
+
+      {/* Bandwidth quota — dedicated servers only (VPS API exposes no counters) */}
+      {bw?.available && (
+        <Card title="Bandwidth" icon={<BarChart3 className="w-4 h-4 text-[#00b7ff]" />}>
+          <div className="space-y-4">
+            {[
+              { label: "Outgoing traffic", used: bw.outputUsedBytes, limit: bw.outputLimitBytes },
+              { label: "Incoming traffic", used: bw.inputUsedBytes, limit: bw.inputLimitBytes },
+            ].map((t) => {
+              const pct = t.limit ? Math.min(100, ((t.used || 0) / t.limit) * 100) : 0;
+              const gb = (v: any) => v != null ? `${(v / 1e9).toFixed(1)} GB` : "—";
+              return (
+                <div key={t.label}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-500">{t.label}</span>
+                    <span className="font-medium text-[#0f172a]">{gb(t.used)} / {t.limit ? gb(t.limit) : "Unlimited"}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${pct > 90 ? "bg-red-500" : "bg-[#00b7ff]"}`} style={{ width: `${t.limit ? pct : 4}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+              {bw.downstreamMbps != null && <span>Downstream: <b className="text-[#0f172a]">{bw.downstreamMbps} Mbps</b></span>}
+              {bw.upstreamMbps != null && <span>Upstream: <b className="text-[#0f172a]">{bw.upstreamMbps} Mbps</b></span>}
+              {bw.connectionMbps != null && <span>Connection: <b className="text-[#0f172a]">{bw.connectionMbps} Mbps</b></span>}
+              {bw.isThrottled != null && <span className={bw.isThrottled ? "text-red-500 font-semibold" : ""}>{bw.isThrottled ? "Throttled" : "Not throttled"}</span>}
+              {bw.resetQuotaDate && <span>Quota resets: <b className="text-[#0f172a]">{new Date(bw.resetQuotaDate).toLocaleDateString()}</b></span>}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Metrics history with range selector */}
       <Card title="Metric history" icon={<BarChart3 className="w-4 h-4 text-[#7c3aed]" />} extra={

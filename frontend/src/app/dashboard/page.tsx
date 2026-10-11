@@ -1776,7 +1776,10 @@ export default function DashboardPage() {
                           <td className="px-6 py-3 text-xs text-slate-500">{o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}</td>
                           <td className="px-6 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                             {(o.status === "PENDING" || o.status === "PENDING_PAYMENT") && (
-                              <button onClick={async () => { try { await api.orders.payWallet(o.id); showToast("Payment applied", "success"); fetchData(); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20">Pay with wallet</button>
+                              <>
+                                <button onClick={async () => { try { await api.orders.payWallet(o.id); showToast("Payment applied", "success"); fetchData(); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20">Pay with wallet</button>
+                                <button onClick={async () => { if (!confirm("Cancel this unpaid order?")) return; try { await api.orders.cancel(o.id); showToast("Order cancelled", "success"); fetchData(); } catch (e: any) { showToast(e.message, "error"); } }} className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50">Cancel</button>
+                              </>
                             )}
                             {o.plan_code && (
                               <a href={`/configure?plan=${encodeURIComponent(o.plan_code)}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-[#0f172a] hover:border-slate-400" aria-label={`Reorder ${o.display_name || o.plan_code}`}>Reorder</a>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Server, Menu, X, ChevronDown, LogOut, User, Bell, Mail, CreditCard, FileText, Shield, Globe, Users, Settings, Package, Search, ShoppingCart } from "lucide-react";
 import { api } from "@/lib/api";
@@ -279,6 +279,65 @@ function CartButton({ dark }: { dark: boolean }) {
   );
 }
 
+function NotifButton({ dark }: { dark: boolean }) {
+  const [items, setItems] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => api.auth.notificationsList().then((d) => { if (alive && Array.isArray(d)) setItems(d); }).catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  const unread = items.filter((n) => !n.isRead).length;
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen((o) => !o)} aria-label="Notifications" className={`relative inline-flex h-8 w-8 items-center justify-center rounded-full ${dark ? "text-white hover:bg-white/10" : "text-[#0f172a] hover:bg-slate-100"}`}>
+        <Bell className="h-4 w-4" />
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ff3d00] px-1 text-[9px] font-bold text-white">
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className={`absolute right-0 top-10 w-80 rounded-xl shadow-2xl z-50 overflow-hidden ${dark ? "border border-white/10 bg-[#0f0f0f]" : "border border-slate-200 bg-white"}`}>
+          <div className={`px-4 py-3 text-sm font-bold ${dark ? "text-white border-b border-white/10" : "text-[#0f172a] border-b border-slate-200"}`}>Notifications</div>
+          <div className="max-h-80 overflow-y-auto">
+            {items.length === 0 && <p className="px-4 py-6 text-center text-xs text-slate-500">No notifications yet.</p>}
+            {items.slice(0, 10).map((n) => (
+              <button
+                key={n.id}
+                onClick={async () => {
+                  try { await api.auth.markNotificationRead(n.id); } catch {}
+                  setOpen(false);
+                  window.location.href = n.link || "/dashboard";
+                }}
+                className={`block w-full text-left px-4 py-3 border-b last:border-0 ${dark ? "border-white/5 hover:bg-white/5" : "border-slate-100 hover:bg-[#f8faff]"}`}
+              >
+                <div className="flex items-start gap-2">
+                  {!n.isRead && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#00b7ff]" />}
+                  <div className={n.isRead ? "pl-4" : ""}>
+                    <p className={`text-xs font-semibold ${dark ? "text-white" : "text-[#0f172a]"}`}>{n.title}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-2">{n.message}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <Link href="/dashboard" onClick={() => setOpen(false)} className={`block px-4 py-2.5 text-center text-xs font-bold text-[#00b7ff] ${dark ? "border-t border-white/10 hover:bg-white/5" : "border-t border-slate-200 hover:bg-[#f8faff]"}`}>View all in dashboard</Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMega, setOpenMega] = useState<number | null>(null);
@@ -450,6 +509,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
           <LanguageSelector />
           <CurrencySelector />
           <ThemeToggle className="hidden md:inline-flex" />
+          {user && <NotifButton dark={dark} />}
           {user && <CartButton dark={dark} />}
 
           {user ? (

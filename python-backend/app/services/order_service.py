@@ -557,7 +557,7 @@ def _pay_ovh_order(db: Session, ovh: OvhClient, order: CustomerOrder, ovh_order_
 
 # ---------- Service-option orders (upgrade / additional disk / automated backup) ----------
 
-SERVICE_OPTION_KINDS = ("upgrade", "additional_disk", "automated_backup")
+SERVICE_OPTION_KINDS = ("upgrade", "additional_disk", "automated_backup", "license")
 DISK_SIZES_GB = (50, 100, 200, 500)
 
 
@@ -605,7 +605,7 @@ def get_vps_option_catalog(db: Session, ovh: OvhClient, sub: Subscription, curre
             "currency": target,
         }
 
-    result: Dict[str, Any] = {"upgrades": [], "additionalDisks": [], "automatedBackup": None}
+    result: Dict[str, Any] = {"upgrades": [], "additionalDisks": [], "automatedBackup": None, "licenses": []}
 
     # --- Model upgrades ---
     try:
@@ -685,6 +685,39 @@ def get_vps_option_catalog(db: Session, ovh: OvhClient, sub: Subscription, curre
             result["automatedBackup"] = {"duration": dur, **customer_price(base, base_cur)}
         except Exception as e:
             logger.debug(f"Backup {dur} preview failed: {e}")
+
+    # --- Licenses & other cartServiceOption add-ons (cPanel/Plesk/Windows/snapshot) ---
+    try:
+        svc_options = ovh.get(f"/order/cartServiceOption/vps/{service_name}") or []
+    except Exception as e:
+        logger.debug(f"cartServiceOption unavailable for {service_name}: {e}")
+        svc_options = []
+    for opt in svc_options:
+        family = (opt.get("family") or "").lower()
+        if family in ("additionaldisk", "automatedbackup"):
+            continue  # already covered by their dedicated order endpoints
+        # Monthly renewal price is the real recurring cost; installation is usually 0
+        best = None
+        for p in opt.get("prices") or []:
+            if "renew" not in (p.get("capacities") or []):
+                continue
+            val = (p.get("price") or {}).get("value") or 0
+            cur = (p.get("price") or {}).get("currencyCode") or "USD"
+            if val <= 0:
+                continue
+            if best is None or val < best[0]:
+                best = (val, cur, p.get("duration"), p.get("pricingMode"))
+        if not best:
+            continue
+        base, base_cur, duration, pricing_mode = best
+        result["licenses"].append({
+            "family": family,
+            "planCode": opt.get("planCode"),
+            "productName": opt.get("productName") or opt.get("planCode"),
+            "duration": duration or "P1M",
+            "pricingMode": pricing_mode or "default",
+            **customer_price(Decimal(str(base)), base_cur),
+        })
 
     return result
 
@@ -818,6 +851,37 @@ def create_service_option_order(
             raise ValueError("No pricing available for automated backup")
         option.update({"duration": duration})
         label = "Automated backup"
+
+    elif kind == "license":
+        if sub.category != ServiceCategory.VPS:
+            raise ValueError("Licenses can only be attached to a VPS")
+        plan_code = (params.get("planCode") or "").strip()
+        if not plan_code:
+            raise ValueError("planCode is required for a license option")
+        svc_options = ovh.get(f"/order/cartServiceOption/vps/{service_name}") or []
+        offer = next((o for o in svc_options if o.get("planCode") == plan_code), None)
+        if not offer:
+            raise ValueError("This option is not available for your VPS")
+        # Pick the cheapest monthly 'renew' price, mirroring the catalog listing
+        best = None
+        for p in offer.get("prices") or []:
+            if "renew" not in (p.get("capacities") or []):
+                continue
+            val = Decimal(str((p.get("price") or {}).get("value") or 0))
+            if val <= 0:
+                continue
+            if best is None or val < best[0]:
+                best = (val, (p.get("price") or {}).get("currencyCode") or "USD", p.get("duration"), p.get("pricingMode"))
+        if not best:
+            raise ValueError("No pricing available for this option")
+        base, base_currency, duration, pricing_mode = best
+        option.update({
+            "planCode": plan_code,
+            "duration": duration or "P1M",
+            "pricingMode": pricing_mode or "default",
+            "family": offer.get("family") or "license",
+        })
+        label = f"{offer.get('productName') or plan_code} license"
 
     # Apply category margin + convert to customer currency + tax
     final_price = float(apply_margin(base, get_margin_for_category(db, sub.category)))
