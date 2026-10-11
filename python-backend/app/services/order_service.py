@@ -708,7 +708,8 @@ def create_service_option_order(
     if not service_name:
         raise ValueError("Subscription has no OVH service attached")
     if sub.category != ServiceCategory.VPS:
-        raise ValueError("Service options are currently supported for VPS only")
+        if not (sub.category == ServiceCategory.DEDICATED and kind == "upgrade"):
+            raise ValueError("Service options are currently supported for VPS only (dedicated supports upgrades)")
     if sub.status != SubscriptionStatus.ACTIVE:
         raise ValueError("Server must be active to purchase options")
 
@@ -718,7 +719,8 @@ def create_service_option_order(
         plan_code = (params.get("planCode") or "").strip()
         if not plan_code:
             raise ValueError("planCode is required for an upgrade")
-        offers = ovh.get(f"/order/upgrade/vps/{service_name}") or []
+        family = "vps" if sub.category == ServiceCategory.VPS else "dedicated"
+        offers = ovh.get(f"/order/upgrade/{family}/{service_name}") or []
         offer = next((o for o in offers if o.get("planCode") == plan_code), None)
         if not offer:
             raise ValueError("This upgrade is not available for your VPS")
@@ -762,7 +764,7 @@ def create_service_option_order(
         label = "Automated backup"
 
     # Apply category margin + convert to customer currency + tax
-    final_price = float(apply_margin(base, get_margin_for_category(db, ServiceCategory.VPS)))
+    final_price = float(apply_margin(base, get_margin_for_category(db, sub.category)))
     target = (currency or sub.currency or get_settings().currency or "USD").upper()
     rate = convert(db, 1.0, base_currency, target)
     final_price_conv = round(final_price * rate, 2)
@@ -808,16 +810,17 @@ def execute_service_option_order(db: Session, ovh: OvhClient, order: CustomerOrd
     try:
         if kind == "upgrade":
             plan_code = option.get("planCode")
+            family = "dedicated" if (order.category == ServiceCategory.DEDICATED) else "vps"
             try:
                 result = ovh.post(
-                    f"/order/upgrade/vps/{service_name}/{plan_code}",
+                    f"/order/upgrade/{family}/{service_name}/{plan_code}",
                     quantity=1,
                     autoPayWithPreferredPaymentMethod=True,
                 )
             except Exception as e:
                 logger.warning(f"Auto-pay upgrade failed, retrying without autoPay: {e}")
                 result = ovh.post(
-                    f"/order/upgrade/vps/{service_name}/{plan_code}",
+                    f"/order/upgrade/{family}/{service_name}/{plan_code}",
                     quantity=1,
                     autoPayWithPreferredPaymentMethod=False,
                 )
