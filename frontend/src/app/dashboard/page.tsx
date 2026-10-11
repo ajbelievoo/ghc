@@ -1002,7 +1002,7 @@ export default function DashboardPage() {
             {/* Getting-started checklist — hidden once everything is done */}
             {(() => {
               const steps = [
-                { label: "Verify your email", done: !!user?.email_verified, action: async () => {
+                { label: "Verify your email", done: !!(user?.emailVerified ?? user?.email_verified), action: async () => {
                     try {
                       await api.auth.resendVerification({ email: user?.email });
                       showToast(`Verification email sent to ${user?.email} — check your inbox`, "success");
@@ -1010,7 +1010,7 @@ export default function DashboardPage() {
                   }, cta: "Send link" },
                 { label: "Add funds to your wallet", done: (wallet?.balance || 0) > 0, action: () => setTab("wallet"), cta: "Top up" },
                 { label: "Deploy your first service", done: servers.length > 0, action: () => setActiveView("order"), cta: "Order" },
-                { label: "Enable two-factor auth", done: !!user?.totp_enabled, action: () => setTab("security"), cta: "Security" },
+                { label: "Enable two-factor auth", done: !!(user?.twoFactorEnabled ?? user?.totp_enabled), action: () => setTab("security"), cta: "Security" },
               ];
               const doneCount = steps.filter((s) => s.done).length;
               if (doneCount === steps.length) return null;
@@ -2453,7 +2453,7 @@ export default function DashboardPage() {
               <div>
                 <label className="block text-xs text-slate-500 mb-1.5">Email</label>
                 <input value={user?.email || ""} disabled className="w-full rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-slate-500 cursor-not-allowed" />
-                {user?.email_verified ? (
+                {(user?.emailVerified ?? user?.email_verified) ? (
                   <p className="mt-1.5 text-[11px] font-semibold text-green-600 flex items-center gap-1"><Check className="w-3 h-3" /> Email verified</p>
                 ) : (
                   <div className="mt-2 flex items-center justify-between rounded-lg border border-yellow-300/60 bg-yellow-50 px-3 py-2">

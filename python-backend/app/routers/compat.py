@@ -3169,51 +3169,6 @@ def dedicated_monitoring_update(server_id: str, body: dict, db: Session = Depend
     return _ovh_call(lambda: set_dedicated_monitoring(ovh, sub, monitoring=monitoring, no_intervention=no_intervention))
 
 
-# ---------- SSH keys (OVH /me/sshKey) ----------
-
-@router.get("/account/ssh-keys")
-def list_ssh_keys(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    ovh = get_ovh_client_from_db(db)
-    try:
-        names = ovh.get("/me/sshKey") or []
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
-    keys = []
-    for name in names:
-        try:
-            k = ovh.get(f"/me/sshKey/{name}")
-            keys.append({"keyName": name, "key": (k or {}).get("key"), "default": (k or {}).get("default")})
-        except Exception:
-            keys.append({"keyName": name})
-    return {"keys": keys}
-
-
-@router.post("/account/ssh-keys")
-def create_ssh_key(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    key_name = (body.get("keyName") or "").strip()
-    key = (body.get("key") or "").strip()
-    if not key_name or not key:
-        raise HTTPException(status_code=400, detail="keyName and key are required")
-    if not _re.match(r"^(ssh-(rsa|ed25519|dss)|ecdsa-\S+)\s+\S+", key):
-        raise HTTPException(status_code=400, detail="Invalid SSH public key format")
-    ovh = get_ovh_client_from_db(db)
-    try:
-        ovh.post("/me/sshKey", keyName=key_name, key=key)
-        return {"success": True, "keyName": key_name}
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
-
-
-@router.delete("/account/ssh-keys/{key_name}")
-def delete_ssh_key(key_name: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    ovh = get_ovh_client_from_db(db)
-    try:
-        ovh.delete(f"/me/sshKey/{key_name}")
-        return {"success": True}
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
-
-
 # ---------- Service order history ----------
 
 @router.get("/server/{server_id}/orders")

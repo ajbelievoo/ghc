@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models.models import Coupon, CouponRedemption
+from app.models.models import Coupon, CouponRedemption, CustomerOrder
 
 logger = logging.getLogger(__name__)
 
@@ -53,3 +53,28 @@ def redeem_coupon(db: Session, coupon: Coupon, user_id: str, order_id: str, disc
     db.add(CouponRedemption(coupon_id=coupon.id, user_id=user_id, order_id=order_id, discount_amount=discount))
     coupon.used_count = (coupon.used_count or 0) + 1
     db.commit()
+
+
+def release_coupon_redemptions(db: Session, order_id: str) -> int:
+    """Free redemptions burned by an order that never completed payment, so the
+    customer can use the coupon again. Only call for unpaid failed/cancelled orders."""
+    from app.models.models import PaymentTransaction, PaymentStatus
+
+    order = db.query(CustomerOrder).filter(CustomerOrder.id == order_id).first()
+    if not order:
+        return 0
+    paid = db.query(PaymentTransaction).filter(
+        PaymentTransaction.order_id == order_id,
+        PaymentTransaction.status == PaymentStatus.COMPLETED,
+    ).first()
+    if paid:
+        return 0
+    redemptions = db.query(CouponRedemption).filter(CouponRedemption.order_id == order_id).all()
+    for r in redemptions:
+        coupon = db.query(Coupon).filter(Coupon.id == r.coupon_id).first()
+        if coupon and coupon.used_count:
+            coupon.used_count = max(0, coupon.used_count - 1)
+        db.delete(r)
+    if redemptions:
+        db.commit()
+    return len(redemptions)

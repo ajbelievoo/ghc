@@ -43,6 +43,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Info,
+  FileText,
 } from "lucide-react";
 
 interface ServerInstance {
@@ -525,7 +526,64 @@ function HomeTab({ server, detail, metrics, additionalIps, setTab }: any) {
         <Row label="Commitment / Expiry" value={server.expiresAt ? new Date(server.expiresAt).toLocaleDateString() : "—"} />
         <UpgradeBanner serverId={server.id} isVps={server.category === "VPS"} />
       </Card>
+
+      {/* Billing history */}
+      <ServiceBilling serverId={server.id} />
     </div>
+  );
+}
+
+function ServiceBilling({ serverId }: { serverId: string }) {
+  const { showToast } = useToast();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    Promise.all([
+      api.server.serviceOrders(serverId).then((d) => setOrders(d.orders || [])).catch(() => {}),
+      api.server.serviceInvoices(serverId).then((d) => setInvoices(d.invoices || [])).catch(() => {}),
+    ]).finally(() => setLoaded(true));
+  }, [serverId]);
+
+  return (
+    <Card title="Orders & invoices" icon={<FileText className="w-4 h-4 text-[#00b7ff]" />}>
+      {!loaded ? (
+        <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+      ) : (
+        <div className="space-y-3">
+          {orders.map((o) => (
+            <div key={o.id} className="flex items-center justify-between rounded-lg bg-slate-100 border border-slate-200 px-3 py-2">
+              <div>
+                <p className="text-xs font-medium text-[#0f172a]">{o.label}</p>
+                <p className="text-[10px] text-slate-500">{o.kind} · {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ""}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-medium text-[#0f172a]">{getCurrencySymbol(o.currency)}{o.amount?.toFixed(2)}</p>
+                <Badge ok={o.status === "ACTIVE" || o.status === "COMPLETED"}>{o.status}</Badge>
+              </div>
+            </div>
+          ))}
+          {invoices.map((inv) => (
+            <div key={inv.id} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+              <div>
+                <p className="text-xs font-medium text-[#0f172a]">Invoice {inv.invoiceNumber || inv.id.slice(0, 8)}</p>
+                <p className="text-[10px] text-slate-500">due {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : "—"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-medium text-[#0f172a]">{getCurrencySymbol(inv.currency)}{inv.amount?.toFixed(2)}</p>
+                <Badge ok={inv.status === "PAID"}>{inv.status}</Badge>
+                {inv.status !== "PAID" && (
+                  <Link href="/dashboard?tab=invoices" className="rounded bg-[#00b7ff] px-2 py-1 text-[10px] font-bold text-white">Pay</Link>
+                )}
+              </div>
+            </div>
+          ))}
+          {!orders.length && !invoices.length && (
+            <p className="text-xs text-slate-500">No orders or invoices linked to this service yet.</p>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -2034,6 +2092,9 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
         )}
       </Card>
 
+      {/* Dedicated server ops */}
+      {!isVps && <DedicatedOps server={server} />}
+
       {/* Tasks */}
       {isVps && tasks.length > 0 && (
         <Card title="Recent tasks" icon={<Clock className="w-4 h-4 text-[#00b7ff]" />}>
@@ -2051,6 +2112,126 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
         </Card>
       )}
     </div>
+  );
+}
+
+/* ================= DEDICATED OPS (tasks / backup FTP / interventions / monitoring / IPMI) ================= */
+
+function DedicatedOps({ server }: { server: ServerInstance }) {
+  const { showToast } = useToast();
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [interventions, setInterventions] = useState<any[]>([]);
+  const [backupFtp, setBackupFtp] = useState<any>(null);
+  const [mon, setMon] = useState<any>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (server.category !== "DEDICATED") return;
+    api.server.dedicatedTasks(server.id).then((d) => setTasks(d.tasks || [])).catch(() => {});
+    api.server.dedicatedInterventions(server.id).then((d) => setInterventions(d.interventions || [])).catch(() => {});
+    api.server.dedicatedBackupFtp(server.id).then(setBackupFtp).catch(() => setBackupFtp({}));
+    api.server.dedicatedMonitoring(server.id).then(setMon).catch(() => {});
+  }, [server.id, server.category]);
+
+  if (server.category !== "DEDICATED") return null;
+
+  const run = async (key: string, fn: () => Promise<any>, ok: string) => {
+    setBusy(key);
+    try {
+      await fn();
+      showToast(ok, "success");
+    } catch (e: any) {
+      showToast(e.message || "Action failed", "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <>
+      {/* Backup storage (FTP backup) */}
+      <Card title="Backup storage" icon={<HardDrive className="w-4 h-4 text-[#00b7ff]" />}>
+        {backupFtp === null ? (
+          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+        ) : backupFtp?.activated ? (
+          <div className="space-y-1.5">
+            <Row label="Status" value={<Badge ok>Activated</Badge>} />
+            {backupFtp.ftpBackupName && <Row label="FTP backup" value={backupFtp.ftpBackupName} mono />}
+            {backupFtp.capacity != null && <Row label="Capacity" value={`${backupFtp.capacity} GB`} />}
+            {backupFtp.usage != null && <Row label="Used" value={`${backupFtp.usage} GB`} />}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-500">Included FTP backup space — activate to store files off-server.</p>
+            <button
+              onClick={() => run("bftp", () => api.server.dedicatedBackupFtpActivate(server.id).then(() => api.server.dedicatedBackupFtp(server.id).then(setBackupFtp)), "Backup storage activation requested")}
+              disabled={busy === "bftp"}
+              className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-bold text-white hover:bg-[#0090cc] disabled:opacity-50"
+            >
+              {busy === "bftp" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Activate"}
+            </button>
+          </div>
+        )}
+      </Card>
+
+      {/* OVH monitoring */}
+      {mon && (
+        <Card title="Provider monitoring" icon={<Activity className="w-4 h-4 text-[#00b7ff]" />}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-[#0f172a]">OVH monitoring</p>
+              <p className="text-[10px] text-slate-400">Provider-side ping monitoring with automatic interventions.</p>
+            </div>
+            <button
+              onClick={() => run("mon", async () => {
+                const next = !(mon.monitoring === true);
+                await api.server.dedicatedSetMonitoring(server.id, { monitoring: next });
+                setMon((m: any) => ({ ...m, monitoring: next }));
+              }, "Monitoring updated")}
+              disabled={busy === "mon" || mon.monitoring == null}
+              className={`relative h-6 w-11 rounded-full transition-colors ${mon.monitoring ? "bg-[#00b7ff]" : "bg-slate-300"} disabled:opacity-50`}
+            >
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${mon.monitoring ? "left-[22px]" : "left-0.5"}`} />
+            </button>
+          </div>
+          {mon.state && <Row label="Server state" value={mon.state} />}
+        </Card>
+      )}
+
+      {/* Interventions */}
+      {interventions.length > 0 && (
+        <Card title="Ongoing interventions" icon={<AlertTriangle className="w-4 h-4 text-[#ff3d00]" />}>
+          <div className="space-y-2">
+            {interventions.slice(0, 5).map((iv: any, i: number) => (
+              <div key={iv.interventionId || i} className="flex items-center justify-between rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5">
+                <div>
+                  <p className="text-xs font-medium text-[#0f172a]">{iv.type || "Intervention"}</p>
+                  <p className="text-[10px] text-slate-500">{iv.startDate ? new Date(iv.startDate).toLocaleString() : ""}</p>
+                </div>
+                <Badge>{iv.status || "in progress"}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Tasks */}
+      {tasks.length > 0 && (
+        <Card title="Recent tasks" icon={<Clock className="w-4 h-4 text-[#00b7ff]" />}>
+          <div className="space-y-2">
+            {tasks.slice(0, 8).map((t: any, i: number) => (
+              <div key={t.taskId || i} className="flex items-center justify-between rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5">
+                <div>
+                  <p className="text-xs font-medium text-[#0f172a]">{t.function || t.type}</p>
+                  <p className="text-[10px] text-slate-500">{t.lastUpdate || t.startDate ? new Date(t.lastUpdate || t.startDate).toLocaleString() : ""}</p>
+                </div>
+                <Badge ok={t.status === "done"}>{t.status}</Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </>
   );
 }
 

@@ -247,6 +247,11 @@ def run_maintenance():
                     continue
                 order.status = "FAILED"
                 cancelled += 1
+                try:
+                    from app.services.coupon_service import release_coupon_redemptions
+                    release_coupon_redemptions(db, order.id)
+                except Exception:
+                    logger.exception(f"Coupon release failed for order {order.id}")
             if cancelled:
                 db.commit()
                 _log(db, LogType.CRON, f"Marked {cancelled} abandoned order(s) as failed")

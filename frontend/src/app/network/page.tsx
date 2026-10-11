@@ -11,10 +11,11 @@ const features = [
   { icon: Server, title: "Load Balancing", desc: "Layer 4 and Layer 7 load balancing with health checks, SSL termination, and sticky sessions." },
 ];
 
-const plans = [
-  { name: "Standard", price: "Free", desc: "Included with every server", features: ["1 Gbps public port", "Basic DDoS protection", "Standard routing", "Community support"] },
-  { name: "Advanced", price: "$29.76/mo", desc: "For production workloads", features: ["10 Gbps public port", "Advanced DDoS protection", "Anycast IP option", "Private backbone access", "Priority support"] },
-  { name: "Enterprise", price: "Custom", desc: "Mission-critical infrastructure", features: ["100 Gbps public port", "Dedicated anti-DDoS", "Custom BGP routing", "Private backbone + VLAN", "24/7 SRE support"] },
+const products = [
+  { name: "Load Balancer", href: "/public-cloud?s=loadbalancer", desc: "Managed Layer 4/7 load balancing with health checks and SSL termination.", features: ["HTTP/TCP farms", "SSL termination", "Health checks", "Region-based routing"] },
+  { name: "Floating IP", href: "/public-cloud?s=floatingip", desc: "Flexible public IPs you can move between instances instantly.", features: ["Instant failover", "Anycast-ready", "BYOIP friendly", "Per-second billing"] },
+  { name: "Gateway", href: "/public-cloud?s=gateway", desc: "Managed egress gateway for private networks — SNAT/DNAT included.", features: ["Outbound NAT", "Floating IP attach", "Private subnet egress", "HA by default"] },
+  { name: "Private Network (vRack)", href: "/public-cloud?s=vrack", desc: "Isolated L2 private networking across regions and services.", features: ["Multi-region VLAN", "VPS + dedicated + cloud", "10 Gbps private", "Free traffic"] },
 ];
 
 export default function NetworkPage() {
@@ -52,19 +53,18 @@ export default function NetworkPage() {
 
       <section className="bg-[#f8faff] py-16">
         <div className="mx-auto max-w-7xl px-6">
-          <h2 className="mb-10 text-center text-3xl font-black">Network Tiers</h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            {plans.map((p) => (
-              <div key={p.name} className="rounded-2xl border border-slate-200 bg-white p-8">
+          <h2 className="mb-10 text-center text-3xl font-black">Network products</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {products.map((p) => (
+              <div key={p.name} className="rounded-2xl border border-slate-200 bg-white p-8 flex flex-col">
                 <h3 className="text-xl font-bold">{p.name}</h3>
                 <p className="mt-1 text-sm text-slate-500">{p.desc}</p>
-                <p className="mt-4 text-3xl font-black">{p.price}</p>
-                <ul className="mt-6 space-y-3">
+                <ul className="mt-6 space-y-3 flex-1">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm text-slate-600"><Check className="h-4 w-4 text-[#00a832] flex-shrink-0 mt-0.5" />{f}</li>
                   ))}
                 </ul>
-                <Link href="/vps" className="mt-6 block w-full rounded-lg bg-[#0f0c29] py-2.5 text-center text-sm font-bold text-white hover:bg-[#302b63]">Get Started</Link>
+                <Link href={p.href} className="mt-6 block w-full rounded-lg bg-[#0f0c29] py-2.5 text-center text-sm font-bold text-white hover:bg-[#302b63]">View plans</Link>
               </div>
             ))}
           </div>

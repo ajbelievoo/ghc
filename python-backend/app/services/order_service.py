@@ -398,6 +398,15 @@ def _update_order_status(
     if commit and status in (OrderStatus.ACTIVE, OrderStatus.FAILED):
         _notify_order_status(db, order, status, error)
 
+    # Free coupon redemptions burned by unpaid failed orders so the customer
+    # can reuse the coupon on a future order.
+    if commit and status == OrderStatus.FAILED:
+        try:
+            from app.services.coupon_service import release_coupon_redemptions
+            release_coupon_redemptions(db, order.id)
+        except Exception:
+            logger.exception(f"Coupon release failed for order {order.id}")
+
 
 def _extract_service_name_from_order_details(ovh: OvhClient, order_id: int) -> Optional[str]:
     """OVH order details contain the domain/serviceName created by the order."""
