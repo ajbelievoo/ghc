@@ -1363,6 +1363,30 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         raise
 
 
+def fulfill_cart_orders(db: Session, tx) -> None:
+    """Mark every order in a CART payment as paid and kick off provisioning.
+    Shared by the wallet cart path and gateway webhooks/fulfillment."""
+    meta = tx.payment_metadata or {}
+    order_ids = meta.get("orderIds") or []
+    for oid in order_ids:
+        order = db.query(CustomerOrder).filter(CustomerOrder.id == oid).first()
+        if not order or order.status != OrderStatus.PENDING:
+            continue
+        order.status = OrderStatus.PAYMENT_RECEIVED
+        db.commit()
+        try:
+            if order.user:
+                send_order_payment_email(db, order, order.user)
+        except Exception:
+            pass
+        try:
+            order.status = OrderStatus.PROVISIONING
+            db.commit()
+            spawn_provisioning(order.id)
+        except Exception:
+            logger.exception(f"Cart order {order.id} provisioning kickoff failed")
+
+
 def pay_order_with_wallet(db: Session, user_id: str, order_id: str) -> CustomerOrder:
     """Pay a pending order from user's internal wallet balance."""
     order = db.query(CustomerOrder).filter(

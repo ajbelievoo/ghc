@@ -266,6 +266,9 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 domain.expires_at = datetime.utcnow() + timedelta(days=365 * domain.years)
                 domain.payment_transaction_id = tx.id
                 db.commit()
+    elif meta.get("type") == "CART" or meta.get("orderIds"):
+        from app.services.order_service import fulfill_cart_orders
+        fulfill_cart_orders(db, tx)
     elif meta.get("type") == "ADDITIONAL_IP" or meta.get("ipId"):
         ip_id = meta.get("ipId")
         if ip_id:

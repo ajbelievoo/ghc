@@ -900,7 +900,7 @@ def admin_ovh_account_health(db: Session = Depends(get_db), admin: User = Depend
 
 # ---------- Live chat (admin) ----------
 
-@router.get("/admin/chat/sessions")
+@router.get("/chat/sessions")
 def admin_chat_sessions(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import ChatSession
     sessions = db.query(ChatSession).order_by(ChatSession.last_message_at.desc().nullslast(), ChatSession.created_at.desc()).limit(200).all()
@@ -920,7 +920,7 @@ def admin_chat_sessions(db: Session = Depends(get_db), admin: User = Depends(get
     }
 
 
-@router.get("/admin/chat/sessions/{session_id}/messages")
+@router.get("/chat/sessions/{session_id}/messages")
 def admin_chat_messages(session_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import ChatSession, ChatMessage
     sess = db.query(ChatSession).filter(ChatSession.id == session_id).first()
@@ -943,7 +943,7 @@ def admin_chat_messages(session_id: str, db: Session = Depends(get_db), admin: U
     }
 
 
-@router.post("/admin/chat/sessions/{session_id}/messages")
+@router.post("/chat/sessions/{session_id}/messages")
 def admin_chat_reply(session_id: str, body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import ChatSession, ChatMessage
     sess = db.query(ChatSession).filter(ChatSession.id == session_id).first()
@@ -975,7 +975,7 @@ def admin_chat_reply(session_id: str, body: dict, db: Session = Depends(get_db),
     return {"ok": True, "message": {"id": msg.id, "sender": msg.sender, "senderName": msg.sender_name, "body": msg.body, "createdAt": msg.created_at.isoformat()}}
 
 
-@router.post("/admin/chat/sessions/{session_id}/status")
+@router.post("/chat/sessions/{session_id}/status")
 def admin_chat_status(session_id: str, body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import ChatSession
     sess = db.query(ChatSession).filter(ChatSession.id == session_id).first()
@@ -1009,14 +1009,14 @@ def _mp_json(p) -> dict:
     }
 
 
-@router.get("/admin/marketplace")
+@router.get("/marketplace")
 def admin_marketplace_list(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import MarketplaceProduct
     items = db.query(MarketplaceProduct).order_by(MarketplaceProduct.sort_order, MarketplaceProduct.name).all()
     return {"items": [_mp_json(p) for p in items]}
 
 
-@router.post("/admin/marketplace")
+@router.post("/marketplace")
 def admin_marketplace_create(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import MarketplaceProduct
     name = (body.get("name") or "").strip()
@@ -1045,7 +1045,7 @@ def admin_marketplace_create(body: dict, db: Session = Depends(get_db), admin: U
     return {"ok": True, "item": _mp_json(p)}
 
 
-@router.put("/admin/marketplace/{item_id}")
+@router.put("/marketplace/{item_id}")
 def admin_marketplace_update(item_id: str, body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import MarketplaceProduct
     p = db.query(MarketplaceProduct).filter(MarketplaceProduct.id == item_id).first()
@@ -1069,7 +1069,7 @@ def admin_marketplace_update(item_id: str, body: dict, db: Session = Depends(get
     return {"ok": True, "item": _mp_json(p)}
 
 
-@router.delete("/admin/marketplace/{item_id}")
+@router.delete("/marketplace/{item_id}")
 def admin_marketplace_delete(item_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.models.models import MarketplaceProduct
     p = db.query(MarketplaceProduct).filter(MarketplaceProduct.id == item_id).first()

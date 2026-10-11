@@ -1565,7 +1565,7 @@ def payments_checkout(body: dict, db: Session = Depends(get_db), user: User = De
 
 # ---------- Multi-item cart ----------
 
-@router.get("/server/cart")
+@router.get("/cart")
 def cart_list(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     from app.models.models import CartItem
     items = db.query(CartItem).filter(CartItem.user_id == user.id).order_by(CartItem.created_at).all()
@@ -1586,7 +1586,7 @@ def cart_list(db: Session = Depends(get_db), user: User = Depends(get_current_us
     }
 
 
-@router.post("/server/cart")
+@router.post("/cart")
 def cart_add(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     from app.models.models import CartItem
     plan_code = (body.get("planCode") or "").strip()
@@ -1615,7 +1615,7 @@ def cart_add(body: dict, db: Session = Depends(get_db), user: User = Depends(get
     return {"ok": True, "item": {"id": item.id}}
 
 
-@router.delete("/server/cart/{item_id}")
+@router.delete("/cart/{item_id}")
 def cart_remove(item_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     from app.models.models import CartItem
     item = db.query(CartItem).filter(CartItem.id == item_id, CartItem.user_id == user.id).first()
@@ -1626,7 +1626,7 @@ def cart_remove(item_id: str, db: Session = Depends(get_db), user: User = Depend
     return {"ok": True}
 
 
-@router.delete("/server/cart")
+@router.delete("/cart")
 def cart_clear(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     from app.models.models import CartItem
     db.query(CartItem).filter(CartItem.user_id == user.id).delete()
@@ -1634,7 +1634,7 @@ def cart_clear(db: Session = Depends(get_db), user: User = Depends(get_current_u
     return {"ok": True}
 
 
-@router.post("/server/cart/checkout")
+@router.post("/cart/checkout")
 def cart_checkout(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Convert all cart items into orders and create a single payment session."""
     from app.models.models import CartItem
@@ -1647,6 +1647,20 @@ def cart_checkout(body: dict, db: Session = Depends(get_db), user: User = Depend
         raise HTTPException(status_code=400, detail="Cart is empty")
     gateway = (body.get("gateway") or "wallet").lower()
     currency = (body.get("currency") or get_settings().currency or "USD").upper()
+
+    # Wallet pay: verify balance BEFORE creating orders so a failed checkout
+    # doesn't leave orphan orders + a dead payment session behind.
+    if gateway == "wallet":
+        wallet_check = db.query(Wallet).filter(Wallet.user_id == user.id).with_for_update().first()
+        if wallet_check:
+            from app.services.currency_service import convert as _cv0
+            est_total = sum(float(i.unit_price or 0) for i in items)
+            try:
+                est_amount = _cv0(db, est_total, currency, wallet_check.currency, strict=True)
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+            if wallet_check.balance < est_amount:
+                raise HTTPException(status_code=400, detail=f"Insufficient wallet balance: {wallet_check.balance:.2f} {wallet_check.currency}")
 
     orders = []
     errors = []
@@ -1685,9 +1699,12 @@ def cart_checkout(body: dict, db: Session = Depends(get_db), user: User = Depend
     db.commit()
 
     if gateway == "wallet":
-        wallet = get_or_create_wallet(db, user.id)
+        wallet = db.query(Wallet).filter(Wallet.user_id == user.id).with_for_update().first() or get_or_create_wallet(db, user.id)
         from app.services.currency_service import convert as _cv
-        wallet_amount = _cv(db, total, orders[0].currency, wallet.currency)
+        try:
+            wallet_amount = _cv(db, total, orders[0].currency, wallet.currency, strict=True)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         if wallet.balance < wallet_amount:
             raise HTTPException(status_code=400, detail=f"Insufficient wallet balance: {wallet.balance:.2f} {wallet.currency} < {wallet_amount:.2f} {wallet.currency}")
         wallet.balance -= wallet_amount
@@ -1722,28 +1739,8 @@ def cart_checkout(body: dict, db: Session = Depends(get_db), user: User = Depend
 
 
 def _fulfill_cart_orders(db: Session, tx) -> None:
-    """Mark every order in a CART payment as paid and start provisioning."""
-    meta = tx.payment_metadata or {}
-    order_ids = meta.get("orderIds") or []
-    for oid in order_ids:
-        order = db.query(CustomerOrder).filter(CustomerOrder.id == oid).first()
-        if not order or order.status != OrderStatus.PENDING:
-            continue
-        order.status = OrderStatus.PAYMENT_RECEIVED
-        db.commit()
-        try:
-            if order.user:
-                from app.services.email_service import send_order_payment_email
-                send_order_payment_email(db, order, order.user)
-        except Exception:
-            pass
-        try:
-            from app.services.order_service import spawn_provisioning
-            order.status = OrderStatus.PROVISIONING
-            db.commit()
-            spawn_provisioning(order.id)
-        except Exception:
-            pass
+    from app.services.order_service import fulfill_cart_orders
+    fulfill_cart_orders(db, tx)
 
 
 @router.get("/payments/session/{session_id}")
@@ -3958,3 +3955,76 @@ def marketplace_public(db: Session = Depends(get_db)):
             for p in items
         ]
     }
+
+
+# ---------- Email hosting (mailboxes on customer domains) ----------
+
+def _mail_domain_or_404(db: Session, user: User, domain: str) -> str:
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    from app.services import mail_service
+    if not mail_service.mail_available():
+        raise HTTPException(status_code=503, detail="Mail service is not available")
+    return domain
+
+
+@router.get("/server/domains/{domain}/mailboxes")
+def mailboxes_list(domain: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = _mail_domain_or_404(db, user, domain)
+    from app.services import mail_service
+    try:
+        return {"info": mail_service.domain_mail_info(domain), "mailboxes": mail_service.list_mailboxes(domain)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/server/domains/{domain}/mailboxes")
+def mailboxes_create(domain: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = _mail_domain_or_404(db, user, domain)
+    from app.services import mail_service
+    try:
+        mb = mail_service.create_mailbox(
+            domain,
+            body.get("localPart") or "",
+            body.get("password") or "",
+            full_name=body.get("fullName") or "",
+            quota=body.get("quota"),
+        )
+        return {"ok": True, "mailbox": mb}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/server/domains/{domain}/mailboxes/{username}")
+def mailboxes_update(domain: str, username: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = _mail_domain_or_404(db, user, domain)
+    from app.services import mail_service
+    try:
+        mb = mail_service.update_mailbox(
+            domain,
+            username,
+            password=body.get("password"),
+            quota=body.get("quota"),
+            active=body.get("active"),
+        )
+        return {"ok": True, "mailbox": mb}
+    except ValueError as e:
+        raise HTTPException(status_code=404 if "not found" in str(e).lower() else 400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/server/domains/{domain}/mailboxes/{username}")
+def mailboxes_delete(domain: str, username: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    domain = _mail_domain_or_404(db, user, domain)
+    from app.services import mail_service
+    try:
+        mail_service.delete_mailbox(domain, username)
+        return {"ok": True}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
