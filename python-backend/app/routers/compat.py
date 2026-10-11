@@ -4028,3 +4028,138 @@ def mailboxes_delete(domain: str, username: str, db: Session = Depends(get_db), 
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/server/{server_id}/vps/console-access")
+def vps_console_access(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a browser serial-console session at the provider (KVM fallback)."""
+    sub, ovh = _vps_sub_and_client(db, user, server_id)
+    service_name = sub.service_name or sub.ovh_resource_id
+    try:
+        result = ovh.post(f"/vps/{service_name}/consoleAccess") or {}
+        return {"success": True, "url": result.get("url"), "protocol": result.get("protocol")}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/user/export")
+def export_user_data(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """GDPR-style data export — everything we hold about the account."""
+    from app.models.models import DomainRegistration, LoginEvent, SupportTicket
+    subs = db.query(Subscription).filter(Subscription.user_id == user.id).all()
+    orders = db.query(CustomerOrder).filter(CustomerOrder.user_id == user.id).all()
+    invoices = db.query(Invoice).filter(Invoice.user_id == user.id).all()
+    domains = db.query(DomainRegistration).filter(DomainRegistration.user_id == user.id).all()
+    tickets = db.query(SupportTicket).filter(SupportTicket.user_id == user.id).all()
+    logins = db.query(LoginEvent).filter(LoginEvent.user_id == user.id).order_by(LoginEvent.created_at.desc()).limit(100).all()
+    ssh_keys: list = []
+    try:
+        ovh = get_ovh_client_from_db(db)
+        for name in ovh.get("/me/sshKey") or []:
+            k = ovh.get(f"/me/sshKey/{name}") or {}
+            ssh_keys.append({"name": k.get("keyName") or name, "fingerprint": k.get("fingerPrint")})
+    except Exception:
+        pass
+    return {
+        "generatedAt": datetime.utcnow().isoformat(),
+        "user": {
+            "id": user.id, "email": user.email, "name": user.name,
+            "createdAt": user.created_at.isoformat() if user.created_at else None,
+            "country": getattr(user, "country", None), "language": getattr(user, "language", None),
+        },
+        "subscriptions": [
+            {
+                "id": s.id, "planCode": s.plan_code, "category": s.category.value if s.category else None,
+                "serviceName": s.service_name, "displayName": s.display_name, "ipAddress": s.ip_address,
+                "status": s.status.value if s.status else None, "datacenter": s.datacenter,
+                "nextBillDate": s.next_bill_date.isoformat() if s.next_bill_date else None,
+                "priceAmount": s.price_amount, "currency": s.currency,
+                "createdAt": s.created_at.isoformat() if s.created_at else None,
+            } for s in subs
+        ],
+        "orders": [
+            {
+                "id": o.id, "planCode": o.plan_code, "amount": o.customer_amount, "tax": o.tax_amount,
+                "currency": o.currency, "status": o.status.value if o.status else None,
+                "createdAt": o.created_at.isoformat() if o.created_at else None,
+            } for o in orders
+        ],
+        "invoices": [
+            {
+                "id": i.id, "number": i.invoice_number, "amount": i.amount, "tax": i.tax_amount,
+                "currency": i.currency, "status": i.status.value if i.status else None,
+                "createdAt": i.created_at.isoformat() if i.created_at else None,
+            } for i in invoices
+        ],
+        "domains": [
+            {"domain": f"{d.domain_name}{d.tld}", "status": d.status.value if d.status else None,
+             "expiresAt": d.expires_at.isoformat() if d.expires_at else None}
+            for d in domains
+        ],
+        "supportTickets": [
+            {"id": t.id, "subject": t.subject, "status": t.status.value if hasattr(t.status, "value") else t.status,
+             "createdAt": t.created_at.isoformat() if t.created_at else None}
+            for t in tickets
+        ],
+        "sshKeys": [{"name": k.name, "fingerprint": getattr(k, "fingerprint", None)} for k in ssh_keys],
+        "recentLogins": [
+            {"ip": l.ip_address, "at": l.created_at.isoformat() if l.created_at else None}
+            for l in logins
+        ],
+    }
+
+
+@router.post("/billing/invoices/pay")
+def pay_invoices(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Pay one or more open invoices from the wallet in a single debit."""
+    from app.services.wallet_service import get_or_create_wallet
+    from app.services.currency_service import convert as _cv
+    ids = body.get("invoiceIds") or []
+    if not ids:
+        raise HTTPException(status_code=400, detail="invoiceIds required")
+    invoices = db.query(Invoice).filter(
+        Invoice.id.in_(ids), Invoice.user_id == user.id,
+    ).all()
+    if len(invoices) != len(set(ids)):
+        raise HTTPException(status_code=404, detail="One or more invoices not found")
+    unpaid = [i for i in invoices if i.status != InvoiceStatus.PAID]
+    if not unpaid:
+        raise HTTPException(status_code=400, detail="All invoices are already paid")
+    wallet = get_or_create_wallet(db, user.id)
+    total = 0.0
+    for inv in unpaid:
+        total += _cv(db, float(inv.amount) + float(inv.tax_amount or 0), inv.currency or "USD", wallet.currency)
+    total = round(total, 2)
+    if wallet.balance < total:
+        raise HTTPException(status_code=400, detail=f"Insufficient wallet balance: {wallet.balance:.2f} {wallet.currency} < {total:.2f} {wallet.currency}")
+    wallet.balance -= total
+    db.add(WalletTransaction(
+        wallet_id=wallet.id,
+        type=WalletTransactionType.PAYMENT,
+        amount=-total,
+        description=f"Payment for {len(unpaid)} invoice(s)",
+        gateway="wallet",
+        metadata={"invoice_ids": [i.id for i in unpaid]},
+    ))
+    paid_ids = []
+    for inv in unpaid:
+        inv.status = InvoiceStatus.PAID
+        paid_ids.append(inv.id)
+        if inv.order_id:
+            order = db.query(CustomerOrder).filter(CustomerOrder.id == inv.order_id).first()
+            if order and order.status == OrderStatus.PENDING:
+                order.status = OrderStatus.PAYMENT_RECEIVED
+        try:
+            from app.services.subscription_service import reactivate_after_invoice_payment
+            reactivate_after_invoice_payment(db, inv)
+        except Exception:
+            pass
+    db.commit()
+    try:
+        from app.services.notification_service import create_notification
+        create_notification(db, user, "Invoices paid", f"{len(paid_ids)} invoice(s) paid — {wallet.currency} {total:.2f}.", "success", "/dashboard?tab=invoices")
+    except Exception:
+        pass
+    return {"ok": True, "paid": paid_ids, "total": total, "currency": wallet.currency, "balance": wallet.balance}

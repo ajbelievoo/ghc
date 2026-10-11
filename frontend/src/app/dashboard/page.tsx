@@ -66,6 +66,7 @@ import {
   ArrowRightLeft,
   CreditCard,
   Tag,
+  AlertTriangle,
 } from "lucide-react";
 
 type Tab = "overview" | "servers" | "domains" | "invoices" | "wallet" | "support" | "security" | "profile";
@@ -192,6 +193,7 @@ export default function DashboardPage() {
   const [notifList, setNotifList] = useState<any[]>([]);
   const [savingNotifications, setSavingNotifications] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+  const [bulkPayingInvoices, setBulkPayingInvoices] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [serviceStatus, setServiceStatus] = useState<any>(null);
   const [referral, setReferral] = useState<any>(null);
@@ -991,6 +993,35 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* Expiring services warning */}
+            {(() => {
+              const soon = Date.now() + 14 * 24 * 3600 * 1000;
+              const expiring = [
+                ...servers.filter((s) => s.expiresAt && new Date(s.expiresAt).getTime() < soon && s.status === "ACTIVE")
+                  .map((s) => ({ name: s.displayName || s.serviceName || s.planCode || s.id, when: new Date(s.expiresAt!), kind: "service", id: s.id })),
+                ...safeDomains.filter((d) => d.expiresAt && new Date(d.expiresAt).getTime() < soon)
+                  .map((d) => ({ name: d.domain, when: new Date(d.expiresAt), kind: "domain", id: d.id })),
+              ].sort((a, b) => a.when.getTime() - b.when.getTime());
+              if (!expiring.length) return null;
+              return (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <p className="text-sm font-bold text-amber-800">{expiring.length} item{expiring.length > 1 ? "s" : ""} expiring within 14 days</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {expiring.slice(0, 6).map((e) => (
+                      <span key={e.id} className="inline-flex items-center gap-1.5 rounded-full bg-white border border-amber-200 px-3 py-1 text-xs text-amber-800">
+                        {e.name} <b className="text-amber-600">{e.when.toLocaleDateString()}</b>
+                      </span>
+                    ))}
+                    {expiring.length > 6 && <span className="text-xs text-amber-700 self-center">+{expiring.length - 6} more</span>}
+                  </div>
+                  <button onClick={() => setTab("invoices")} className="mt-3 rounded-lg bg-amber-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-amber-700">Renew now</button>
+                </div>
+              );
+            })()}
+
             <div className="flex flex-wrap gap-3">
               <button onClick={() => setActiveView("order")} className="rounded-xl bg-gradient-to-r from-[#00b7ff] to-[#00f0ff] text-white px-4 py-2.5 text-sm font-semibold shadow-lg shadow-[#00b7ff]/20 hover:shadow-[#00b7ff]/40 transition-all flex items-center gap-2"><Plus className="w-4 h-4" /> Order Service</button>
               <button onClick={() => setActiveView("domain-search")} className="rounded-xl bg-white border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#0a0f1c] hover:border-[#00b7ff] transition-all flex items-center gap-2"><Globe className="w-4 h-4 text-[#00b7ff]" /> Register Domain</button>
@@ -1693,6 +1724,34 @@ export default function DashboardPage() {
         {!activeView && tab === "invoices" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-[#0f172a]">Billing & Invoices</h2>
+
+            {(() => {
+              const open = filteredInvoices.filter((i) => i.status !== "PAID" && i.status !== "CANCELLED");
+              if (open.length < 2) return null;
+              const total = open.reduce((s, i) => s + i.amount + (i.taxAmount || i.tax_amount || 0), 0);
+              return (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#00b7ff]/40 bg-[#00b7ff]/5 px-4 py-3">
+                  <p className="text-sm font-medium text-[#0f172a]">
+                    {open.length} open invoices — total {getCurrencySymbol(open[0]?.currency || currency)}{total.toFixed(2)}
+                  </p>
+                  <button
+                    disabled={bulkPayingInvoices}
+                    onClick={async () => {
+                      setBulkPayingInvoices(true);
+                      try {
+                        const r = await api.account2.payInvoices(open.map((i) => i.id));
+                        showToast(`${r.paid.length} invoice(s) paid from wallet`, "success");
+                        fetchData();
+                      } catch (e: any) { showToast(e.message || "Bulk payment failed", "error"); }
+                      finally { setBulkPayingInvoices(false); }
+                    }}
+                    className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-bold text-white hover:bg-[#009fe0] disabled:opacity-50"
+                  >
+                    {bulkPayingInvoices ? "Paying…" : "Pay all from wallet"}
+                  </button>
+                </div>
+              );
+            })()}
 
             {ordersList.length > 0 && (
               <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
@@ -2531,6 +2590,27 @@ export default function DashboardPage() {
                 <div><p className="text-sm text-[#0f172a]">2FA Status</p><p className="text-xs text-slate-500">Extra account security</p></div>
                 <span className={`text-sm font-medium ${user?.twoFactorEnabled ? 'text-[#00ff88]' : 'text-slate-500'}`}>{user?.twoFactorEnabled ? 'Enabled' : 'Disabled'}</span>
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6 space-y-3">
+              <h3 className="text-sm font-semibold text-[#0f172a] flex items-center gap-2"><Download className="w-4 h-4 text-[#00b7ff]" /> Your data</h3>
+              <p className="text-xs text-slate-500">Download a copy of everything we store about your account — profile, services, orders, invoices, domains, tickets and login history (GDPR export).</p>
+              <button
+                onClick={async () => {
+                  try {
+                    const data = await api.account2.exportData();
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `ghc-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast("Data export downloaded", "success");
+                  } catch (e: any) { showToast(e.message || "Export failed", "error"); }
+                }}
+                className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2.5 text-sm font-medium text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all"
+              >Download my data (JSON)</button>
             </div>
           </div>
         )}

@@ -336,6 +336,7 @@ export const api = {
       request(`/server/${id}/vps/secondary-dns`, { method: "POST", body: JSON.stringify(body) }),
     vpsImages: (id: string) => request(`/server/${id}/vps/images`),
     vpsTasks: (id: string) => request(`/server/${id}/vps/tasks`),
+    vpsConsoleAccess: (id: string) => request(`/server/${id}/vps/console-access`, { method: "POST" }),
     vpsUpdate: (id: string, body: { displayName?: string; netbootMode?: "local" | "rescue" }) =>
       request(`/server/${id}/vps`, { method: "PUT", body: JSON.stringify(body) }),
     vpsPasswordReset: (id: string) => request(`/server/${id}/vps/password`, { method: "POST" }),
@@ -515,6 +516,11 @@ export const api = {
       request(`/server/domains/${encodeURIComponent(domain)}/mailboxes/${encodeURIComponent(username)}`, { method: "PUT", body: JSON.stringify(body) }),
     remove: (domain: string, username: string) =>
       request(`/server/domains/${encodeURIComponent(domain)}/mailboxes/${encodeURIComponent(username)}`, { method: "DELETE" }),
+  },
+  account2: {
+    exportData: () => request("/user/export"),
+    payInvoices: (invoiceIds: string[]) =>
+      request("/billing/invoices/pay", { method: "POST", body: JSON.stringify({ invoiceIds }) }),
   },
   adminExtra: {
     chatSessions: () => request("/admin/chat/sessions"),

@@ -44,6 +44,7 @@ import {
   RefreshCw,
   Info,
   FileText,
+  MonitorSmartphone,
 } from "lucide-react";
 
 interface ServerInstance {
@@ -1655,6 +1656,7 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
   const [images, setImages] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [consoleLoading, setConsoleLoading] = useState(false);
+  const [serialLoading, setSerialLoading] = useState(false);
   const [reverseIp, setReverseIp] = useState(detail?.network?.ipv4 || server.ipAddress || "");
   const [reverseValue, setReverseValue] = useState(detail?.network?.reverseDns || "");
   const [ov, setOv] = useState<any>(null);
@@ -1728,6 +1730,20 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
       showToast(e.message || "Failed to open console", "error");
     } finally {
       setConsoleLoading(false);
+    }
+  };
+
+  const openSerialConsole = async () => {
+    setSerialLoading(true);
+    try {
+      const res = await api.server.vpsConsoleAccess(server.id);
+      const url = res.consoleUrl || res.url;
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+      else showToast(res.error || "Serial console not available for this VPS", "error");
+    } catch (e: any) {
+      showToast(e.message || "Failed to open serial console", "error");
+    } finally {
+      setSerialLoading(false);
     }
   };
 
@@ -1846,6 +1862,16 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
             {consoleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Terminal className="w-4 h-4 text-[#00b7ff]" />}
             KVM console
           </button>
+          {isVps && (
+            <button
+              onClick={openSerialConsole}
+              disabled={serialLoading}
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-xs font-medium text-[#0f172a] hover:bg-slate-100 disabled:opacity-50"
+            >
+              {serialLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MonitorSmartphone className="w-4 h-4 text-[#00b7ff]" />}
+              Serial console
+            </button>
+          )}
           {isVps && (
             <button
               onClick={toggleRescue}
