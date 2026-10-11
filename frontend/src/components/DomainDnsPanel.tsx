@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ToastProvider";
-import { Globe, Plus, Pencil, Trash2, X, Loader2, Save, RefreshCw, Lock, LockOpen, KeySquare } from "lucide-react";
+import { Globe, Plus, Pencil, Trash2, X, Loader2, Save, RefreshCw, Lock, LockOpen, KeySquare, Shield } from "lucide-react";
 
 interface DomainDnsPanelProps {
   domain: string;
@@ -28,6 +28,7 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
   const [nsInput, setNsInput] = useState("");
   const [dnssec, setDnssec] = useState<any>(null);
   const [info, setInfo] = useState<any>(null);
+  const [privacy, setPrivacy] = useState<any>(null);
   const [glue, setGlue] = useState<any[]>([]);
   const [glueHost, setGlueHost] = useState("");
   const [glueIps, setGlueIps] = useState("");
@@ -53,6 +54,7 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
     }).catch(() => {});
     api.server.domainDnssec(domain).then((d) => setDnssec(d)).catch(() => {});
     api.server.domainInfo(domain).then(setInfo).catch(() => {});
+    api.server.domainPrivacy(domain).then(setPrivacy).catch(() => {});
     api.server.domainGlue(domain).then((r) => setGlue(r.glueRecords || [])).catch(() => {});
   }, [domain]);
 
@@ -152,6 +154,29 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
                 {(info.transferLockStatus || "unknown").toUpperCase()}
               </button>
             </div>
+            {info.owoSupported && privacy !== null && (
+              <div>
+                <p className="text-slate-500">WHOIS privacy</p>
+                <button
+                  onClick={async () => {
+                    const want = !privacy.enabled;
+                    setSaving(true);
+                    try {
+                      await api.server.setDomainPrivacy(domain, want);
+                      setPrivacy({ ...privacy, enabled: want });
+                      showToast(want ? "WHOIS privacy enabled" : "WHOIS privacy disabled", "success");
+                    } catch (e: any) { showToast(e.message || "Privacy update failed", "error"); }
+                    finally { setSaving(false); }
+                  }}
+                  className={`mt-0.5 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                    privacy.enabled ? "bg-[#00ff88]/15 text-[#00a832]" : "bg-slate-200 text-slate-500"}`}
+                  title="Click to toggle"
+                >
+                  <Shield className="w-3 h-3" />
+                  {privacy.enabled ? "ON" : "OFF"}
+                </button>
+              </div>
+            )}
           </div>
         )}
         <div className="mb-6 flex flex-wrap items-center gap-3">

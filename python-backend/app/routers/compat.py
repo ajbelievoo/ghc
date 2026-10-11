@@ -3083,6 +3083,45 @@ def dedicated_tasks(server_id: str, db: Session = Depends(get_db), user: User = 
     return {"tasks": _ovh_call(lambda: get_dedicated_tasks(ovh, sub))}
 
 
+@router.get("/server/{server_id}/dedicated/upgrades")
+def dedicated_upgrade_offers(server_id: str, currency: Optional[str] = None, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.services.order_service import get_dedicated_option_catalog
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    return _ovh_call(lambda: get_dedicated_option_catalog(db, ovh, sub, currency))
+
+
+@router.post("/server/{server_id}/dedicated/options/order")
+def dedicated_option_order(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _dedi_sub_and_client(db, user, server_id)
+    kind = (body.get("kind") or "").strip()
+    try:
+        order = create_service_option_order(
+            db, ovh, user.id, sub, kind,
+            {
+                "planCode": body.get("planCode"),
+                "size": body.get("size"),
+                "duration": body.get("duration"),
+            },
+            currency=body.get("currency"),
+        )
+        return {
+            "success": True,
+            "order": {
+                "id": order.id,
+                "kind": kind,
+                "label": (order.configuration_payload or {}).get("display_name"),
+                "amount": order.customer_amount,
+                "taxAmount": order.tax_amount,
+                "currency": order.currency,
+                "status": order.status.value,
+            },
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
 @router.get("/server/{server_id}/dedicated/boots")
 def dedicated_boots(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     sub, ovh = _dedi_sub_and_client(db, user, server_id)
@@ -3392,6 +3431,42 @@ def domain_info(domain: str, db: Session = Depends(get_db), user: User = Depends
             "suspensionState": info.get("suspensionState"),
             "renewalState": info.get("renewalState"),
         }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/server/domains/{domain}/privacy")
+def domain_privacy_status(domain: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """WHOIS privacy (OWO) status — list of fields currently obfuscated."""
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    try:
+        ovh = get_ovh_client_from_db(db)
+        fields = ovh.get(f"/domain/{domain}/owo") or []
+        return {"domain": domain, "enabled": bool(fields), "fields": fields}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/server/domains/{domain}/privacy")
+def set_domain_privacy(domain: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Enable/disable WHOIS privacy (OWO) on the supported fields."""
+    domain = (domain or "").strip().lower()
+    if not _verify_domain_owner(db, user.id, domain):
+        raise HTTPException(status_code=404, detail="Domain not found")
+    enabled = bool(body.get("enabled", True))
+    try:
+        ovh = get_ovh_client_from_db(db)
+        if enabled:
+            ovh.post(f"/domain/{domain}/owo", fields=["phone", "fax", "email", "address", "organisation", "name"])
+            return {"success": True, "enabled": True}
+        ovh.delete(f"/domain/{domain}/owo")
+        return {"success": True, "enabled": False}
     except HTTPException:
         raise
     except Exception as e:

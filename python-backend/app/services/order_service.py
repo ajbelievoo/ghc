@@ -689,6 +689,62 @@ def get_vps_option_catalog(db: Session, ovh: OvhClient, sub: Subscription, curre
     return result
 
 
+def get_dedicated_option_catalog(db: Session, ovh: OvhClient, sub: Subscription, currency: Optional[str] = None) -> Dict[str, Any]:
+    """Return purchasable upgrade offers for a dedicated server (margin applied)."""
+    service_name = sub.service_name or sub.ovh_resource_id
+    if not service_name:
+        raise ValueError("Subscription has no OVH service attached")
+    target = (currency or sub.currency or get_settings().currency or "USD").upper()
+    margin = get_margin_for_category(db, ServiceCategory.DEDICATED)
+    tax_rate = get_settings().tax_rate_percent / 100.0
+
+    def customer_price(base: Decimal, base_currency: str) -> Dict[str, Any]:
+        final = float(apply_margin(base, margin))
+        rate = convert(db, 1.0, base_currency, target)
+        converted = round(final * rate, 2)
+        return {
+            "price": converted,
+            "tax": round(converted * tax_rate, 2),
+            "total": round(converted * (1 + tax_rate), 2),
+            "currency": target,
+        }
+
+    result: Dict[str, Any] = {"upgrades": []}
+    try:
+        offers = ovh.get(f"/order/upgrade/dedicated/{service_name}") or []
+    except Exception as e:
+        logger.warning(f"Upgrade offers unavailable for {service_name}: {e}")
+        offers = []
+    catalog_plans = {
+        p.plan_code: p
+        for p in db.query(PlanCatalog).filter(
+            PlanCatalog.category == ServiceCategory.DEDICATED, PlanCatalog.is_active == True
+        ).all()
+    }
+    for offer in offers:
+        code = offer.get("planCode")
+        base, base_cur, duration = _pick_offer_price(offer.get("prices") or [])
+        if base <= 0:
+            continue
+        plan = catalog_plans.get(code)
+        entry = {
+            "planCode": code,
+            "productName": offer.get("productName") or (plan.invoice_name if plan else code),
+            "duration": duration,
+            **customer_price(base, base_cur),
+        }
+        if plan:
+            blobs = (plan.catalog_metadata or {}).get("blobs") or {}
+            tech = blobs.get("technical") or {}
+            entry["specs"] = {
+                "cpu": tech.get("cpu") or tech.get("processor"),
+                "memory": tech.get("memory") or tech.get("ram"),
+                "storage": tech.get("storage"),
+            }
+        result["upgrades"].append(entry)
+    return result
+
+
 def create_service_option_order(
     db: Session,
     ovh: OvhClient,

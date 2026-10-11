@@ -231,6 +231,9 @@ export const api = {
     domainInfo: (domain: string) => request(`/server/domains/${encodeURIComponent(domain)}/info`),
     setDomainLock: (domain: string, locked: boolean) =>
       request(`/server/domains/${encodeURIComponent(domain)}/lock`, { method: "PUT", body: JSON.stringify({ locked }) }),
+    domainPrivacy: (domain: string) => request(`/server/domains/${encodeURIComponent(domain)}/privacy`),
+    setDomainPrivacy: (domain: string, enabled: boolean) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/privacy`, { method: "POST", body: JSON.stringify({ enabled }) }),
     domainAuthInfo: (domain: string) =>
       request(`/server/domains/${encodeURIComponent(domain)}/authinfo`, { method: "POST" }),
     domainGlue: (domain: string) => request(`/server/domains/${encodeURIComponent(domain)}/glue`),
@@ -348,6 +351,9 @@ export const api = {
       request(`/server/${id}/renew`, { method: "POST", body: JSON.stringify({ gateway }) }),
     serviceOrders: (id: string) => request(`/server/${id}/orders`),
     serviceInvoices: (id: string) => request(`/server/${id}/invoices`),
+    dedicatedUpgrades: (id: string) => request(`/server/${id}/dedicated/upgrades?currency=${selectedCurrency()}`),
+    dedicatedOptionOrder: (id: string, body: { kind: string; planCode?: string; currency?: string }) =>
+      request(`/server/${id}/dedicated/options/order`, { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
     dedicatedTasks: (id: string) => request(`/server/${id}/dedicated/tasks`),
     dedicatedBoots: (id: string) => request(`/server/${id}/dedicated/boots`),
     dedicatedVrack: (id: string) => request(`/server/${id}/dedicated/vrack`),

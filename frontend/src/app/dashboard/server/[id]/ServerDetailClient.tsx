@@ -617,10 +617,11 @@ function UpgradeBanner({ serverId, isVps }: { serverId: string; isVps: boolean }
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (isVps) api.server.vpsOptions(serverId).then(setOpts).catch(() => setOpts({ upgrades: [] }));
+    else api.server.dedicatedUpgrades(serverId).then(setOpts).catch(() => setOpts({ upgrades: [] }));
     api.server.upgradeOptions(serverId).then((d: any) => setRecs(d.options || [])).catch(() => {});
   }, [serverId, isVps]);
 
-  const ovhUpgrades = isVps ? (opts?.upgrades || []) : [];
+  const ovhUpgrades = opts?.upgrades || [];
   if (!ovhUpgrades.length && !recs.length) return null;
   return (
     <>
@@ -629,7 +630,7 @@ function UpgradeBanner({ serverId, isVps }: { serverId: string; isVps: boolean }
           <Zap className="w-4 h-4 text-[#00b7ff]" />
           <p className="text-xs font-medium text-[#0f172a]">
             {ovhUpgrades.length
-              ? `${ovhUpgrades.length} upgrade${ovhUpgrades.length > 1 ? "s" : ""} available for this VPS`
+              ? `${ovhUpgrades.length} upgrade${ovhUpgrades.length > 1 ? "s" : ""} available for this ${isVps ? "VPS" : "server"}`
               : `${recs.length} higher-tier plan${recs.length > 1 ? "s" : ""} recommended`}
           </p>
         </div>
@@ -637,7 +638,7 @@ function UpgradeBanner({ serverId, isVps }: { serverId: string; isVps: boolean }
           Upgrade
         </button>
       </div>
-      {open && <UpgradeModal serverId={serverId} upgrades={ovhUpgrades} recs={recs} onClose={() => setOpen(false)} />}
+      {open && <UpgradeModal serverId={serverId} upgrades={ovhUpgrades} recs={recs} isDedicated={!isVps} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -945,7 +946,7 @@ function DiskTab({ server }: { server: ServerInstance }) {
 
 /* ================= UPGRADE MODAL ================= */
 
-function UpgradeModal({ serverId, upgrades, recs, onClose }: { serverId: string; upgrades: any[]; recs?: any[]; onClose: () => void }) {
+function UpgradeModal({ serverId, upgrades, recs, isDedicated, onClose }: { serverId: string; upgrades: any[]; recs?: any[]; isDedicated?: boolean; onClose: () => void }) {
   const [order, setOrder] = useState<any>(null);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -958,14 +959,14 @@ function UpgradeModal({ serverId, upgrades, recs, onClose }: { serverId: string;
           {upgrades.map((u) => (
             <button
               key={u.planCode}
-              onClick={() => setOrder({ kind: "upgrade", planCode: u.planCode, label: `Upgrade to ${u.productName}`, price: u.price, tax: u.tax, total: u.total, currency: u.currency })}
+              onClick={() => setOrder({ kind: "upgrade", planCode: u.planCode, label: `Upgrade to ${u.productName}`, price: u.price, tax: u.tax, total: u.total, currency: u.currency, isDedicated })}
               className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 hover:border-[#00b7ff]/50 hover:bg-[#00b7ff]/5 transition text-left"
             >
               <div>
                 <p className="text-sm font-bold text-[#0f172a]">{u.productName || u.planCode}</p>
                 {u.specs && (
                   <p className="text-xs text-slate-500">
-                    {[u.specs.vcores && `${u.specs.vcores} vCores`, u.specs.memory && `${u.specs.memory}`, u.specs.storage && `${u.specs.storage}`].filter(Boolean).join(" • ")}
+                    {[(u.specs.vcores || u.specs.cpu) && `${u.specs.vcores || u.specs.cpu}${u.specs.vcores ? " vCores" : ""}`, u.specs.memory && `${u.specs.memory}`, u.specs.storage && `${u.specs.storage}`].filter(Boolean).join(" • ")}
                   </p>
                 )}
               </div>
@@ -1026,12 +1027,14 @@ function OptionOrderModal({ serverId, option, onClose, onDone }: { serverId: str
   const pay = async () => {
     setPaying(true);
     try {
-      const res = await api.server.vpsOrderOption(serverId, {
-        kind: option.kind,
-        planCode: option.planCode,
-        size: option.size,
-        duration: option.duration,
-      });
+      const res = option.isDedicated
+        ? await api.server.dedicatedOptionOrder(serverId, { kind: option.kind, planCode: option.planCode })
+        : await api.server.vpsOrderOption(serverId, {
+            kind: option.kind,
+            planCode: option.planCode,
+            size: option.size,
+            duration: option.duration,
+          });
       const orderId = res.order.id;
       const session = await api.payments.createCheckoutSession({
         type: "ORDER",
@@ -1675,6 +1678,17 @@ function ManagementTab({ server, detail, setServer, isVps }: any) {
     api.server.vpsIpCountries(server.id).then((d) => setIpCountries(d.countries || [])).catch(() => {});
   }, [server.id, isVps]);
 
+  // Poll while any VPS task is still running
+  useEffect(() => {
+    if (!isVps) return;
+    const running = tasks.some((t: any) => ["todo", "doing", "init"].includes(String(t.status || t.state || "").toLowerCase()));
+    if (!running) return;
+    const iv = setInterval(() => {
+      api.server.vpsTasks(server.id).then(setTasks).catch(() => {});
+    }, 10000);
+    return () => clearInterval(iv);
+  }, [tasks, server.id, isVps]);
+
   const handlePower = async (action: string) => {
     setActionLoading(action);
     try {
@@ -2132,6 +2146,17 @@ function DedicatedOps({ server }: { server: ServerInstance }) {
     api.server.dedicatedBackupFtp(server.id).then(setBackupFtp).catch(() => setBackupFtp({}));
     api.server.dedicatedMonitoring(server.id).then(setMon).catch(() => {});
   }, [server.id, server.category]);
+
+  // Poll while any dedicated task is still running
+  useEffect(() => {
+    if (server.category !== "DEDICATED") return;
+    const running = tasks.some((t: any) => ["todo", "doing", "init"].includes(String(t.status || t.state || "").toLowerCase()));
+    if (!running) return;
+    const iv = setInterval(() => {
+      api.server.dedicatedTasks(server.id).then((d) => setTasks(d.tasks || [])).catch(() => {});
+    }, 10000);
+    return () => clearInterval(iv);
+  }, [tasks, server.id, server.category]);
 
   if (server.category !== "DEDICATED") return null;
 
