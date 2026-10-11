@@ -1365,13 +1365,15 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
 
 def pay_order_with_wallet(db: Session, user_id: str, order_id: str) -> CustomerOrder:
     """Pay a pending order from user's internal wallet balance."""
-    order = db.query(CustomerOrder).filter(CustomerOrder.id == order_id, CustomerOrder.user_id == user_id).first()
+    order = db.query(CustomerOrder).filter(
+        CustomerOrder.id == order_id, CustomerOrder.user_id == user_id
+    ).with_for_update().first()
     if not order:
         raise ValueError("Order not found")
     if order.status != OrderStatus.PENDING:
         raise ValueError(f"Order is already in status {order.status.value}")
 
-    wallet = db.query(Wallet).filter(Wallet.user_id == user_id).first()
+    wallet = db.query(Wallet).filter(Wallet.user_id == user_id).with_for_update().first()
     if not wallet:
         wallet = get_or_create_wallet(db, user_id, currency="INR")
 

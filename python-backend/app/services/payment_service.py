@@ -203,6 +203,29 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 spawn_provisioning(tx.order_id)
             except Exception as e:
                 logger.exception(f"Auto-provision kickoff failed for order {tx.order_id}: {e}")
+    elif meta.get("type") == "CART":
+        # Multi-order cart checkout — pay + provision every linked order
+        for oid in meta.get("orderIds") or []:
+            order = db.query(CustomerOrder).filter(CustomerOrder.id == oid).first()
+            if order and order.status == OrderStatus.PENDING:
+                order.status = OrderStatus.PAYMENT_RECEIVED
+                db.commit()
+                try:
+                    if order.user:
+                        send_order_payment_email(db, order, order.user)
+                except Exception:
+                    logger.exception("Cart order payment email failed")
+                try:
+                    create_notification(db, order.user, "Payment received", f"Payment for {order.plan_code or 'order'} confirmed.", "success", "/dashboard")
+                except Exception:
+                    pass
+                try:
+                    from app.services.order_service import spawn_provisioning
+                    order.status = OrderStatus.PROVISIONING
+                    db.commit()
+                    spawn_provisioning(order.id)
+                except Exception:
+                    logger.exception(f"Cart order {oid} provisioning kickoff failed")
     elif meta.get("type") == "INVOICE_PAYMENT" or meta.get("invoice_id") or meta.get("invoice_ids"):
         ids = meta.get("invoice_ids") or ([meta.get("invoice_id") or meta.get("invoiceId")] if (meta.get("invoice_id") or meta.get("invoiceId")) else [])
         for invoice_id in ids:

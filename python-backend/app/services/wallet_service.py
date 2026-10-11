@@ -58,9 +58,11 @@ def pay_invoice_with_wallet(db: Session, user, invoice) -> dict:
     from fastapi import HTTPException
     from app.models.models import InvoiceStatus, CustomerOrder, OrderStatus
 
+    # Lock the invoice row so a double-submit can't debit twice
+    invoice = db.query(type(invoice)).filter(type(invoice).id == invoice.id).with_for_update().first()
     if invoice.status == InvoiceStatus.PAID:
         return {"paid": True, "already": True}
-    wallet = get_or_create_wallet(db, user.id)
+    wallet = db.query(Wallet).filter(Wallet.user_id == user.id).with_for_update().first() or get_or_create_wallet(db, user.id)
     amount = convert(db, invoice.amount, invoice.currency, wallet.currency, strict=True)
     if wallet.balance < amount:
         raise HTTPException(

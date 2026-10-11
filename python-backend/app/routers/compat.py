@@ -1561,6 +1561,189 @@ def payments_checkout(body: dict, db: Session = Depends(get_db), user: User = De
     }
 
 
+# ---------- Multi-item cart ----------
+
+@router.get("/server/cart")
+def cart_list(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.models import CartItem
+    items = db.query(CartItem).filter(CartItem.user_id == user.id).order_by(CartItem.created_at).all()
+    return {
+        "items": [
+            {
+                "id": i.id,
+                "planCode": i.plan_code,
+                "durationLabel": i.duration_label,
+                "displayName": i.display_name,
+                "category": i.category,
+                "unitPrice": i.unit_price,
+                "currency": i.currency,
+                "configuration": i.configuration,
+            }
+            for i in items
+        ]
+    }
+
+
+@router.post("/server/cart")
+def cart_add(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.models import CartItem
+    plan_code = (body.get("planCode") or "").strip()
+    if not plan_code:
+        raise HTTPException(status_code=400, detail="planCode is required")
+    # Prevent duplicate pending items for the same plan+duration
+    existing = db.query(CartItem).filter(
+        CartItem.user_id == user.id,
+        CartItem.plan_code == plan_code,
+        CartItem.duration_label == (body.get("durationLabel") or None),
+    ).first()
+    if existing:
+        return {"ok": True, "item": {"id": existing.id}, "message": "Already in cart"}
+    item = CartItem(
+        user_id=user.id,
+        plan_code=plan_code,
+        duration_label=body.get("durationLabel"),
+        display_name=body.get("displayName"),
+        category=body.get("category"),
+        unit_price=body.get("unitPrice"),
+        currency=body.get("currency"),
+        configuration=body.get("configuration"),
+    )
+    db.add(item)
+    db.commit()
+    return {"ok": True, "item": {"id": item.id}}
+
+
+@router.delete("/server/cart/{item_id}")
+def cart_remove(item_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.models import CartItem
+    item = db.query(CartItem).filter(CartItem.id == item_id, CartItem.user_id == user.id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    db.delete(item)
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/server/cart")
+def cart_clear(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.models import CartItem
+    db.query(CartItem).filter(CartItem.user_id == user.id).delete()
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/server/cart/checkout")
+def cart_checkout(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Convert all cart items into orders and create a single payment session."""
+    from app.models.models import CartItem
+    from app.services.payment_service import create_gateway_checkout, create_payment_session
+    from app.services.wallet_service import get_or_create_wallet
+    from app.services.order_service import create_customer_order
+
+    items = db.query(CartItem).filter(CartItem.user_id == user.id).order_by(CartItem.created_at).all()
+    if not items:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+    gateway = (body.get("gateway") or "wallet").lower()
+    currency = (body.get("currency") or get_settings().currency or "USD").upper()
+
+    orders = []
+    errors = []
+    for item in items:
+        try:
+            order = create_customer_order(
+                db,
+                user_id=user.id,
+                plan_code=item.plan_code,
+                duration_label=item.duration_label,
+                config=item.configuration,
+                currency=currency,
+                coupon_code=body.get("couponCode"),
+            )
+            orders.append(order)
+        except Exception as e:
+            errors.append({"planCode": item.plan_code, "error": str(e)})
+    if not orders:
+        raise HTTPException(status_code=400, detail=f"Could not create any order: {errors[0]['error'] if errors else 'unknown'}")
+
+    total = round(sum(float(o.customer_amount) + float(o.tax_amount or 0) for o in orders), 2)
+    tx = create_payment_session(
+        db,
+        user_id=user.id,
+        amount=total,
+        currency=orders[0].currency,
+        gateway=gateway,
+        order_id=None,
+        metadata={"type": "CART", "orderIds": [o.id for o in orders]},
+    )
+    # Clear the cart for the items that converted successfully
+    ordered_plans = {o.plan_code for o in orders}
+    for item in items:
+        if item.plan_code in ordered_plans:
+            db.delete(item)
+    db.commit()
+
+    if gateway == "wallet":
+        wallet = get_or_create_wallet(db, user.id)
+        from app.services.currency_service import convert as _cv
+        wallet_amount = _cv(db, total, orders[0].currency, wallet.currency)
+        if wallet.balance < wallet_amount:
+            raise HTTPException(status_code=400, detail=f"Insufficient wallet balance: {wallet.balance:.2f} {wallet.currency} < {wallet_amount:.2f} {wallet.currency}")
+        wallet.balance -= wallet_amount
+        db.add(WalletTransaction(
+            wallet_id=wallet.id,
+            type=WalletTransactionType.PAYMENT,
+            amount=-wallet_amount,
+            description=f"Wallet payment for cart ({len(orders)} orders)",
+            gateway="wallet",
+            metadata={"payment_transaction_id": tx.id, "type": "CART"},
+        ))
+        tx.status = PaymentStatus.COMPLETED
+        tx.gateway_transaction_id = f"wallet_{tx.id}"
+        db.commit()
+        _fulfill_cart_orders(db, tx)
+        return {"id": tx.id, "amount": tx.amount, "currency": tx.currency, "gateway": tx.gateway, "status": tx.status.value, "paid": True, "orders": [{"id": o.id, "planCode": o.plan_code} for o in orders]}
+
+    try:
+        checkout = create_gateway_checkout(db, tx, user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {
+        "id": tx.id,
+        "amount": tx.amount,
+        "currency": tx.currency,
+        "gateway": tx.gateway,
+        "status": tx.status.value,
+        "orders": [{"id": o.id, "planCode": o.plan_code} for o in orders],
+        "errors": errors or None,
+        **checkout,
+    }
+
+
+def _fulfill_cart_orders(db: Session, tx) -> None:
+    """Mark every order in a CART payment as paid and start provisioning."""
+    meta = tx.payment_metadata or {}
+    order_ids = meta.get("orderIds") or []
+    for oid in order_ids:
+        order = db.query(CustomerOrder).filter(CustomerOrder.id == oid).first()
+        if not order or order.status != OrderStatus.PENDING:
+            continue
+        order.status = OrderStatus.PAYMENT_RECEIVED
+        db.commit()
+        try:
+            if order.user:
+                from app.services.email_service import send_order_payment_email
+                send_order_payment_email(db, order, order.user)
+        except Exception:
+            pass
+        try:
+            from app.services.order_service import spawn_provisioning
+            order.status = OrderStatus.PROVISIONING
+            db.commit()
+            spawn_provisioning(order.id)
+        except Exception:
+            pass
+
+
 @router.get("/payments/session/{session_id}")
 def payments_session(session_id: str, db: Session = Depends(get_db)):
     tx = db.query(PaymentTransaction).filter(PaymentTransaction.id == session_id).first()
@@ -3669,3 +3852,79 @@ def transfer_domain(body: dict, db: Session = Depends(get_db), user: User = Depe
             db.commit()
     return {"success": True, "domainId": reg.id, "priceAmount": price, "taxAmount": tax_amount,
             "totalAmount": total, "currency": reg.currency, "status": reg.status.value, "transfer": True}
+
+
+# ---------- Live chat ----------
+
+def _chat_session(db: Session, user: User, create: bool = True):
+    from app.models.models import ChatSession
+    sess = (
+        db.query(ChatSession)
+        .filter(ChatSession.user_id == user.id, ChatSession.status == "open")
+        .order_by(ChatSession.created_at.desc())
+        .first()
+    )
+    if not sess and create:
+        sess = ChatSession(user_id=user.id)
+        db.add(sess)
+        db.commit()
+        db.refresh(sess)
+    return sess
+
+
+def _chat_msg_json(m) -> dict:
+    return {
+        "id": m.id,
+        "sender": m.sender,
+        "senderName": m.sender_name,
+        "body": m.body,
+        "createdAt": m.created_at.isoformat() if m.created_at else None,
+    }
+
+
+@router.get("/server/chat/session")
+def chat_session(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sess = _chat_session(db, user)
+    return {
+        "id": sess.id,
+        "status": sess.status,
+        "unreadForUser": sess.unread_for_user,
+        "lastMessageAt": sess.last_message_at.isoformat() if sess.last_message_at else None,
+    }
+
+
+@router.get("/server/chat/messages")
+def chat_messages(after: Optional[str] = None, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.models import ChatMessage
+    sess = _chat_session(db, user)
+    q = db.query(ChatMessage).filter(ChatMessage.session_id == sess.id)
+    if after:
+        q = q.filter(ChatMessage.id > after)
+    msgs = q.order_by(ChatMessage.created_at).limit(200).all()
+    sess.unread_for_user = 0
+    db.commit()
+    return {"sessionId": sess.id, "status": sess.status, "messages": [_chat_msg_json(m) for m in msgs]}
+
+
+@router.post("/server/chat/messages")
+def chat_send(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models.models import ChatMessage
+    text = (body.get("body") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Message is required")
+    if len(text) > 4000:
+        raise HTTPException(status_code=400, detail="Message too long")
+    sess = _chat_session(db, user)
+    msg = ChatMessage(
+        session_id=sess.id,
+        sender="user",
+        sender_name=user.name or user.email,
+        body=text,
+    )
+    db.add(msg)
+    sess.last_message_at = datetime.utcnow()
+    sess.unread_for_admin = (sess.unread_for_admin or 0) + 1
+    if not sess.subject:
+        sess.subject = text[:80]
+    db.commit()
+    return {"ok": True, "message": _chat_msg_json(msg)}
