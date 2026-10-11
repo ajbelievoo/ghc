@@ -86,8 +86,9 @@ def gateway_ready(cfg: Dict[str, Any]) -> bool:
     return True
 
 
-def gateway_issues(cfg: Dict[str, Any]) -> list:
+def gateway_issues(cfg: Dict[str, Any], name: str = "") -> list:
     """Human-readable reasons a gateway is/isn't production-ready."""
+    cfg = {**cfg, "_name": name or cfg.get("_name", "")}
     issues = []
     if not cfg.get("isActive"):
         return ["disabled"]
@@ -103,7 +104,11 @@ def gateway_issues(cfg: Dict[str, Any]) -> list:
         issues.append("missing keyId")
     if _is_placeholder(cfg.get("keySecret") or cfg.get("secret_key") or cfg.get("secret") or cfg.get("merchant_salt")):
         issues.append("missing keySecret")
-    if not cfg.get("webhookSecret"):
+    # Webhook secret: Razorpay/Stripe need a dedicated one; Cashfree signs with
+    # keySecret; PayPal uses capture-return (no webhooks); PayU similar.
+    name = str(cfg.get("_name") or "")
+    needs_secret = name in ("razorpay", "stripe")
+    if needs_secret and not cfg.get("webhookSecret"):
         issues.append("no webhookSecret (webhook path disabled)")
     return issues
 

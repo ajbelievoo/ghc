@@ -888,7 +888,7 @@ def admin_ovh_account_health(db: Session = Depends(get_db), admin: User = Depend
         gw[g.name] = {
             "active": bool(g.is_active),
             "customerReady": gateway_ready(cfg),
-            "issues": gateway_issues(cfg),
+            "issues": gateway_issues(cfg, g.name),
         }
         for gi in gw[g.name]["issues"]:
             if g.is_active and "disabled" not in gi and "webhook" not in gi:
