@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.models import CustomerOrder, User
+from app.models.models import CustomerOrder, Invoice, InvoiceStatus, OrderStatus, PaymentStatus, PaymentTransaction, User
 from app.schemas.order import OrderCreate, OrderResponse, OrderWithLogs
 from app.services.order_service import create_customer_order, execute_checkout, pay_order_with_wallet
 from app.services.ovh_client import get_ovh_client_from_db
@@ -46,7 +46,20 @@ def provision_order(order_id: str, db: Session = Depends(get_db), user: User = D
     order = db.query(CustomerOrder).filter(CustomerOrder.id == order_id, CustomerOrder.user_id == user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    if order.status not in ("PAYMENT_RECEIVED", "PENDING", "FAILED"):
+    paid = (
+        order.status == OrderStatus.PAYMENT_RECEIVED
+        or db.query(PaymentTransaction).filter(
+            PaymentTransaction.order_id == order.id,
+            PaymentTransaction.status == PaymentStatus.COMPLETED,
+        ).first() is not None
+        or db.query(Invoice).filter(
+            Invoice.order_id == order.id,
+            Invoice.status == InvoiceStatus.PAID,
+        ).first() is not None
+    )
+    if not paid:
+        raise HTTPException(status_code=400, detail="Order is not paid yet")
+    if order.status not in (OrderStatus.PAYMENT_RECEIVED, OrderStatus.PENDING, OrderStatus.FAILED, OrderStatus.PROVISIONING_FAILED, OrderStatus.OVH_ORDER_PLACED, OrderStatus.OVH_PAID):
         raise HTTPException(status_code=400, detail=f"Order status is {order.status.value}")
     try:
         ovh = get_ovh_client_from_db(db)

@@ -888,6 +888,190 @@ def execute_service_option_order(db: Session, ovh: OvhClient, order: CustomerOrd
         raise
 
 
+def _complete_provisioning(db: Session, ovh: OvhClient, order: CustomerOrder, plan: PlanCatalog, ovh_order_id: int) -> None:
+    """Poll OVH for the delivered service and create the subscription + paid invoice."""
+    service_name = _poll_for_service_name(ovh, plan.category, ovh_order_id)
+    creds = _extract_service_credentials(ovh, plan.category, service_name) if service_name else {}
+    config = order.configuration_payload or {}
+
+    cycle_days, billing_cycle = _duration_to_cycle(order.duration_label)
+
+    subscription = Subscription(
+        order_id=order.id,
+        user_id=order.user_id,
+        ovh_resource_id=service_name,
+        service_name=service_name,
+        display_name=config.get("display_name"),
+        plan_code=order.plan_code,
+        category=order.category,
+        ip_address=creds.get("ip_address"),
+        root_user=creds.get("root_user") or ("root" if order.category in (ServiceCategory.VPS, ServiceCategory.DEDICATED) else None),
+        root_password=creds.get("root_password"),
+        os_template=config.get("os") or "ubuntu_2204",
+        datacenter=creds.get("datacenter"),
+        status=SubscriptionStatus.ACTIVE if service_name else SubscriptionStatus.PENDING,
+        billing_cycle=billing_cycle,
+        auto_renew=True,
+        next_bill_date=datetime.utcnow() + timedelta(days=cycle_days),
+        price_amount=order.customer_amount,
+        currency=order.currency,
+    )
+    db.add(subscription)
+    _update_order_status(db, order, OrderStatus.ACTIVE)
+    log_ovh_step(db, order.id, "CREATE_SUBSCRIPTION", f"service/{service_name}", {}, {"service_name": service_name, "subscription_id": subscription.id})
+
+    # Create invoice
+    if not order.invoice:
+        tax_type, hsn_code, place = gst_fields_for_user(db, order.user_id)
+        invoice = Invoice(
+            order_id=order.id,
+            user_id=order.user_id,
+            amount=order.customer_amount,
+            tax_amount=order.tax_amount,
+            tax_rate=order.tax_rate,
+            tax_type=tax_type,
+            hsn_code=hsn_code,
+            place_of_supply=place,
+            due_date=datetime.utcnow(),
+            status=InvoiceStatus.PAID,
+            currency=order.currency,
+        )
+        db.add(invoice)
+        db.flush()
+        invoice.invoice_number = generate_invoice_number(invoice)
+        db.commit()
+
+
+def _resume_service_option_order(db: Session, ovh: OvhClient, order: CustomerOrder, ovh_order_id: int) -> bool:
+    """Resume a paid service-option order (upgrade/disk/backup) — no provisioning needed,
+    just mark the subscription change + invoice once upstream payment landed."""
+    cfg = order.configuration_payload or {}
+    option = cfg.get("service_option") or {}
+    try:
+        ovh_order = ovh.get(f"/me/order/{ovh_order_id}")
+    except Exception as e:
+        raise ValueError(f"upstream order {ovh_order_id} unreadable: {e}")
+    if not ovh_order or not isinstance(ovh_order, dict):
+        raise ValueError(f"upstream order {ovh_order_id} no longer exists")
+    try:
+        status = (ovh.get(f"/me/order/{ovh_order_id}/status") or "").lower()
+    except Exception:
+        status = ""
+    if status == "cancelled":
+        raise ValueError(f"upstream order {ovh_order_id} was cancelled")
+
+    paid = status in ("delivered", "validated") or _pay_ovh_order(db, ovh, order, ovh_order_id)
+    if not paid:
+        _update_order_status(db, order, OrderStatus.OVH_ORDER_PLACED, "Waiting for OVH payment; no registered payment method available")
+        return True
+
+    sub = db.query(Subscription).filter(Subscription.id == option.get("subscriptionId")).first()
+    if sub:
+        if option.get("kind") == "upgrade" and option.get("planCode"):
+            sub.plan_code = option["planCode"]
+        sub.updated_at = func.now()
+        db.commit()
+    _update_order_status(db, order, OrderStatus.ACTIVE)
+
+    if not order.invoice:
+        tax_type, hsn_code, place = gst_fields_for_user(db, order.user_id)
+        invoice = Invoice(
+            order_id=order.id, user_id=order.user_id,
+            amount=order.customer_amount, tax_amount=order.tax_amount, tax_rate=order.tax_rate,
+            tax_type=tax_type, hsn_code=hsn_code, place_of_supply=place,
+            due_date=datetime.utcnow(), status=InvoiceStatus.PAID, currency=order.currency,
+        )
+        db.add(invoice)
+        db.flush()
+        invoice.invoice_number = generate_invoice_number(invoice)
+        db.commit()
+    return True
+
+
+def _resume_existing_ovh_order(db: Session, ovh: OvhClient, order: CustomerOrder, plan: PlanCatalog, ovh_order_id: int) -> bool:
+    """Continue from an already-placed upstream order instead of placing a new one.
+
+    Returns True when the order was handled (paid + provisioned or still waiting on
+    upstream payment). Raises ValueError when the upstream order is gone so the
+    caller can fall back to a fresh cart checkout.
+    """
+    try:
+        ovh_order = ovh.get(f"/me/order/{ovh_order_id}")
+    except Exception as e:
+        raise ValueError(f"upstream order {ovh_order_id} unreadable: {e}")
+    if not ovh_order or not isinstance(ovh_order, dict):
+        raise ValueError(f"upstream order {ovh_order_id} no longer exists")
+
+    try:
+        status = (ovh.get(f"/me/order/{ovh_order_id}/status") or "").lower()
+    except Exception:
+        status = ""
+
+    if status == "cancelled":
+        raise ValueError(f"upstream order {ovh_order_id} was cancelled")
+
+    # Try paying it if it still needs payment (manager may have already paid it).
+    paid = status in ("delivered", "validated")
+    if not paid:
+        paid = _pay_ovh_order(db, ovh, order, ovh_order_id)
+
+    if not paid:
+        _update_order_status(db, order, OrderStatus.OVH_ORDER_PLACED, "Waiting for OVH payment; no registered payment method available")
+        return True
+
+    if order.status != OrderStatus.OVH_PAID:
+        _update_order_status(db, order, OrderStatus.OVH_PAID)
+    _update_order_status(db, order, OrderStatus.PROVISIONING)
+    _complete_provisioning(db, ovh, order, plan, ovh_order_id)
+    return True
+
+
+def reconcile_provider_order(db: Session, ovh: OvhClient, order: CustomerOrder) -> str:
+    """Maintenance-safe resume for orders stuck at OVH_ORDER_PLACED/OVH_PAID.
+
+    Only acts on the EXISTING upstream order — never creates a new cart/order, so a
+    cron run can never surprise-spend account balance. Returns the resulting action.
+    """
+    try:
+        ovh_order_id = int(order.ovh_order_id)
+    except (TypeError, ValueError):
+        _update_order_status(db, order, OrderStatus.FAILED, f"Invalid upstream order id {order.ovh_order_id!r}")
+        return "failed-invalid-id"
+
+    is_option = bool((order.configuration_payload or {}).get("service_option"))
+    try:
+        if is_option:
+            _resume_service_option_order(db, ovh, order, ovh_order_id)
+        else:
+            plan = db.query(PlanCatalog).filter(PlanCatalog.plan_code == order.plan_code).first()
+            if not plan:
+                _update_order_status(db, order, OrderStatus.FAILED, "Plan no longer in catalog")
+                return "failed-no-plan"
+            _resume_existing_ovh_order(db, ovh, order, plan, ovh_order_id)
+        return order.status.value
+    except ValueError:
+        # upstream order gone/cancelled — mark failed and alert admin
+        _update_order_status(db, order, OrderStatus.FAILED, f"Upstream OVH order {ovh_order_id} no longer exists or was cancelled")
+        try:
+            log_ovh_step(db, order.id, "RECONCILE_DEAD_END", f"/me/order/{ovh_order_id}", {}, {}, is_success=False,
+                         error_message="upstream order missing/cancelled")
+        except Exception:
+            pass
+        try:
+            from app.models.models import EmailLog
+            already_alerted = db.query(EmailLog).filter(
+                EmailLog.subject.like(f"%{order.id[:8]}%"),
+            ).first()
+            if not already_alerted:
+                send_admin_fulfillment_email(
+                    db, order,
+                    f"Upstream order {ovh_order_id} is gone/cancelled — customer paid {order.currency} {order.customer_amount}. "
+                    "Refund or place the order manually in the OVH manager, then mark the order accordingly.")
+        except Exception:
+            pass
+        return "failed-upstream-gone"
+
+
 def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrder:
     """
     Full automated loop:
@@ -913,6 +1097,26 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         OrderStatus.FAILED,
     ):
         raise ValueError(f"Order is in status {order.status.value}, cannot checkout")
+
+    # Resume path — an upstream OVH order already exists (placed-but-unpaid).
+    # Pay/poll that order instead of creating a second cart/order upstream.
+    if order.ovh_order_id:
+        is_option = bool((order.configuration_payload or {}).get("service_option"))
+        plan = db.query(PlanCatalog).filter(PlanCatalog.plan_code == order.plan_code).first() if not is_option else None
+        try:
+            handled = (
+                _resume_service_option_order(db, ovh, order, int(order.ovh_order_id))
+                if is_option else
+                plan is not None and _resume_existing_ovh_order(db, ovh, order, plan, int(order.ovh_order_id))
+            )
+            if handled:
+                return order
+        except ValueError as e:
+            # upstream order no longer usable — start over
+            logger.info(f"Cannot resume OVH order {order.ovh_order_id}: {e}; starting over")
+            order.ovh_order_id = None
+            order.ovh_order_url = None
+            db.commit()
 
     # Service-option orders (VPS upgrade / additional disk / automated backup on an
     # existing service) follow a dedicated provisioning path — no cart checkout.
@@ -1046,55 +1250,7 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
 
         # 7. Poll for real serviceName and create subscription
         _update_order_status(db, order, OrderStatus.PROVISIONING)
-        service_name = _poll_for_service_name(ovh, plan.category, int(ovh_order_id))
-        creds = _extract_service_credentials(ovh, plan.category, service_name) if service_name else {}
-
-        cycle_days, billing_cycle = _duration_to_cycle(order.duration_label)
-
-        subscription = Subscription(
-            order_id=order.id,
-            user_id=order.user_id,
-            ovh_resource_id=service_name,
-            service_name=service_name,
-            display_name=order.configuration_payload.get("display_name") if order.configuration_payload else None,
-            plan_code=order.plan_code,
-            category=order.category,
-            ip_address=creds.get("ip_address"),
-            root_user=creds.get("root_user") or ("root" if order.category in (ServiceCategory.VPS, ServiceCategory.DEDICATED) else None),
-            root_password=creds.get("root_password"),
-            os_template=config.get("os") or "ubuntu_2204",
-            datacenter=creds.get("datacenter"),
-            status=SubscriptionStatus.ACTIVE if service_name else SubscriptionStatus.PENDING,
-            billing_cycle=billing_cycle,
-            auto_renew=True,
-            next_bill_date=datetime.utcnow() + timedelta(days=cycle_days),
-            price_amount=order.customer_amount,
-            currency=order.currency,
-        )
-        db.add(subscription)
-        _update_order_status(db, order, OrderStatus.ACTIVE)
-        log_ovh_step(db, order.id, "CREATE_SUBSCRIPTION", f"service/{service_name}", {}, {"service_name": service_name, "subscription_id": subscription.id})
-
-        # Create invoice
-        if not order.invoice:
-            tax_type, hsn_code, place = gst_fields_for_user(db, order.user_id)
-            invoice = Invoice(
-                order_id=order.id,
-                user_id=order.user_id,
-                amount=order.customer_amount,
-                tax_amount=order.tax_amount,
-                tax_rate=order.tax_rate,
-                tax_type=tax_type,
-                hsn_code=hsn_code,
-                place_of_supply=place,
-                due_date=datetime.utcnow(),
-                status=InvoiceStatus.PAID,
-                currency=order.currency,
-            )
-            db.add(invoice)
-            db.flush()
-            invoice.invoice_number = generate_invoice_number(invoice)
-            db.commit()
+        _complete_provisioning(db, ovh, order, plan, int(ovh_order_id))
 
         return order
 

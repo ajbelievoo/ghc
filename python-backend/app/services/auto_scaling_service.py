@@ -128,13 +128,27 @@ def _trigger_action(db: Session, rule: AutoScalingRule, subscription: Subscripti
             "warning",
             f"/dashboard/services/{subscription.id}",
         )
-    elif action == ScalingAction.RESTART:
         event.status = "completed"
-        event.message += " Restart requested for service."
-        # TODO: call OVH restart API
-    elif action in (ScalingAction.UPSIZE, ScalingAction.DOWNSIZE):
-        event.status = "completed"
-        event.message += f" {action.value} workflow initiated."
-        # TODO: initiate catalog plan change order
+    elif action == ScalingAction.RESTART and subscription.user:
+        # Reboot via the provider isn't wired yet — tell the customer instead of
+        # silently pretending it happened.
+        event.status = "failed"
+        event.message += " Automatic restart is not supported yet — please reboot from the dashboard."
+        create_notification(
+            db, subscription.user, "Auto-scaling restart unavailable",
+            message + " Automatic restart is not supported yet — please reboot the service manually from the dashboard.",
+            "warning", f"/dashboard/services/{subscription.id}",
+        )
+    elif action in (ScalingAction.UPSIZE, ScalingAction.DOWNSIZE) and subscription.user:
+        event.status = "failed"
+        event.message += f" Automatic {action.value.lower()} is not supported yet — please upgrade from the dashboard."
+        create_notification(
+            db, subscription.user, "Auto-scaling resize unavailable",
+            message + f" Automatic {action.value.lower()} is not supported yet — open the service's upgrade options to resize manually.",
+            "warning", f"/dashboard/services/{subscription.id}",
+        )
+    else:
+        event.status = "failed"
+        event.message += " Action could not be delivered (no linked user)."
 
     db.commit()

@@ -24,6 +24,7 @@ from app.models.models import (
     InvoiceStatus,
     LogType,
     MetricSample,
+    OrderStatus,
     PaymentTransaction,
     PaymentStatus,
     ServerPingMetric,
@@ -316,6 +317,25 @@ def run_maintenance():
                 _log(db, LogType.CRON, f"Auto-renew invoice created for {dom.domain_name}", {"invoice_id": invoice.id, "order_id": order.id})
             except Exception:
                 logger.exception(f"Auto-renew setup failed for {dom.id}")
+
+        # Reconcile orders stuck waiting on the upstream provider — if the upstream
+        # order got paid/delivered in the OVH manager, activate the service now.
+        # reconcile_provider_order only resumes existing upstream orders — it never
+        # creates a new cart, so this cron can never surprise-spend balance.
+        stuck = db.query(CustomerOrder).filter(
+            CustomerOrder.status.in_([OrderStatus.OVH_ORDER_PLACED, OrderStatus.OVH_PAID]),
+            CustomerOrder.ovh_order_id.isnot(None),
+        ).all()
+        for o in stuck:
+            try:
+                from app.services.ovh_client import get_ovh_client_from_db
+                from app.services.order_service import reconcile_provider_order
+                ovh = get_ovh_client_from_db(db)
+                result = reconcile_provider_order(db, ovh, o)
+                if result not in (OrderStatus.OVH_ORDER_PLACED.value, OrderStatus.OVH_PAID.value):
+                    _log(db, LogType.CRON, f"Reconciled provider order {o.id} -> {result}")
+            except Exception as e:
+                _log(db, LogType.CRON, f"Provider-order reconcile failed for {o.id}: {e}")
         run_usage_collection()
     except Exception as e:
         logger.exception(f"Maintenance task error: {e}")
