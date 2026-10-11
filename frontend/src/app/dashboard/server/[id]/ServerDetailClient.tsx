@@ -45,6 +45,7 @@ import {
   Info,
   FileText,
   MonitorSmartphone,
+  Key,
 } from "lucide-react";
 
 interface ServerInstance {
@@ -937,6 +938,35 @@ function DiskTab({ server }: { server: ServerInstance }) {
           <p className="text-xs text-slate-500">Additional disk options are not available for this VPS right now.</p>
         )}
       </Card>
+
+      {opts?.licenses?.length > 0 && (
+        <Card title="Licenses & options" icon={<Key className="w-4 h-4 text-[#00b7ff]" />}>
+          <div className="space-y-4">
+            {Object.entries(
+              (opts.licenses as any[]).reduce((acc: Record<string, any[]>, l: any) => {
+                (acc[l.family] = acc[l.family] || []).push(l);
+                return acc;
+              }, {})
+            ).map(([family, items]) => (
+              <div key={family}>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{family === "os" ? "Operating system licence" : family}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {(items as any[]).slice(0, 9).map((l: any) => (
+                    <button
+                      key={l.planCode}
+                      onClick={() => setOrder({ kind: "license", label: l.productName, ...l })}
+                      className="rounded-xl border border-slate-200 bg-slate-100 p-3 text-left hover:border-[#00b7ff]/50 hover:bg-[#00b7ff]/5 transition"
+                    >
+                      <p className="text-xs font-semibold text-[#0f172a] leading-snug">{l.productName}</p>
+                      <p className="text-xs text-[#00b7ff] mt-1.5">{formatPrice(l)}/mo</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {order && (
         <OptionOrderModal serverId={server.id} option={order} onClose={() => setOrder(null)} onDone={() => { setOrder(null); load(); }} />

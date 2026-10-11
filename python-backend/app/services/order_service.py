@@ -966,6 +966,31 @@ def execute_service_option_order(db: Session, ovh: OvhClient, order: CustomerOrd
             operation = {}
             log_ovh_step(db, order.id, "ORDER_BACKUP", f"/order/vps/{service_name}/automatedBackup/{duration}", {}, ovh_order)
 
+        elif kind == "license":
+            # Service options (cPanel/Plesk/Windows/snapshot) only sell through the
+            # cart flow: POST /order/cart/{id}/vps/options → checkout → pay.
+            cart = ovh.create_cart(description=f"GHC option order {order.id}")
+            cart_id = cart.get("cartId")
+            ovh.assign_cart(cart_id)
+            added = ovh.post(
+                f"/order/cart/{cart_id}/vps/options",
+                planCode=option.get("planCode"),
+                duration=option.get("duration") or "P1M",
+                pricingMode=option.get("pricingMode") or "default",
+                quantity=1,
+                serviceName=service_name,
+            )
+            log_ovh_step(db, order.id, "ADD_LICENSE_OPTION", f"/order/cart/{cart_id}/vps/options", {"planCode": option.get("planCode"), "serviceName": service_name}, added)
+            order.ovh_cart_id = cart_id
+            try:
+                checkout = ovh.post_cart_checkout(cart_id, auto_pay_with_preferred_payment_mean=True)
+            except Exception as e:
+                logger.warning(f"License auto-pay checkout failed, retrying manual: {e}")
+                checkout = ovh.post_cart_checkout(cart_id, auto_pay_with_preferred_payment_mean=False)
+            ovh_order = checkout or {}
+            operation = {}
+            log_ovh_step(db, order.id, "ORDER_LICENSE", f"/order/cart/{cart_id}/checkout", {"autoPay": True}, ovh_order)
+
         else:
             raise ValueError(f"Unsupported option kind: {kind}")
 
@@ -988,6 +1013,17 @@ def execute_service_option_order(db: Session, ovh: OvhClient, order: CustomerOrd
             db.commit()
 
         _update_order_status(db, order, OrderStatus.ACTIVE)
+        try:
+            from app.services.notification_service import create_notification
+            create_notification(
+                db, order.user,
+                "Service option activated",
+                f"{(order.configuration_payload or {}).get('display_name') or 'Your option'} is now active on your service.",
+                "success",
+                f"/dashboard/server/{option.get('subscriptionId')}",
+            )
+        except Exception:
+            pass
 
         # Invoice for the completed option purchase
         if not order.invoice:
