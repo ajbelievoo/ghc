@@ -283,6 +283,51 @@ def _is_protected_subscription(sub: Subscription) -> bool:
     return is_protected_subscription(sub)
 
 
+@router.post("/wallets/{user_id}/adjust")
+def admin_adjust_wallet(user_id: str, body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Credit or debit a customer wallet with a proper ledger entry and audit log.
+    amount>0 credits, amount<0 debits. A reason/description is required."""
+    from app.models.models import WalletTransaction, WalletTransactionType
+    from app.services.wallet_service import get_or_create_wallet
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        amount = float(body.get("amount"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="amount must be a number")
+    if amount == 0:
+        raise HTTPException(status_code=400, detail="amount must be non-zero")
+    description = (body.get("description") or "").strip()
+    if not description:
+        raise HTTPException(status_code=400, detail="description is required for audit")
+
+    wallet = get_or_create_wallet(db, target.id)
+    new_balance = float(wallet.balance or 0) + amount
+    if new_balance < 0:
+        raise HTTPException(status_code=400, detail=f"Debit exceeds balance ({wallet.balance:.2f} {wallet.currency})")
+    wallet.balance = new_balance
+    db.add(WalletTransaction(
+        wallet_id=wallet.id,
+        type=WalletTransactionType.DEPOSIT if amount > 0 else WalletTransactionType.PAYMENT,
+        amount=amount,
+        description=f"Admin adjustment — {description}",
+        gateway="admin",
+        metadata={"admin_id": admin.id, "admin_email": admin.email},
+    ))
+    db.add(SystemLog(type=LogType.INFO, message=f"Admin {admin.email} adjusted wallet of {target.email} by {amount} {wallet.currency}",
+                     details={"admin_id": admin.id, "user_id": target.id, "amount": amount, "reason": description}))
+    db.commit()
+    try:
+        from app.services.notification_service import create_notification
+        verb = "credited" if amount > 0 else "debited"
+        create_notification(db, target, f"Wallet {verb}", f"{wallet.currency} {abs(amount):.2f} {verb} — {description}", "info", "/dashboard?tab=wallet")
+    except Exception:
+        pass
+    return {"success": True, "balance": wallet.balance, "currency": wallet.currency}
+
+
 @router.post("/subscriptions/{subscription_id}/suspend")
 def admin_suspend_subscription(subscription_id: str, body: dict = None, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     """Suspend a subscription (e.g. overdue). Refuses protected owner accounts."""

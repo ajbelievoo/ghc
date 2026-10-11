@@ -1380,7 +1380,7 @@ def pay_order_with_wallet(db: Session, user_id: str, order_id: str) -> CustomerO
     if order_currency == wallet.currency:
         wallet_deduction = order.customer_amount
     else:
-        wallet_deduction = convert(db, order.customer_amount, order_currency, wallet.currency)
+        wallet_deduction = convert(db, order.customer_amount, order_currency, wallet.currency, strict=True)
 
     if wallet.balance < wallet_deduction:
         raise ValueError(f"Insufficient wallet balance: {wallet.balance} {wallet.currency} < {wallet_deduction} {wallet.currency}")

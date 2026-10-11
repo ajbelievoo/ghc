@@ -18,7 +18,7 @@ def credit_wallet(db: Session, user_id: str, amount: float, description: str = "
     wallet = get_or_create_wallet(db, user_id)
     deposit_currency = (currency or "INR").upper()
     if deposit_currency != wallet.currency:
-        credit_amount = convert(db, amount, deposit_currency, wallet.currency)
+        credit_amount = convert(db, amount, deposit_currency, wallet.currency, strict=True)
     else:
         credit_amount = amount
     wallet.balance += credit_amount
@@ -61,7 +61,7 @@ def pay_invoice_with_wallet(db: Session, user, invoice) -> dict:
     if invoice.status == InvoiceStatus.PAID:
         return {"paid": True, "already": True}
     wallet = get_or_create_wallet(db, user.id)
-    amount = convert(db, invoice.amount, invoice.currency, wallet.currency)
+    amount = convert(db, invoice.amount, invoice.currency, wallet.currency, strict=True)
     if wallet.balance < amount:
         raise HTTPException(
             status_code=400,

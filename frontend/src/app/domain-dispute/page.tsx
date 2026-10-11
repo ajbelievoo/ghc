@@ -1,45 +1,146 @@
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import LegalPage, { P, UL, COMPANY } from "@/components/LegalPage";
 
 export const metadata = {
-  title: "Domain Dispute Policy (UDRP) | GHC - Go Host Cloud",
-  description: "How domain name disputes are handled under ICANN's UDRP and registrar rules.",
+  title: "Domain Dispute Policy | GHC - Go Host Cloud",
+  description: "How domain ownership disputes, UDRP/INDRP proceedings and court orders are handled for GHC-registered domains.",
 };
 
 export default function DomainDisputePage() {
   return (
-    <div className="min-h-screen bg-[#f8fcff] text-[#0f172a]">
-      <Navbar />
-      <main className="mx-auto max-w-4xl px-6 py-16">
-        <h1 className="text-3xl font-black text-[#0f172a] md:text-4xl">Domain Dispute Policy</h1>
-        <p className="mt-2 text-sm text-slate-500">Last updated: {new Date().toLocaleDateString()}</p>
-        <div className="mt-8 space-y-6 text-sm leading-relaxed text-slate-700">
-          <p>Domain names registered through GHC are subject to ICANN&apos;s Uniform Domain-Name Dispute-Resolution Policy (UDRP) and the rules of the upstream registrar and registry.</p>
-          <h2 className="text-lg font-bold text-[#0f172a]">When the UDRP applies</h2>
-          <p>The UDRP covers disputes where a complainant claims a domain:</p>
-          <ul className="list-disc space-y-1.5 pl-6">
-            <li>Is identical or confusingly similar to their trademark</li>
-            <li>Was registered by someone with no legitimate rights to it</li>
-            <li>Was registered and is being used in bad faith</li>
-          </ul>
-          <h2 className="text-lg font-bold text-[#0f172a]">How to file a dispute</h2>
-          <ul className="list-disc space-y-1.5 pl-6">
-            <li><b>UDRP complaints</b> must be filed with an approved dispute provider (WIPO, FORUM/NAF, ADNDRC, CAC). GHC cannot decide trademark ownership.</li>
-            <li><b>Accuracy/whois issues</b> — report to <a href="mailto:abuse@believoo.com" className="text-[#00b7ff] hover:underline">abuse@believoo.com</a></li>
-            <li><b>Phishing/fraud on a domain</b> — use the <a href="/abuse" className="text-[#00b7ff] hover:underline">abuse form</a>; we can suspend DNS for clear abuse</li>
-            <li><b>Ownership disputes between two parties</b> — resolved by courts or UDRP, not by the registrar</li>
-          </ul>
-          <h2 className="text-lg font-bold text-[#0f172a]">What we do when a dispute is filed</h2>
-          <ul className="list-disc space-y-1.5 pl-6">
-            <li>Lock the domain against transfer while the proceeding is active (per UDRP rules)</li>
-            <li>Comply with the panel&apos;s decision — transfer, cancel, or maintain the registration</li>
-            <li>Notify the registrant of proceedings and decisions we receive</li>
-          </ul>
-          <h2 className="text-lg font-bold text-[#0f172a]">Registrant rights</h2>
-          <p>If a UDRP complaint is filed against your domain, you may respond to the dispute provider within the period stated in the provider&apos;s notice. Court action filed within 10 business days of a UDRP decision stays the decision&apos;s implementation.</p>
-        </div>
-      </main>
-      <Footer />
-    </div>
+    <LegalPage
+      title="Domain Dispute Policy"
+      subtitle="How disputes over domain names registered through GHC are handled — UDRP, INDRP, court orders and transfer locks."
+      updated="11 October 2026"
+      intro={
+        <P>
+          Domain names registered through GHC are subject to the dispute-resolution policies of the applicable
+          registry and ICANN (for generic TLDs) or the national registry (for country-code TLDs like .in). This
+          page explains what happens when a third party disputes a domain, when we lock a domain, and how
+          court/authority orders are handled.
+        </P>
+      }
+      sections={[
+        {
+          id: "frameworks",
+          title: "Applicable dispute frameworks",
+          body: (
+            <>
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 text-left">
+                      <th className="px-4 py-2.5 font-bold text-[#0f172a]">Domain type</th>
+                      <th className="px-4 py-2.5 font-bold text-[#0f172a]">Dispute policy</th>
+                      <th className="px-4 py-2.5 font-bold text-[#0f172a]">Forum</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-600">
+                    <tr><td className="px-4 py-2.5">gTLDs (.com, .net, .org, new gTLDs)</td><td className="px-4 py-2.5">UDRP — Uniform Domain-Name Dispute-Resolution Policy</td><td className="px-4 py-2.5">WIPO, NAF, other ICANN-approved providers</td></tr>
+                    <tr><td className="px-4 py-2.5">.in / .co.in (India)</td><td className="px-4 py-2.5">INDRP — .IN Dispute Resolution Policy</td><td className="px-4 py-2.5">NIXI-approved arbitrators</td></tr>
+                    <tr><td className="px-4 py-2.5">Other ccTLDs</td><td className="px-4 py-2.5">The registry's own policy (varies)</td><td className="px-4 py-2.5">Registry-designated forum</td></tr>
+                    <tr><td className="px-4 py-2.5">URS (new gTLDs)</td><td className="px-4 py-2.5">Uniform Rapid Suspension for clear-cut cases</td><td className="px-4 py-2.5">ICANN-approved URS providers</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <P>
+                By registering a domain you agreed to be bound by the applicable policy. These policies are
+                administered by independent providers — we implement their outcomes but do not decide who is right.
+              </P>
+            </>
+          ),
+        },
+        {
+          id: "what-we-do",
+          title: "What happens during a dispute",
+          body: (
+            <>
+              <UL
+                items={[
+                  <><b>Notification:</b> when a UDRP/INDRP/URS complaint or court order naming your domain is received, we email the registrant contact on file immediately — keep your WHOIS email current.</>,
+                  <><b>Registrar lock:</b> the domain is placed under lock — it cannot be transferred, deleted, or have its registrant changed until the proceeding ends. DNS keeps working unless the order says otherwise.</>,
+                  <><b>No editorial judgment:</b> we do not evaluate who has the better claim — the dispute provider decides. We implement the decision (transfer, cancellation, or status quo).</>,
+                  <><b>Timeline:</b> UDRP respondents typically have 20 days to respond to the provider; missing the deadline usually means a default decision.</>,
+                  <><b>Outcome:</b> if the panel orders a transfer or cancellation, we implement it 10 business days after notification unless you file a lawsuit in a competent court within that window and notify us.</>,
+                ]}
+              />
+            </>
+          ),
+        },
+        {
+          id: "court-orders",
+          title: "Court and government orders",
+          body: (
+            <>
+              <UL
+                items={[
+                  <>Valid orders from competent Indian courts, tribunals, or government authorities (including orders under the IT Act, 2000) are implemented as directed — suspension, transfer, or DNS block.</>,
+                  <>Foreign court orders are evaluated for enforceability; we may require local enforcement before acting, except where the domain registry is in that jurisdiction.</>,
+                  <>Emergency seizure/takedown orders are actioned immediately; the registrant is notified unless the order prohibits disclosure.</>,
+                ]}
+              />
+            </>
+          ),
+        },
+        {
+          id: "private-disputes",
+          title: "Disputes between private parties",
+          body: (
+            <>
+              <UL
+                items={[
+                  <>If two private parties dispute domain ownership (e.g. a business split), we will not act on either party's word alone — provide a court order, or use the UDRP/INDRP process.</>,
+                  <>Allegations that a domain was registered through account hijacking are investigated as security incidents — supply evidence via {COMPANY.abuse} and file a police/cybercrime complaint where applicable.</>,
+                  <>We may place a disputed domain under lock while ownership evidence is examined, preventing transfer or deletion by either party.</>,
+                ]}
+              />
+            </>
+          ),
+        },
+        {
+          id: "whois",
+          title: "Registrant accuracy and verification",
+          body: (
+            <>
+              <UL
+                items={[
+                  <>ICANN requires accurate registrant data. Domains with unverified or demonstrably false WHOIS data may be suspended by the registry — outside our control and not refundable.</>,
+                  <>WHOIS privacy/proxy, where offered for a TLD, does not shield a domain from UDRP/INDRP or legal process — the underlying registrant is revealed to the dispute provider when required.</>,
+                ]}
+              />
+            </>
+          ),
+        },
+        {
+          id: "reporting",
+          title: "How to file a dispute",
+          body: (
+            <>
+              <UL
+                items={[
+                  <><b>UDRP complaint:</b> file with WIPO (wipo.int/amc) or NAF — they serve the complaint on us as registrar of record.</>,
+                  <><b>INDRP complaint:</b> file with NIXI per the .IN Dispute Resolution Policy.</>,
+                  <><b>Court order / government request:</b> serve on the Grievance Officer — {COMPANY.grievance} — with the legal basis cited.</>,
+                  <><b>Ownership/security issues:</b> email {COMPANY.abuse} with evidence; for compromised accounts also open a support ticket.</>,
+                  <><b>Our role is technical implementation</b> — for who owns a name, the dispute provider or court decides.</>,
+                ]}
+              />
+            </>
+          ),
+        },
+        {
+          id: "contact",
+          title: "Contact",
+          body: (
+            <>
+              <P>
+                Domain dispute notices: <a href={`mailto:${COMPANY.grievance}`} className="text-[#0050d7] font-semibold hover:underline">{COMPANY.grievance}</a>.
+                Abuse/security reports: <a href={`mailto:${COMPANY.abuse}`} className="text-[#0050d7] font-semibold hover:underline">{COMPANY.abuse}</a>.
+                Postal: {COMPANY.name}, {COMPANY.address}.
+              </P>
+            </>
+          ),
+        },
+      ]}
+    />
   );
 }

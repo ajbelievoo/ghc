@@ -139,6 +139,8 @@ export const api = {
       request(`/admin/users?${new URLSearchParams(params as any).toString()}`),
     updateUser: (userId: string, body: { role?: string; isSuspended?: boolean; name?: string; phone?: string }) =>
       request(`/admin/users/${userId}`, { method: "POST", body: JSON.stringify(body) }),
+    adjustWallet: (userId: string, body: { amount: number; description: string }) =>
+      request(`/admin/wallets/${userId}/adjust`, { method: "POST", body: JSON.stringify(body) }),
     // Credentials
     getCredentials: () => request("/admin/credentials"),
     testProvider: () => request("/admin/cloud/balance"),

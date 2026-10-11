@@ -965,3 +965,70 @@ class StatusSubscriber(Base):
     token = Column(String(64), default=lambda: uuid.uuid4().hex, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class CartItem(Base):
+    __tablename__ = "cart_items"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    plan_code = Column(String(255), nullable=False)
+    duration_label = Column(String(50), nullable=True)
+    display_name = Column(String(255), nullable=True)
+    category = Column(String(50), nullable=True)
+    unit_price = Column(Float, nullable=True)  # cached display price in user currency
+    currency = Column(String(10), nullable=True)
+    configuration = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    subject = Column(String(255), nullable=True)
+    status = Column(String(20), default="open", nullable=False, index=True)  # open, closed
+    unread_for_admin = Column(Integer, default=0, nullable=False)
+    unread_for_user = Column(Integer, default=0, nullable=False)
+    last_message_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = relationship("User")
+    messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String(36), ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender = Column(String(10), nullable=False)  # user, admin
+    sender_name = Column(String(255), nullable=True)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    session = relationship("ChatSession", back_populates="messages")
+
+
+class MarketplaceProduct(Base):
+    __tablename__ = "marketplace_products"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    slug = Column(String(100), nullable=False, unique=True, index=True)
+    name = Column(String(255), nullable=False)
+    vendor = Column(String(255), nullable=True)
+    category = Column(String(80), nullable=True)  # apps, licenses, images, integrations
+    description = Column(Text, nullable=True)
+    icon = Column(String(80), nullable=True)  # lucide icon name
+    price = Column(Float, default=0.0, nullable=False)
+    currency = Column(String(10), default="USD", nullable=False)
+    billing_cycle = Column(String(20), default="monthly", nullable=False)  # monthly, yearly, one-time, free
+    plan_code = Column(String(255), nullable=True)  # links to plan_catalog when orderable
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)

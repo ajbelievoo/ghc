@@ -150,18 +150,41 @@ def get_rate(db: Session, base: str, target: str) -> float:
     return 1.0
 
 
-def convert(db: Session, amount: Optional[Any], from_currency: str, to_currency: str) -> float:
-    """Convert an amount from one currency to another."""
+def rate_available(db: Session, base: str, target: str) -> bool:
+    """True when a real rate exists (cache, live API, or fallback table) — not the 1.0 last resort."""
+    base = (base or DEFAULT_BASE).upper()
+    target = (target or DEFAULT_BASE).upper()
+    if base == target:
+        return True
+    if _get_cached_rate(db, base, target):
+        return True
+    rates = _fetch_rates(base)
+    if target in rates or "USD" in rates:
+        return True
+    if base == DEFAULT_BASE and target in FALLBACK_RATES:
+        return True
+    return False
+
+
+def convert(db: Session, amount: Optional[Any], from_currency: str, to_currency: str, strict: bool = False) -> float:
+    """Convert an amount from one currency to another.
+
+    ``strict=True`` raises ValueError when no real exchange rate exists — required
+    for money-moving paths so a rate outage can't silently charge the wrong amount."""
     if amount is None:
         return 0.0
     from_currency = (from_currency or DEFAULT_BASE).upper()
     to_currency = (to_currency or DEFAULT_BASE).upper()
     if from_currency == to_currency:
         return float(amount)
+    if strict and not rate_available(db, from_currency, to_currency):
+        raise ValueError(f"Exchange rate unavailable for {from_currency} -> {to_currency}")
     try:
         rate = get_rate(db, from_currency, to_currency)
         return float(Decimal(str(amount)) * Decimal(str(rate)))
     except Exception:
+        if strict:
+            raise ValueError(f"Exchange rate unavailable for {from_currency} -> {to_currency}")
         return float(amount)
 
 

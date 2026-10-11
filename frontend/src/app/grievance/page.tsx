@@ -1,49 +1,142 @@
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import LegalPage, { P, UL, COMPANY } from "@/components/LegalPage";
 
 export const metadata = {
   title: "Grievance Officer | GHC - Go Host Cloud",
-  description: "Grievance officer details and complaint redressal process under the Information Technology Act, 2000 and IT (Intermediary) Rules, 2021.",
+  description: "Contact details and process for the Grievance Officer of Believoo Private Limited under the IT Act, 2000.",
 };
 
 export default function GrievancePage() {
   return (
-    <div className="min-h-screen bg-[#f8fcff] text-[#0f172a]">
-      <Navbar />
-      <main className="mx-auto max-w-4xl px-6 py-16">
-        <h1 className="text-3xl font-black text-[#0f172a] md:text-4xl">Grievance Officer</h1>
-        <p className="mt-2 text-sm text-slate-500">Appointed under the Information Technology Act, 2000 and IT (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021</p>
-        <div className="mt-8 space-y-6 text-sm leading-relaxed text-slate-700">
-          <div className="rounded-xl border border-[#00b7ff]/30 bg-[#f0f9ff] p-6">
-            <h2 className="text-lg font-bold text-[#0f172a]">Contact details</h2>
-            <div className="mt-3 space-y-1.5">
-              <p><b>Designation:</b> Grievance Officer, Believoo Pvt Ltd</p>
-              <p><b>Email:</b> <a href="mailto:grievance@believoo.com" className="text-[#00b7ff] hover:underline">grievance@believoo.com</a></p>
-              <p><b>Alternate:</b> <a href="mailto:abuse@believoo.com" className="text-[#00b7ff] hover:underline">abuse@believoo.com</a></p>
-              <p><b>Address:</b> Believoo Pvt Ltd, India</p>
-            </div>
-          </div>
-          <h2 className="text-lg font-bold text-[#0f172a]">How to file a grievance</h2>
-          <p>If you believe any content hosted on our infrastructure violates law, infringes your rights, or breaches our Acceptable Use Policy, email the Grievance Officer with:</p>
-          <ul className="list-disc space-y-1.5 pl-6">
-            <li>Your name, email address, and contact number</li>
-            <li>The URL, IP address, domain name, or service involved</li>
-            <li>A description of the complaint and the grounds for it</li>
-            <li>Any supporting evidence (screenshots, documents, court orders)</li>
-          </ul>
-          <h2 className="text-lg font-bold text-[#0f172a]">Resolution timelines</h2>
-          <ul className="list-disc space-y-1.5 pl-6">
-            <li><b>Acknowledgement:</b> within 24 hours of receiving the complaint</li>
-            <li><b>Resolution:</b> within 15 days from the date of receipt</li>
-            <li><b>Content removal requests (non-consensual intimate imagery, court orders):</b> acted upon within 24 hours</li>
-          </ul>
-          <h2 className="text-lg font-bold text-[#0f172a]">Escalation</h2>
-          <p>If your grievance is not resolved within the stated timelines, you may escalate by replying to the acknowledgement email with &quot;ESCALATION&quot; in the subject line. Unresolved statutory complaints may also be raised with the appropriate government authorities.</p>
-          <h2 className="text-lg font-bold text-[#0f172a]">Abuse reports (non-legal)</h2>
-          <p>For spam, phishing, malware, or network abuse hosted on our platform, use the <a href="/abuse" className="text-[#00b7ff] hover:underline">abuse report form</a> or email <a href="mailto:abuse@believoo.com" className="text-[#00b7ff] hover:underline">abuse@believoo.com</a>.</p>
-        </div>
-      </main>
-      <Footer />
-    </div>
+    <LegalPage
+      title="Grievance Officer"
+      subtitle="Appointed under the Information Technology Act, 2000 and IT (Intermediary Guidelines) Rules — your escalation point for unresolved complaints."
+      updated="11 October 2026"
+      intro={
+        <P>
+          As required by Rule 3 of the Information Technology (Intermediary Guidelines and Digital Media Ethics
+          Code) Rules, {COMPANY.name} has appointed a Grievance Officer to receive and resolve complaints relating
+          to content, account actions, privacy, billing disputes and violations of law or our policies on the GHC
+          platform.
+        </P>
+      }
+      sections={[
+        {
+          id: "officer",
+          title: "Grievance Officer details",
+          body: (
+            <>
+              <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600 space-y-2">
+                <p><b className="text-[#0f172a]">Designation:</b> Grievance Officer</p>
+                <p><b className="text-[#0f172a]">Organisation:</b> {COMPANY.name}</p>
+                <p><b className="text-[#0f172a]">Email:</b> <a href={`mailto:${COMPANY.grievance}`} className="text-[#0050d7] font-semibold hover:underline">{COMPANY.grievance}</a></p>
+                <p><b className="text-[#0f172a]">Alternate (abuse/security):</b> <a href={`mailto:${COMPANY.abuse}`} className="text-[#0050d7] font-semibold hover:underline">{COMPANY.abuse}</a></p>
+                <p><b className="text-[#0f172a]">Phone:</b> {COMPANY.phone}</p>
+                <p><b className="text-[#0f172a]">Postal address:</b> Grievance Officer, {COMPANY.name}, {COMPANY.address}</p>
+                <p><b className="text-[#0f172a]">Working hours:</b> Monday–Saturday, 10:00–18:00 IST (emails monitored 24×7 for abuse)</p>
+              </div>
+            </>
+          ),
+        },
+        {
+          id: "when",
+          title: "When to contact the Grievance Officer",
+          body: (
+            <>
+              <P>Escalate to the Grievance Officer when:</P>
+              <UL
+                items={[
+                  <>A support ticket or abuse report has not been resolved within the promised timeframe.</>,
+                  <>You believe content hosted on our platform violates Indian law, or your content was removed/suspended wrongly.</>,
+                  <>You have a complaint about privacy or personal-data handling that support could not resolve.</>,
+                  <>Law-enforcement or government authorities need a designated point of contact for lawful requests.</>,
+                  <>A billing or service dispute remains unresolved after normal support escalation.</>,
+                  <>Your account was suspended or terminated and you believe the decision was in error.</>,
+                ]}
+              />
+              <P>
+                For routine issues (provisioning delays, password resets, invoice copies) please open a regular
+                support ticket first — the Grievance channel is for escalations and statutory complaints.
+              </P>
+            </>
+          ),
+        },
+        {
+          id: "how",
+          title: "How to file a grievance",
+          body: (
+            <>
+              <P>Email {COMPANY.grievance} with the subject line <b>"Grievance — [topic]"</b> and include:</P>
+              <UL
+                items={[
+                  <>Your full name, registered email address and contact number.</>,
+                  <>Account ID, service name, domain name, IP address or URL involved (as applicable).</>,
+                  <>Reference numbers of related tickets, orders or invoices.</>,
+                  <>A clear description of the complaint, the outcome you seek, and supporting evidence (screenshots, headers, logs with timestamps and timezone).</>,
+                  <>For legal requests: the statutory basis and issuing authority's reference.</>,
+                ]}
+              />
+            </>
+          ),
+        },
+        {
+          id: "process",
+          title: "Process and timelines",
+          body: (
+            <>
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 text-left">
+                      <th className="px-4 py-2.5 font-bold text-[#0f172a]">Stage</th>
+                      <th className="px-4 py-2.5 font-bold text-[#0f172a]">Timeline</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-600">
+                    <tr><td className="px-4 py-2.5">Acknowledgement of your grievance</td><td className="px-4 py-2.5">Within 24 hours</td></tr>
+                    <tr><td className="px-4 py-2.5">Resolution of standard grievances</td><td className="px-4 py-2.5">Within 15 days</td></tr>
+                    <tr><td className="px-4 py-2.5">Content complaints under IT Rules (unlawful content)</td><td className="px-4 py-2.5">Action/response within statutory period (72 hours where required)</td></tr>
+                    <tr><td className="px-4 py-2.5">CSAM / imminent-harm reports</td><td className="px-4 py-2.5">Immediate — highest priority queue</td></tr>
+                    <tr><td className="px-4 py-2.5">Complex billing/legal disputes</td><td className="px-4 py-2.5">Within 30 days, with progress updates</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <P>
+                Every grievance receives a tracking reference. If the response does not satisfy you, reply to the
+                same thread requesting a review — it is re-examined by senior management. Statutory escalation
+                rights under Indian law remain unaffected.
+              </P>
+            </>
+          ),
+        },
+        {
+          id: "law-enforcement",
+          title: "For law enforcement and government authorities",
+          body: (
+            <>
+              <P>
+                Law-enforcement agencies should send requests on official letterhead (or from an official .gov/.nic
+                email address) to {COMPANY.grievance}, citing the legal basis (IT Act 2000 §69/79, CrPC §91,
+                applicable rules). We respond to valid requests within statutory timelines and can preserve data
+                pending formal process. Emergency disclosure requests involving imminent threats to life are
+                handled 24×7.
+              </P>
+            </>
+          ),
+        },
+        {
+          id: "nodal",
+          title: "Consumer grievance under e-commerce rules",
+          body: (
+            <>
+              <P>
+                For complaints under the Consumer Protection (E-Commerce) Rules, 2020, the Grievance Officer above
+                serves as the designated nodal contact. Complaints are acknowledged within 48 hours and resolved
+                within one month of receipt.
+              </P>
+            </>
+          ),
+        },
+      ]}
+    />
   );
 }

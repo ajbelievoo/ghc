@@ -359,6 +359,18 @@ export default function AdminPage() {
                             <button onClick={() => handleUpdateUser(u.id, { role: u.role === "ADMIN" ? "CLIENT" : "ADMIN" })} className="rounded-lg bg-slate-100/50 border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100/80 transition-all">{u.role === "ADMIN" ? "Demote" : "Promote"}</button>
                             <button onClick={() => handleUpdateUser(u.id, { isSuspended: !u.isSuspended })} className={`rounded-lg border px-3 py-1.5 text-xs transition-all ${u.isSuspended ? "bg-[#00ff88]/10 border-[#00ff88]/20 text-[#00ff88] hover:bg-[#00ff88]/20" : "bg-yellow-500/10 border-yellow-500/20 text-yellow-700 hover:bg-yellow-500/20"}`}>{u.isSuspended ? "Activate" : "Suspend"}</button>
                             {u.role !== "ADMIN" && <button onClick={() => handleImpersonate(u)} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all">Login as</button>}
+                            <button onClick={async () => {
+                              const amt = prompt(`Adjust wallet for ${u.email} — positive to credit, negative to debit (INR):`);
+                              if (amt === null) return;
+                              const amount = parseFloat(amt);
+                              if (!amount || isNaN(amount)) { alert("Invalid amount"); return; }
+                              const description = prompt("Reason (required for audit):");
+                              if (!description) { alert("Reason required"); return; }
+                              try {
+                                const r = await api.admin.adjustWallet(u.id, { amount, description });
+                                alert(`Done — new balance: ${r.balance} ${r.currency}`);
+                              } catch (e: any) { alert(e.message || "Adjustment failed"); }
+                            }} className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-500/20 transition-all">Wallet</button>
                           </div>
                         </td>
                       </tr>
