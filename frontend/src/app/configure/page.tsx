@@ -734,6 +734,34 @@ function ConfigurePageContent() {
               <button onClick={startPayment} disabled={paying || !providerConfig?.available || (providerDatacenters.length > 0 && !datacenter)} className="mt-4 flex w-full items-center justify-center gap-2 rounded bg-[#0f0c29] px-5 py-3 text-sm font-bold text-white hover:bg-[#302b63] disabled:opacity-50">
                 Continue order →
               </button>
+              {user && (
+                <button
+                  onClick={async () => {
+                    const osValue = imageTab === "app" ? selectedApp : image;
+                    const configuration: any = {};
+                    if (osValue) configuration.os = osValue;
+                    if (datacenter) configuration.datacenter = datacenter;
+                    try {
+                      await api.cart.add({
+                        planCode: plan.planCode,
+                        durationLabel: selectedDuration?.durationLabel,
+                        displayName: plan.invoiceName || plan.planCode,
+                        category: plan.category || category,
+                        unitPrice: selectedDuration?.monthlyPrice,
+                        configuration,
+                      });
+                      showToast("Added to cart", "success");
+                      window.dispatchEvent(new CustomEvent("ghc:cart-updated"));
+                    } catch (e: any) {
+                      showToast(e.message || "Could not add to cart", "error");
+                    }
+                  }}
+                  disabled={!providerConfig?.available}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-[#0f172a] hover:border-[#00b7ff] hover:text-[#00b7ff] disabled:opacity-50"
+                >
+                  Add to cart
+                </button>
+              )}
               {providerDatacenters.length > 0 && !datacenter && <p className="mt-2 text-center text-[10px] text-slate-500">Select a datacenter to continue</p>}
               <p className="mt-2 text-center text-[10px] text-slate-400">
                 ⏱ Estimated provisioning: {

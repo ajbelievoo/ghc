@@ -24,7 +24,9 @@ export default function Footer() {
                 </>
               )}
             </div>
-            <p className="mt-3 text-sm text-slate-300">{ghc.tagline} — automated cloud billing & provisioning by Believoo Private Limited.</p>
+            <p className="mt-3 text-sm text-slate-300">
+              <b className="text-white">{ghc.name} — {ghc.tagline}</b> · automated cloud billing &amp; provisioning by Believoo Private Limited.
+            </p>
           </div>
           <div>
             <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-400">Products</p>

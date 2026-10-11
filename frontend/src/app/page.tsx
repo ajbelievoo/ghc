@@ -279,6 +279,9 @@ export default function Home() {
             <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-200">
               {ghc.hero_subtitle}
             </p>
+            <p className="mt-3 text-xs font-black uppercase tracking-[0.22em] text-[#00b7ff]">
+              {ghc.name} · {ghc.tagline}
+            </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <a href="#products" className="rounded-lg bg-[#00b7ff] px-6 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(0,183,255,0.35)] transition hover:bg-[#0f0c29]">
                 Explore products

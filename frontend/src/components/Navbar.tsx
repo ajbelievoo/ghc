@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Server, Menu, X, ChevronDown, LogOut, User, Bell, Mail, CreditCard, FileText, Shield, Globe, Users, Settings, Package, Search } from "lucide-react";
+import { Server, Menu, X, ChevronDown, LogOut, User, Bell, Mail, CreditCard, FileText, Shield, Globe, Users, Settings, Package, Search, ShoppingCart } from "lucide-react";
+import { api } from "@/lib/api";
 import { useGhcSettings } from "@/lib/ghcSettings";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useCurrency, CURRENCIES } from "@/components/CurrencyProvider";
@@ -187,6 +188,7 @@ const megaMenu: MegaEntry[] = [
       { title: "Domains and Emails", items: [
         { label: "Domain name", href: "/domain", desc: "Assert and secure your identity" },
         { label: "Email hosting", href: "/email-hosting", desc: "Professional mailboxes on your domain" },
+        { label: "Marketplace", href: "/marketplace", desc: "Apps, licenses and add-ons for your servers" },
         { label: "Guides and documentation", href: "/kb", desc: "Knowledge base and tutorials" },
       ]},
     ],
@@ -252,6 +254,28 @@ function LanguageSelector() {
         </>
       )}
     </div>
+  );
+}
+
+function CartButton({ dark }: { dark: boolean }) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const load = () => api.cart.list().then((d) => { if (alive) setCount((d.items || []).length); }).catch(() => {});
+    load();
+    const onUpdate = () => load();
+    window.addEventListener("ghc:cart-updated", onUpdate);
+    return () => { alive = false; window.removeEventListener("ghc:cart-updated", onUpdate); };
+  }, []);
+  return (
+    <Link href="/cart" aria-label="Cart" className={`relative inline-flex h-8 w-8 items-center justify-center rounded-full ${dark ? "text-white hover:bg-white/10" : "text-[#0f172a] hover:bg-slate-100"}`}>
+      <ShoppingCart className="h-4 w-4" />
+      {count > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#00b7ff] px-1 text-[9px] font-bold text-white">
+          {count > 9 ? "9+" : count}
+        </span>
+      )}
+    </Link>
   );
 }
 
@@ -335,15 +359,24 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
   return (
     <nav className={`sticky top-0 z-50 ${navBg}`}>
       <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-3">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5">
           {ghc.logo_url ? (
-            <img src={ghc.logo_url} alt={ghc.name} className="h-10 w-auto" style={{ filter: "drop-shadow(0 2px 8px rgba(0,120,200,.25))" }} />
+            <>
+              <img src={ghc.logo_url} alt={ghc.name} className="h-10 w-auto" style={{ filter: "drop-shadow(0 2px 8px rgba(0,120,200,.25))" }} />
+              <span className="hidden sm:flex flex-col leading-tight">
+                <span className={`text-lg font-black tracking-tight ${dark ? "text-white" : "text-[#0f172a]"}`}>{ghc.name}</span>
+                <span className={`text-[9px] font-bold uppercase tracking-[0.18em] ${dark ? "text-[#00b7ff]" : "text-[#0050d7]"}`}>{ghc.tagline}</span>
+              </span>
+            </>
           ) : (
             <>
               <div className={`flex h-9 w-9 items-center justify-center rounded ${logoBg}`}>
                 <Server className="h-5 w-5" />
               </div>
-              <span className={`text-lg font-bold ${dark ? "text-white" : ""}`}>{ghc.name}</span>
+              <span className="flex flex-col leading-tight">
+                <span className={`text-lg font-bold ${dark ? "text-white" : ""}`}>{ghc.name}</span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#00b7ff]">{ghc.tagline}</span>
+              </span>
             </>
           )}
         </Link>
@@ -417,6 +450,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
           <LanguageSelector />
           <CurrencySelector />
           <ThemeToggle className="hidden md:inline-flex" />
+          {user && <CartButton dark={dark} />}
 
           {user ? (
             <div className="relative ml-3">

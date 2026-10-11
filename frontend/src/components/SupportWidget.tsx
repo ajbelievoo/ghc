@@ -36,6 +36,18 @@ export default function SupportWidget() {
                 </span>
               </a>
             )}
+            <button
+              onClick={() => { setOpen(false); window.dispatchEvent(new CustomEvent("ghc:open-chat")); }}
+              className="flex w-full items-center gap-3 px-4 py-3 hover:bg-slate-50 transition text-left"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#00b7ff]/15 text-[#00b7ff]">
+                <MessageCircle className="h-4 w-4" />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-[#0f172a]">Live chat</span>
+                <span className="block text-[11px] text-slate-500">Instant support, right here</span>
+              </span>
+            </button>
             <Link href="/support" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#00b7ff]/15 text-[#00b7ff]">
                 <LifeBuoy className="h-4 w-4" />

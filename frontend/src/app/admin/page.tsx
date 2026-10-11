@@ -11,10 +11,10 @@ import {
   ToggleLeft, ToggleRight, AlertTriangle, CheckCircle, FileText, Zap, Trash2,
   Pause, Play, Search, RefreshCw, Key, Palette, Eye, EyeOff,
   ChevronLeft, ChevronRight, Save, Globe, Mail, DollarSign, Package,
-  CloudCog, Tag, Ban, RotateCcw, XCircle, Percent, Clock
+  CloudCog, Tag, Ban, RotateCcw, XCircle, Percent, Clock, MessageCircle, Send
 } from "lucide-react";
 
-type Tab = "overview" | "users" | "credentials" | "brand" | "settings" | "margins" | "coupons" | "catalog" | "subscriptions" | "suspensions" | "incidents" | "domain-tlds" | "customer-domains" | "logs" | "orders" | "support" | "invoices";
+type Tab = "overview" | "users" | "credentials" | "brand" | "settings" | "margins" | "coupons" | "catalog" | "subscriptions" | "suspensions" | "incidents" | "domain-tlds" | "customer-domains" | "logs" | "orders" | "support" | "invoices" | "chat" | "marketplace";
 
 interface LogEntry { id: string; type: string; message: string; createdAt: string; details?: any; }
 interface SubEntry { id: string; name: string; providerResourceId: string | null; category: string; status: string; userId: string; user?: { name: string; email: string }; planCode: string | null; billingCycle: string; nextBillDate: string; priceAmount: number; currency: string; autoRenew: boolean; createdAt: string; }
@@ -83,6 +83,12 @@ export default function AdminPage() {
   const [sendingInvoice, setSendingInvoice] = useState<string | null>(null);
   const [supportTickets, setSupportTickets] = useState<any[]>([]);
   const [supportFilter, setSupportFilter] = useState("ALL");
+  const [chatSessions, setChatSessions] = useState<any[]>([]);
+  const [chatActive, setChatActive] = useState<any>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [marketItems, setMarketItems] = useState<any[]>([]);
+  const [marketForm, setMarketForm] = useState({ name: "", vendor: "", category: "apps", description: "", price: "0", currency: "USD", billingCycle: "monthly", icon: "package", planCode: "", sortOrder: "0" });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -135,6 +141,8 @@ export default function AdminPage() {
       if (t === "suspensions") { const q = await api.admin.suspensionQueue(); setSuspensionQueue(q); }
       if (t === "incidents") { const i = await api.admin.incidents(); setIncidents(i || []); }
       if (t === "support") { const params: any = {}; if (supportFilter !== "ALL") params.status = supportFilter; const st = await api.support.getTickets(params); setSupportTickets(st.tickets || []); }
+      if (t === "chat") { const c = await api.adminExtra.chatSessions(); setChatSessions(c.sessions || []); }
+      if (t === "marketplace") { const m = await api.adminExtra.marketplaceList(); setMarketItems(m.items || []); }
     } catch (e: any) { console.error(e); setPageError(e.message || "Failed to load data"); } finally { setLoading(false); }
   };
 
@@ -239,6 +247,8 @@ export default function AdminPage() {
           {navItem("orders", "Orders", <FileText className="w-4 h-4" />)}
           {navItem("invoices", "Invoices", <FileText className="w-4 h-4" />)}
           {navItem("support", "Support Tickets", <Mail className="w-4 h-4" />)}
+          {navItem("chat", "Live Chat", <MessageCircle className="w-4 h-4" />)}
+          {navItem("marketplace", "Marketplace", <Package className="w-4 h-4" />)}
           {navItem("logs", "Logs", <FileText className="w-4 h-4" />)}
         </nav>
         <div className="pt-4 border-t border-slate-200">
@@ -1220,6 +1230,171 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== LIVE CHAT ===== */}
+        {tab === "chat" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-[#0f172a]">Live Chat</h2>
+              <button onClick={() => loadTabData("chat")} className="flex items-center gap-2 rounded-lg bg-slate-100/50 border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100/80 transition-all"><RefreshCw className="w-4 h-4" /></button>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+              <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden divide-y divide-slate-100 max-h-[540px] overflow-y-auto">
+                {chatSessions.length === 0 && <p className="px-5 py-8 text-center text-sm text-slate-500">No chat sessions yet.</p>}
+                {chatSessions.map((s: any) => (
+                  <button
+                    key={s.id}
+                    onClick={async () => {
+                      setChatActive(s);
+                      const d = await api.adminExtra.chatMessages(s.id).catch(() => ({ messages: [] }));
+                      setChatMessages(d.messages || []);
+                      loadTabData("chat");
+                    }}
+                    className={`w-full px-4 py-3 text-left hover:bg-slate-100/60 transition ${chatActive?.id === s.id ? "bg-[#00b7ff]/5 border-l-2 border-[#00b7ff]" : ""}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-[#0f172a] truncate">{s.user?.name || s.user?.email || "Customer"}</p>
+                      {s.unreadForAdmin > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{s.unreadForAdmin}</span>}
+                    </div>
+                    <p className="text-xs text-slate-500 truncate">{s.subject || "—"}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {s.lastMessageAt ? new Date(s.lastMessageAt).toLocaleString() : ""}
+                      {s.status !== "open" && <span className="ml-2 font-bold text-slate-400">CLOSED</span>}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl flex flex-col min-h-[540px]">
+                {!chatActive ? (
+                  <div className="flex flex-1 items-center justify-center text-sm text-slate-400">Select a chat to view the conversation</div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+                      <div>
+                        <p className="text-sm font-bold text-[#0f172a]">{chatActive.user?.name || "Customer"} <span className="font-normal text-slate-500">({chatActive.user?.email})</span></p>
+                        <p className="text-[10px] text-slate-400">Session {chatActive.id.slice(0, 8)} • {chatActive.status}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const next = chatActive.status === "open" ? "closed" : "open";
+                          await api.adminExtra.chatSetStatus(chatActive.id, next).catch(() => {});
+                          setChatActive({ ...chatActive, status: next });
+                          loadTabData("chat");
+                        }}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-bold ${chatActive.status === "open" ? "border-red-300 text-red-600 bg-red-50" : "border-emerald-300 text-emerald-700 bg-emerald-50"}`}
+                      >
+                        {chatActive.status === "open" ? "Close chat" : "Reopen chat"}
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/50">
+                      {chatMessages.map((m: any) => (
+                        <div key={m.id} className={`max-w-[75%] rounded-xl px-3 py-2 text-xs ${m.sender === "admin" ? "ml-auto bg-[#0f0c29] text-white" : "mr-auto bg-white border border-slate-200 text-slate-800"}`}>
+                          <p className={`text-[9px] font-bold mb-0.5 ${m.sender === "admin" ? "text-[#00b7ff]" : "text-slate-400"}`}>{m.sender === "admin" ? (m.senderName || "You") : (m.senderName || "Customer")}</p>
+                          <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                          <p className={`mt-0.5 text-[9px] ${m.sender === "admin" ? "text-white/50" : "text-slate-400"}`}>{m.createdAt ? new Date(m.createdAt).toLocaleString() : ""}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 border-t border-slate-200 p-3">
+                      <input
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={async (e) => {
+                          if (e.key === "Enter" && chatInput.trim()) {
+                            const body = chatInput.trim();
+                            setChatInput("");
+                            const r = await api.adminExtra.chatReply(chatActive.id, body).catch(() => null);
+                            if (r?.message) setChatMessages((m) => [...m, r.message]);
+                          }
+                        }}
+                        placeholder="Reply to customer…"
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-[#00b7ff] focus:outline-none"
+                      />
+                      <button
+                        onClick={async () => {
+                          if (!chatInput.trim()) return;
+                          const body = chatInput.trim();
+                          setChatInput("");
+                          const r = await api.adminExtra.chatReply(chatActive.id, body).catch(() => null);
+                          if (r?.message) setChatMessages((m) => [...m, r.message]);
+                        }}
+                        className="rounded-lg bg-[#00b7ff] p-2 text-white hover:bg-[#0090cc]"
+                      ><Send className="w-4 h-4" /></button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== MARKETPLACE ===== */}
+        {tab === "marketplace" && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-[#0f172a]">Marketplace Products</h2>
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-5">
+              <h3 className="text-sm font-bold text-[#0f172a] mb-3">Add product</h3>
+              <div className="grid gap-3 md:grid-cols-3">
+                <input value={marketForm.name} onChange={(e) => setMarketForm({ ...marketForm, name: e.target.value })} placeholder="Name *" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs" />
+                <input value={marketForm.vendor} onChange={(e) => setMarketForm({ ...marketForm, vendor: e.target.value })} placeholder="Vendor" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs" />
+                <select value={marketForm.category} onChange={(e) => setMarketForm({ ...marketForm, category: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                  <option value="apps">Apps</option><option value="licenses">Licenses</option><option value="images">OS images</option><option value="security">Security</option><option value="integrations">Integrations</option>
+                </select>
+                <input value={marketForm.price} onChange={(e) => setMarketForm({ ...marketForm, price: e.target.value })} placeholder="Price" type="number" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs" />
+                <select value={marketForm.billingCycle} onChange={(e) => setMarketForm({ ...marketForm, billingCycle: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                  <option value="monthly">Monthly</option><option value="yearly">Yearly</option><option value="one-time">One-time</option><option value="free">Free</option>
+                </select>
+                <input value={marketForm.icon} onChange={(e) => setMarketForm({ ...marketForm, icon: e.target.value })} placeholder="Icon (key, shield, download…)" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs" />
+                <input value={marketForm.planCode} onChange={(e) => setMarketForm({ ...marketForm, planCode: e.target.value })} placeholder="planCode (optional, makes it orderable)" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs md:col-span-2" />
+                <input value={marketForm.sortOrder} onChange={(e) => setMarketForm({ ...marketForm, sortOrder: e.target.value })} placeholder="Sort" type="number" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs" />
+                <textarea value={marketForm.description} onChange={(e) => setMarketForm({ ...marketForm, description: e.target.value })} placeholder="Description" className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs md:col-span-3" rows={2} />
+              </div>
+              <button
+                onClick={async () => {
+                  if (!marketForm.name.trim()) { showToast("Name is required", "error"); return; }
+                  try {
+                    await api.adminExtra.marketplaceCreate({ ...marketForm, price: parseFloat(marketForm.price) || 0, sortOrder: parseInt(marketForm.sortOrder) || 0 });
+                    showToast("Product added", "success");
+                    setMarketForm({ name: "", vendor: "", category: "apps", description: "", price: "0", currency: "USD", billingCycle: "monthly", icon: "package", planCode: "", sortOrder: "0" });
+                    loadTabData("marketplace");
+                  } catch (e: any) { showToast(e.message || "Create failed", "error"); }
+                }}
+                className="mt-3 rounded-lg bg-[#00b7ff] px-5 py-2 text-xs font-bold text-white hover:bg-[#0090cc]"
+              >Add product</button>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-slate-200 bg-slate-100/50">
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500">Name</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500">Category</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500">Price</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500">Orderable</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500">Active</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500"></th>
+                </tr></thead>
+                <tbody>
+                  {marketItems.map((p: any) => (
+                    <tr key={p.id} className="border-b border-white/5">
+                      <td className="px-5 py-3 text-sm font-medium text-[#0f172a]">{p.name}<span className="block text-[10px] text-slate-400">{p.slug}{p.vendor ? ` • ${p.vendor}` : ""}</span></td>
+                      <td className="px-5 py-3 text-xs text-slate-500">{p.category}</td>
+                      <td className="px-5 py-3 text-xs">{p.billingCycle === "free" ? "Free" : `${p.currency} ${p.price}/${p.billingCycle}`}</td>
+                      <td className="px-5 py-3 text-xs">{p.planCode ? <span className="text-[#00b7ff] font-mono text-[10px]">{p.planCode}</span> : "—"}</td>
+                      <td className="px-5 py-3">
+                        <button onClick={async () => { await api.adminExtra.marketplaceUpdate(p.id, { isActive: !p.isActive }).catch(() => {}); loadTabData("marketplace"); }} className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${p.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                          {p.isActive ? "ON" : "OFF"}
+                        </button>
+                      </td>
+                      <td className="px-5 py-3">
+                        <button onClick={async () => { if (confirm(`Delete ${p.name}?`)) { await api.adminExtra.marketplaceDelete(p.id).catch(() => {}); loadTabData("marketplace"); } }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                      </td>
+                    </tr>
+                  ))}
+                  {marketItems.length === 0 && <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-500">No marketplace products.</td></tr>}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
