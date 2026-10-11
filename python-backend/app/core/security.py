@@ -35,19 +35,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, settings.secret_key, algorithm="HS256")
 
 
-def create_purpose_token(subject: str, purpose: str, expires_minutes: int) -> str:
+def create_purpose_token(subject: str, purpose: str, expires_minutes: int, extra_claims: Optional[dict] = None) -> str:
     """Short-lived signed token for email verification, password reset, 2FA handoff."""
-    return create_access_token(
-        {"sub": subject, "purpose": purpose},
-        expires_delta=timedelta(minutes=expires_minutes),
-    )
+    claims = {"sub": subject, "purpose": purpose, **(extra_claims or {})}
+    return create_access_token(claims, expires_delta=timedelta(minutes=expires_minutes))
 
 
-def decode_purpose_token(token: str, purpose: str) -> Optional[str]:
+def decode_purpose_token(token: str, purpose: str) -> Optional[dict]:
     payload = decode_access_token(token)
     if not payload or payload.get("purpose") != purpose:
         return None
-    return payload.get("sub")
+    return payload
 
 
 def decode_access_token(token: str) -> Optional[dict]:

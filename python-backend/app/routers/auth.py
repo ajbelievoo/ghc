@@ -1,4 +1,5 @@
 import base64
+import hashlib
 from typing import Optional
 import io
 import logging
@@ -93,7 +94,8 @@ def _send_verification_email(db: Session, user: User) -> bool:
 def _send_reset_email(db: Session, user: User) -> bool:
     if not smtp_configured(db):
         return False
-    token = create_purpose_token(user.id, "reset", RESET_TOKEN_MINUTES)
+    pwd_fp = hashlib.sha256((user.password_hash or "").encode()).hexdigest()[:16]
+    token = create_purpose_token(user.id, "reset", RESET_TOKEN_MINUTES, {"pwd": pwd_fp})
     return send_reset_email(db, user, token, RESET_TOKEN_MINUTES)
 
 
@@ -204,7 +206,8 @@ def login(payload: UserLogin, response: Response, request: Request = None, db: S
 
 @router.post("/login/2fa", dependencies=[Depends(rate_limit(15, 60, "login"))])
 def login_2fa(payload: Login2FA, response: Response, request: Request = None, db: Session = Depends(get_db)):
-    user_id = decode_purpose_token(payload.tempToken, "2fa")
+    _tk = decode_purpose_token(payload.tempToken, "2fa")
+    user_id = _tk.get("sub") if _tk else None
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
     if not user or not user.totp_enabled or not user.totp_secret:
         raise HTTPException(status_code=401, detail="Invalid 2FA session")
@@ -274,7 +277,8 @@ def logout(response: Response):
 
 @router.post("/verify-email")
 def verify_email(payload: VerifyEmail, db: Session = Depends(get_db)):
-    user_id = decode_purpose_token(payload.token, "verify")
+    _tk = decode_purpose_token(payload.token, "verify")
+    user_id = _tk.get("sub") if _tk else None
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired verification link")
@@ -303,9 +307,13 @@ def forgot_password(payload: ForgotPassword, db: Session = Depends(get_db)):
 
 @router.post("/reset-password")
 def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
-    user_id = decode_purpose_token(payload.token, "reset")
+    _tk = decode_purpose_token(payload.token, "reset")
+    user_id = _tk.get("sub") if _tk else None
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
     if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+    expected = hashlib.sha256((user.password_hash or "").encode()).hexdigest()[:16]
+    if _tk.get("pwd") != expected:
         raise HTTPException(status_code=400, detail="Invalid or expired reset link")
     user.password_hash = get_password_hash(payload.newPassword)
     db.commit()
