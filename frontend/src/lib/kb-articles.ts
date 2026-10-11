@@ -409,4 +409,147 @@ export const kbArticles: KbArticle[] = [
       },
     ],
   },
+  {
+    slug: "upgrade-vps-and-add-disk",
+    title: "How to upgrade your VPS and order additional disk",
+    category: "servers",
+    summary: "Upgrade plan, add extra disks and enable automated backup from the server page.",
+    sections: [
+      {
+        heading: "Upgrade the VPS plan",
+        body: [
+          "Open Dashboard → My Servers → your VPS. If upgrades are available, a banner appears in the 'My offer' card — click Upgrade.",
+          "Pick the target plan in the modal. The price shown already includes your billing margin and tax — confirm and pay via wallet or a payment gateway.",
+          "Provisioning runs automatically after payment. The VPS may reboot during the upgrade task — watch the Recent tasks card.",
+        ],
+      },
+      {
+        heading: "Add an additional disk",
+        body: [
+          "Open the Additional disk tab on the server page. Sizes of 50, 100, 200 and 500 GB are available.",
+          "Click Order on the size you want, complete payment, and the disk is provisioned by the provider — attach it inside the OS (e.g. lsblk → mkfs → mount).",
+        ],
+      },
+      {
+        heading: "Enable automated backup",
+        body: [
+          "The Automated backup tab shows the schedule and price. Click Enable, pay the prorated amount, and daily snapshots start automatically.",
+          "Restore points appear in the same tab — use Restore to roll the VPS back to a listed checkpoint.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "vps-rescue-mode",
+    title: "Using rescue mode on VPS and dedicated servers",
+    category: "servers",
+    summary: "Boot into a rescue environment to repair disks, reset passwords or recover files.",
+    sections: [
+      {
+        heading: "Enter rescue mode",
+        body: [
+          "VPS: open the Management tab → 'Boot rescue mode'. The VPS is switched to network rescue and rebooted automatically.",
+          "Dedicated: Management tab → 'Rescue mode' sets the rescue boot option and reboots the server.",
+        ],
+      },
+      {
+        heading: "Work inside rescue",
+        body: [
+          "Rescue credentials are emailed to your account address once the rescue system boots (1-2 minutes).",
+          "Mount your disk, repair fstab/fsck issues, reset the root password with chroot, or copy off data before a reinstall.",
+        ],
+      },
+      {
+        heading: "Exit rescue",
+        body: [
+          "VPS: click 'Exit rescue mode' — netboot is set back to local disk and the VPS reboots.",
+          "Dedicated: click 'Boot from disk' to restore the normal harddisk boot option, then reboot.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "ssh-keys-reinstall",
+    title: "Manage SSH keys for OS reinstalls",
+    category: "servers",
+    summary: "Store public keys on your account and select them when reinstalling a server.",
+    sections: [
+      {
+        heading: "Add a key",
+        body: [
+          "Open Dashboard → Security → SSH keys. Paste the full public key line (ssh-ed25519 AAAA… or ssh-rsa AAAA…) with a name.",
+          "Keys are stored at the provider so reinstalls can inject them directly — no need to re-add later.",
+        ],
+      },
+      {
+        heading: "Use a key during reinstall",
+        body: [
+          "Management tab → OS reinstallation → pick your saved key in the SSH key dropdown before confirming.",
+          "After reinstall finishes, log in as the default user/root with the matching private key — no password needed.",
+        ],
+      },
+      {
+        heading: "Remove a key",
+        body: [
+          "Click the trash icon next to a key. Removing it does not affect servers already installed — only future reinstalls.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "auto-renew-and-cancel",
+    title: "Auto-renewal, renew-now and cancelling a service",
+    category: "billing",
+    summary: "Control automatic renewal, renew early, or terminate a service at its expiry date.",
+    sections: [
+      {
+        heading: "Automatic renewal",
+        body: [
+          "Management tab → Renewal → toggle 'Automatic renewal'. Enabled means the service renews each billing cycle at the provider.",
+          "Disabling auto-renew schedules the service to expire at the end of the paid period.",
+        ],
+      },
+      {
+        heading: "Renew now",
+        body: [
+          "When a renewal is due you can pay immediately: the banner on the server page offers 'Pay from wallet' or 'Pay online' via any gateway.",
+          "Bulk renewal is available from Dashboard → Servers — select multiple services and renew them together.",
+        ],
+      },
+      {
+        heading: "Cancel a service",
+        body: [
+          "Management tab → Cancel service → type CANCEL to confirm. The service terminates at its expiry date — not immediately.",
+          "Download all data and snapshots beforehand: everything is deleted permanently at termination.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "ip-geolocation-change",
+    title: "Change your IP geolocation",
+    category: "network",
+    summary: "Register your VPS IP geolocation in an available country for geo-targeted services.",
+    sections: [
+      {
+        heading: "When it helps",
+        body: [
+          "Geo-IP databases map your address to a country. Changing the registered geolocation helps with content licensing, regional SEO and CDN targeting.",
+        ],
+      },
+      {
+        heading: "How to change it",
+        body: [
+          "Open the Management tab → IP geolocation. Select the IP and the target country from the available list, then Update.",
+          "Propagation to public geo databases can take a few days — the provider's registry updates immediately.",
+        ],
+      },
+      {
+        heading: "Note",
+        body: [
+          "This changes registry data only — it does not move traffic physically. Latency depends on the real datacenter region.",
+        ],
+      },
+    ],
+  },
 ];

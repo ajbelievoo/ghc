@@ -126,6 +126,9 @@ const megaMenu: MegaEntry[] = [
       ]},
       { title: "Bare Metal Foundations", items: [
         { label: "Network", href: "/network", desc: "Secure and high-performance connectivity" },
+        { label: "Anti-DDoS Protection", href: "/products/anti-ddos", desc: "Always-on attack mitigation, free with every server" },
+        { label: "Failover & Additional IPs", href: "/products/ip-failover", desc: "Moveable IPs for high availability" },
+        { label: "vRack Private Network", href: "/products/vrack", desc: "Isolated L2 network across your services" },
         { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Backups and business continuity" },
         { label: "Security & Identities", href: "/security", desc: "Granular control over your environments" },
         { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },

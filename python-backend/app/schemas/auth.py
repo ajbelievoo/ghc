@@ -11,6 +11,7 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     name: str = Field(min_length=1, max_length=255)
     phone: str | None = None
+    ref: str | None = None
     captchaId: str | None = None
     captchaAnswer: str | None = None
 

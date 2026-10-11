@@ -113,6 +113,7 @@ class User(Base):
     totp_enabled = Column(Boolean, default=False, nullable=False)
     wallet_autopay = Column(Boolean, default=False, nullable=False)
     preferred_gateway = Column(String(30), nullable=True)
+    referred_by = Column(String(36), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

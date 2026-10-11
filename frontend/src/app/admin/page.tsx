@@ -315,6 +315,7 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+            <OvhOpsPanel />
           </div>
         )}
 
@@ -1247,6 +1248,114 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+/* ================= OVH account + reconciliation panel ================= */
+
+function OvhOpsPanel() {
+  const { showToast } = useToast();
+  const [acct, setAcct] = useState<any>(null);
+  const [recon, setRecon] = useState<any>(null);
+  const [sales, setSales] = useState<any>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    api.admin.ovhAccount().then(setAcct).catch(() => setAcct({ connected: false }));
+    api.admin.reconcile().then(setRecon).catch(() => setRecon({ subscriptions: [], untracked: [] }));
+    api.admin.salesSummary().then(setSales).catch(() => {});
+  }, []);
+
+  const stale = (recon?.subscriptions || []).filter((s: any) => s.stale);
+  const missing = (recon?.subscriptions || []).filter((s: any) => s.missingResource && s.status === "ACTIVE");
+  const untracked = recon?.untracked || [];
+
+  return (
+    <div className="space-y-4">
+      {/* Sales summary */}
+      {sales && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {[
+            { label: "Lifetime revenue", value: `$${(sales.totalRevenue || 0).toFixed(2)}` },
+            { label: "Lifetime margin", value: `$${(sales.totalMargin || 0).toFixed(2)}` },
+            { label: "Paid orders", value: sales.totalOrders || 0 },
+            { label: "This month orders", value: sales.monthOrders || 0 },
+            { label: "This month revenue", value: `$${(sales.monthRevenue || 0).toFixed(2)}` },
+          ].map((c) => (
+            <div key={c.label} className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-4">
+              <p className="text-xl font-bold text-[#0f172a]">{c.value}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{c.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* OVH account */}
+      <div className="rounded-2xl border border-slate-200 bg-white/60 backdrop-blur-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-[#0f172a] flex items-center gap-2"><CloudCog className="w-5 h-5 text-[#00b7ff]" /> OVH Provider Account</h3>
+          <button onClick={() => setOpen(!open)} className="text-xs font-bold text-[#00b7ff] hover:underline">{open ? "Hide reconciliation" : "Show reconciliation"}</button>
+        </div>
+        {!acct ? (
+          <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+              <p className="text-xs text-slate-500">Connection</p>
+              <p className={`text-sm font-bold ${acct.connected !== false ? "text-[#00a832]" : "text-red-500"}`}>{acct.connected !== false ? "Connected" : "Failed"}</p>
+            </div>
+            <div className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+              <p className="text-xs text-slate-500">Payment methods</p>
+              <p className="text-sm font-bold text-[#0f172a]">{acct.paymentMethods ?? "—"}</p>
+            </div>
+            {Object.entries(acct.services || {}).map(([k, v]) => (
+              <div key={k} className="rounded-xl bg-slate-100 border border-slate-200 p-3">
+                <p className="text-xs text-slate-500 capitalize">{k}</p>
+                <p className="text-sm font-bold text-[#0f172a]">{String(v)}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Reconciliation */}
+        {open && recon && (
+          <div className="mt-5 space-y-4 border-t border-slate-200 pt-4">
+            {(stale.length > 0 || missing.length > 0) && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {stale.length} stale + {missing.length} unprovisioned subscription(s) need attention</p>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead><tr className="border-b border-slate-200"><th className="px-3 py-2 text-xs font-semibold text-slate-500">Service</th><th className="px-3 py-2 text-xs font-semibold text-slate-500">Category</th><th className="px-3 py-2 text-xs font-semibold text-slate-500">Status</th><th className="px-3 py-2 text-xs font-semibold text-slate-500">In OVH</th><th className="px-3 py-2 text-xs font-semibold text-slate-500">Flag</th></tr></thead>
+                <tbody>
+                  {(recon.subscriptions || []).map((s: any) => (
+                    <tr key={s.id} className="border-b border-slate-100">
+                      <td className="px-3 py-2 text-xs font-mono text-[#0f172a]">{s.displayName || s.serviceName || s.id.slice(0, 8)}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{s.category}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{s.status}</td>
+                      <td className="px-3 py-2 text-xs">{s.inOvh ? <CheckCircle className="w-4 h-4 text-[#00a832]" /> : <XCircle className="w-4 h-4 text-slate-300" />}</td>
+                      <td className="px-3 py-2 text-xs">
+                        {s.stale && <span className="rounded-full bg-red-500/10 text-red-600 px-2 py-0.5 text-[10px] font-bold">STALE — not in OVH</span>}
+                        {s.missingResource && <span className="rounded-full bg-amber-500/10 text-amber-700 px-2 py-0.5 text-[10px] font-bold">NO RESOURCE</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {untracked.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-slate-500 mb-2">OVH services with no matching subscription:</p>
+                <div className="flex flex-wrap gap-2">
+                  {untracked.map((n: string) => <span key={n} className="rounded-lg bg-[#b500ff]/10 text-[#b500ff] px-2.5 py-1 text-xs font-mono">{n}</span>)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -2317,7 +2317,18 @@ export default function DashboardPage() {
                       <div className="rounded-xl bg-slate-100 border border-slate-200 p-4 text-center">
                         <img src={twoFactorQr} alt="2FA QR Code" className="mx-auto w-48 h-48" />
                         <p className="text-xs text-slate-500 mt-2">Scan with Google Authenticator</p>
-                        <p className="text-[10px] text-slate-500 mt-1 font-mono">{twoFactorSecret}</p>
+                        <div className="mt-2 flex items-center justify-center gap-2">
+                          <p className="text-[10px] text-slate-500 font-mono break-all">{twoFactorSecret}</p>
+                          <button type="button" onClick={() => { navigator.clipboard.writeText(twoFactorSecret || ""); showToast("Key copied", "success"); }} className="text-[10px] font-bold text-[#00b7ff] hover:underline shrink-0">Copy key</button>
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-[#00b7ff]/5 border border-[#00b7ff]/20 px-3 py-2.5 text-[11px] text-slate-600">
+                        <p className="font-semibold text-[#0f172a]">Code showing "invalid"?</p>
+                        <ul className="mt-1 list-disc list-inside space-y-0.5">
+                          <li>Authenticator me agar <b>pehle se koi "BelieVoo GHC" entry</b> hai — use delete karo, phir naya scan karo.</li>
+                          <li>Enter the code <b>while it is fresh</b> — codes change every 30 seconds.</li>
+                          <li>Phone ka date/time <b>Automatic</b> pe rakho — wrong clock = wrong codes.</li>
+                        </ul>
                       </div>
                       <div>
                         <label className="block text-xs text-slate-500 mb-1.5">Enter code from app to confirm</label>

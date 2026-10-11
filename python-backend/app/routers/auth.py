@@ -7,6 +7,7 @@ import pyotp
 import requests
 import segno
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -134,6 +135,13 @@ def register(payload: UserCreate, response: Response, db: Session = Depends(get_
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    referred_by = None
+    ref_code = (getattr(payload, "ref", None) or "").strip().upper()
+    if ref_code:
+        referrer = db.query(User).filter(func.upper(func.substr(User.id, 1, 12)) == ref_code).first()
+        if referrer and referrer.email.lower() != payload.email.lower():
+            referred_by = referrer.id
+
     user = User(
         email=payload.email,
         password_hash=get_password_hash(payload.password),
@@ -141,6 +149,7 @@ def register(payload: UserCreate, response: Response, db: Session = Depends(get_
         phone=payload.phone,
         role=UserRole.CLIENT,
         email_verified=not _verification_required(db),
+        referred_by=referred_by,
     )
     db.add(user)
     db.commit()
@@ -325,9 +334,14 @@ def change_password(
 def twofa_setup(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if user.totp_enabled:
         raise HTTPException(status_code=400, detail="2FA is already enabled")
-    secret = pyotp.random_base32()
-    user.totp_secret = secret
-    db.commit()
+    # Idempotent: a pending setup reuses the same secret so re-opening the setup
+    # screen never invalidates the QR the user already scanned.
+    if user.totp_secret:
+        secret = user.totp_secret
+    else:
+        secret = pyotp.random_base32()
+        user.totp_secret = secret
+        db.commit()
     uri = pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name="BelieVoo GHC")
     buf = io.BytesIO()
     segno.make(uri, error="m").save(buf, kind="png", scale=5, border=2)
@@ -339,8 +353,8 @@ def twofa_setup(db: Session = Depends(get_db), user: User = Depends(get_current_
 def twofa_confirm(payload: TwoFactorCode, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if not user.totp_secret:
         raise HTTPException(status_code=400, detail="Run 2FA setup first")
-    if not pyotp.TOTP(user.totp_secret).verify(payload.code, valid_window=1):
-        raise HTTPException(status_code=400, detail="Invalid code")
+    if not pyotp.TOTP(user.totp_secret).verify(payload.code.strip(), valid_window=2):
+        raise HTTPException(status_code=400, detail="Invalid code — make sure you are using the newest 'BelieVoo GHC' entry in your authenticator app")
     user.totp_enabled = True
     db.commit()
     return {"success": True, "message": "2FA enabled"}
@@ -350,7 +364,7 @@ def twofa_confirm(payload: TwoFactorCode, db: Session = Depends(get_db), user: U
 def twofa_disable(payload: TwoFactorCode, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     if not user.totp_enabled or not user.totp_secret:
         raise HTTPException(status_code=400, detail="2FA is not enabled")
-    if not pyotp.TOTP(user.totp_secret).verify(payload.code, valid_window=1):
+    if not pyotp.TOTP(user.totp_secret).verify(payload.code.strip(), valid_window=2):
         raise HTTPException(status_code=400, detail="Invalid code")
     user.totp_enabled = False
     user.totp_secret = None
