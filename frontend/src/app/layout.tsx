@@ -8,6 +8,7 @@ import GhcHead from "@/components/GhcHead";
 import BrandStyle from "@/components/BrandStyle";
 import AiAssistant from "@/components/AiAssistant";
 import SupportWidget from "@/components/SupportWidget";
+import LiveChatWidget from "@/components/LiveChatWidget";
 import CookieConsent from "@/components/CookieConsent";
 import { LanguageProvider } from "@/components/LanguageProvider";
 
@@ -94,6 +95,7 @@ export default function RootLayout({
         </LanguageProvider>
         <AiAssistant />
         <SupportWidget />
+        <LiveChatWidget />
         <CookieConsent />
         <script
           type="application/ld+json"

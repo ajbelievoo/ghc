@@ -43,13 +43,24 @@ def _hash_password(plain: str) -> tuple[str, str]:
     return hashed, encoded
 
 
-def domain_mail_info(domain: str) -> Dict[str, Any]:
-    """Domain row + mailbox count — creates the domain row when missing."""
+def domain_mail_info(domain: str, create: bool = False) -> Dict[str, Any]:
+    """Domain row + mailbox count. ``create=True`` provisions the domain row —
+    only do that on explicit mailbox creation: a mere read must not make
+    Postfix treat an externally-hosted domain as local."""
     domain = domain.lower()
     conn = _connect()
     try:
         row = conn.execute("SELECT * FROM domain WHERE domain = ?", (domain,)).fetchone()
         if not row:
+            if not create:
+                return {
+                    "domain": domain,
+                    "maxMailboxes": MAX_MAILBOXES_PER_DOMAIN,
+                    "defaultQuota": DEFAULT_QUOTA,
+                    "mailboxCount": 0,
+                    "active": False,
+                    "mailEnabled": False,
+                }
             conn.execute(
                 "INSERT INTO domain (domain, mailboxes, mailbox_quota, quota, rate_limit, created, active) VALUES (?, ?, ?, ?, ?, ?, 1)",
                 (domain, MAX_MAILBOXES_PER_DOMAIN, DEFAULT_QUOTA, 10 * 1024 * 1024 * 1024, 12, datetime.utcnow().isoformat(sep=" ", timespec="seconds")),
@@ -97,7 +108,7 @@ def create_mailbox(domain: str, local_part: str, password: str, full_name: str =
         raise ValueError("Invalid mailbox name — letters, digits, dot, dash, underscore only")
     if len(password) < 8:
         raise ValueError("Password must be at least 8 characters")
-    info = domain_mail_info(domain)
+    info = domain_mail_info(domain, create=True)
     if info["mailboxCount"] >= info["maxMailboxes"]:
         raise ValueError(f"Mailbox limit reached ({info['maxMailboxes']})")
     username = f"{local_part}@{domain}"

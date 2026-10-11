@@ -490,6 +490,44 @@ export const api = {
     updatePermissions: (body: { memberId: string; permissions: string[] }) =>
       request("/team/permissions", { method: "POST", body: JSON.stringify(body) }),
   },
+  cart: {
+    list: () => request("/cart"),
+    add: (body: { planCode: string; durationLabel?: string; displayName?: string; category?: string; unitPrice?: number; configuration?: object }) =>
+      request("/cart", { method: "POST", body: JSON.stringify({ ...body, currency: selectedCurrency() }) }),
+    remove: (id: string) => request(`/cart/${id}`, { method: "DELETE" }),
+    clear: () => request("/cart", { method: "DELETE" }),
+    checkout: (body: { gateway: string; couponCode?: string }) =>
+      request("/cart/checkout", { method: "POST", body: JSON.stringify({ ...body, currency: selectedCurrency() }) }),
+  },
+  chat: {
+    session: () => request("/server/chat/session"),
+    messages: () => request("/server/chat/messages"),
+    send: (body: string) => request("/server/chat/messages", { method: "POST", body: JSON.stringify({ body }) }),
+  },
+  marketplace: {
+    list: () => request("/marketplace"),
+  },
+  mail: {
+    list: (domain: string) => request(`/server/domains/${encodeURIComponent(domain)}/mailboxes`),
+    create: (domain: string, body: { localPart: string; password: string; fullName?: string }) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/mailboxes`, { method: "POST", body: JSON.stringify(body) }),
+    update: (domain: string, username: string, body: { password?: string; active?: boolean }) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/mailboxes/${encodeURIComponent(username)}`, { method: "PUT", body: JSON.stringify(body) }),
+    remove: (domain: string, username: string) =>
+      request(`/server/domains/${encodeURIComponent(domain)}/mailboxes/${encodeURIComponent(username)}`, { method: "DELETE" }),
+  },
+  adminExtra: {
+    chatSessions: () => request("/admin/chat/sessions"),
+    chatMessages: (id: string) => request(`/admin/chat/sessions/${id}/messages`),
+    chatReply: (id: string, body: string) =>
+      request(`/admin/chat/sessions/${id}/messages`, { method: "POST", body: JSON.stringify({ body }) }),
+    chatSetStatus: (id: string, status: string) =>
+      request(`/admin/chat/sessions/${id}/status`, { method: "POST", body: JSON.stringify({ status }) }),
+    marketplaceList: () => request("/admin/marketplace"),
+    marketplaceCreate: (body: any) => request("/admin/marketplace", { method: "POST", body: JSON.stringify(body) }),
+    marketplaceUpdate: (id: string, body: any) => request(`/admin/marketplace/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    marketplaceDelete: (id: string) => request(`/admin/marketplace/${id}`, { method: "DELETE" }),
+  },
   support: {
     createTicket: (body: FormData) =>
       request("/support/ticket", { method: "POST", body, formData: true }),
