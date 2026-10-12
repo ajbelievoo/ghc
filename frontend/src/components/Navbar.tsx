@@ -21,6 +21,7 @@ interface MegaEntry {
   cols?: number;
   columns: MegaCol[];
   footerLinks?: MegaLink[];
+  highlight?: boolean;
 }
 
 const colGroups = (col: MegaCol): MegaGroup[] =>
@@ -156,6 +157,62 @@ const megaMenu: MegaEntry[] = [
       ]},
       { groups: [
         { title: "Your data, without data loss", items: [
+          { label: "ClickHouse", href: "/solutions/clickhouse" },
+          { label: "PostgreSQL", href: "/solutions/postgresql" },
+          { label: "Cassandra", href: "/solutions/cassandra" },
+          { label: "HBase", href: "/solutions/hbase" },
+          { label: "InfluxDB", href: "/solutions/influxdb" },
+        ]},
+        { title: "The power for your critical workloads", items: [
+          { label: "GROMACS", href: "/solutions/gromacs" },
+          { label: "NAMD", href: "/solutions/namd" },
+        ]},
+        { title: "Blockchain infrastructure", items: [
+          { label: "Validator Nodes", href: "/solutions/validator-nodes" },
+          { label: "RPC Nodes", href: "/solutions/rpc-nodes" },
+          { label: "Archive Nodes", href: "/solutions/archive-nodes" },
+        ]},
+      ]},
+    ],
+    footerLinks: [
+      { label: "Prices", href: "/dedicated-servers" },
+      { label: "Guides & Documentation", href: "/kb" },
+      { label: "Roadmap & Changelog", href: "/status" },
+    ],
+  },
+  {
+    label: "Metal",
+    href: "/dedicated-servers",
+    cols: 4,
+    highlight: true,
+    columns: [
+      { title: "Metal Servers", items: [
+        { label: "Dedicated servers", href: "/dedicated-servers", desc: "All performance levels. Available in minutes." },
+        { label: "VPS", href: "/vps", desc: "The right balance of performance, flexibility and cost control" },
+        { label: "Distributions & Licences", href: "/apps", desc: "Choose an image to deploy on your server" },
+      ]},
+      { title: "Bare Metal Foundations", items: [
+        { label: "Network", href: "/network", desc: "Secure and high-performance connectivity" },
+        { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Backups and business continuity" },
+        { label: "Security & Identities", href: "/security", desc: "Granular control over your environments" },
+        { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
+      ]},
+      { groups: [
+        { title: "Speed up your websites and applications", items: [
+          { label: "WordPress", href: "/vps/wordpress" },
+          { label: "Drupal", href: "/solutions/drupal" },
+          { label: "PrestaShop", href: "/solutions/prestashop" },
+          { label: "Magento", href: "/solutions/magento" },
+        ]},
+        { title: "The ideal foundation for your VMs", items: [
+          { label: "Proxmox", href: "/solutions/proxmox" },
+          { label: "KVM", href: "/solutions/kvm" },
+          { label: "VMware ESXi", href: "/solutions/vmware-esxi" },
+          { label: "Microsoft Hyper-V", href: "/solutions/hyper-v" },
+        ]},
+      ]},
+      { groups: [
+        { title: "Your data, without delay", items: [
           { label: "ClickHouse", href: "/solutions/clickhouse" },
           { label: "PostgreSQL", href: "/solutions/postgresql" },
           { label: "Cassandra", href: "/solutions/cassandra" },
@@ -527,8 +584,10 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
               onMouseEnter={() => setOpenMega(idx)}
               onMouseLeave={() => setOpenMega(null)}
             >
-              <button className={`flex items-center gap-1 px-3 py-5 text-sm font-medium lg:px-4 ${menuText}`}>
-                {item.label} <ChevronDown className="h-3.5 w-3.5" />
+              <button className={`flex items-center gap-1 px-3 py-5 text-sm font-medium lg:px-4 ${item.highlight ? "font-bold text-[#ff3d00] hover:text-[#e63700]" : menuText}`}>
+                {item.label}
+                {item.highlight && <span className="rounded-full bg-[#ff3d00] px-1.5 py-px text-[9px] font-black uppercase tracking-wide text-white">New</span>}
+                <ChevronDown className="h-3.5 w-3.5" />
               </button>
               {openMega === idx && (
                 <div className={`absolute left-1/2 top-full -translate-x-1/2 ${widthCls} max-w-[calc(100vw-1rem)] rounded-b-lg ${megaBg}`}>
@@ -654,7 +713,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
           <div className="flex flex-col gap-1 text-sm font-medium">
             {megaMenu.map((item) => (
               <details key={item.label} className="group">
-                <summary className={`flex cursor-pointer items-center justify-between py-2.5 font-bold ${mobileText} list-none`}>
+                <summary className={`flex cursor-pointer items-center justify-between py-2.5 font-bold ${item.highlight ? "text-[#ff3d00]" : mobileText} list-none`}>
                   {item.label}
                   <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
                 </summary>
