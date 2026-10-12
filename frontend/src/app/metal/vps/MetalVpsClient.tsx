@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -59,6 +59,44 @@ const USE_CASES = [
   { title: "Hosting trading applications", desc: "Run your Forex trading strategies on a high-performing and stable VPS built to handle market demands." },
 ];
 
+const METAL_FAMILIES: Record<string, { crumb: string; rangeTitle: string; title: string; subtitle: string; bullets: string[] }> = {
+  "": {
+    crumb: "VPS",
+    rangeTitle: "Metal VPS 2027",
+    title: "Metal VPS — Virtual Private Servers",
+    subtitle: "A simple, powerful cloud platform tailored to your needs",
+    bullets: ["Maximised value for money, whatever the use", "Enhanced security with anti-DDoS and daily backup included", "Unlimited bandwidth, up to 1.5 Gbps*"],
+  },
+  "n8n": {
+    crumb: "n8n VPS",
+    rangeTitle: "Metal n8n VPS",
+    title: "n8n VPS: workflow automation, self-hosted",
+    subtitle: "Automate everything. Maintain control.",
+    bullets: ["n8n pre-installed and ready to use", "Automate workflows without coding", "Connect 400+ integrations"],
+  },
+  "plesk": {
+    crumb: "Plesk VPS",
+    rangeTitle: "Metal Plesk VPS",
+    title: "Metal Plesk VPS Offer",
+    subtitle: "Web hosting made simple with a unified interface",
+    bullets: ["Plesk Obsidian control panel pre-installed", "Manage multiple websites from one interface", "Automated backups and security tools"],
+  },
+  "cpanel": {
+    crumb: "cPanel VPS",
+    rangeTitle: "Metal cPanel VPS",
+    title: "Metal cPanel VPS",
+    subtitle: "Centralised web hosting. Unified management.",
+    bullets: ["cPanel & WHM pre-installed", "Manage multiple websites easily", "Automatic SSL and backups"],
+  },
+  "wordpress": {
+    crumb: "WordPress VPS",
+    rangeTitle: "Metal WordPress VPS",
+    title: "Metal VPS for WordPress",
+    subtitle: "Customisable and scalable server. Unlimited traffic.",
+    bullets: ["WordPress pre-installed", "Scalable resources as you grow", "Up to 1.5 Gbps unlimited bandwidth and traffic"],
+  },
+};
+
 const FAQS = [
   { q: "Can I easily upgrade my Metal VPS to a higher or downgrade to a lower configuration?", a: "Yes. You can scale your Metal VPS up or down at any time from your control panel — upgrades apply instantly and billing is adjusted pro-rata." },
   { q: "Is automatic backup included with my Metal VPS?", a: "Yes — daily automatic backup is included free with every Metal VPS. Premium backup rotations and snapshots are available as paid options." },
@@ -71,6 +109,9 @@ const FAQS = [
 
 export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }) {
   const router = useRouter();
+  const params = useSearchParams();
+  const sub = (params.get("s") || "").toLowerCase();
+  const fam = METAL_FAMILIES[sub] || METAL_FAMILIES[""];
   const { currency } = useCurrency();
   const [plans, setPlans] = useState<any[]>(initialPlans || []);
   const [svcTab, setSvcTab] = useState<keyof typeof SERVICE_TABS>("HARDWARE");
@@ -89,7 +130,11 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
       const d = (p.durations || []).find((x: any) => x.durationLabel === "1_month") || p.durations?.[0];
       return d?.monthlyPrice ?? d?.finalPrice ?? Infinity;
     };
-    return [...(plans || [])].filter((p) => price(p) !== Infinity).sort((a, b) => price(a) - price(b));
+    // Only the current-gen VPS 2027 range is sold under Metal — older families
+    // (starter/value/essential/comfort/elite/le) stay hidden per product decision.
+    return [...(plans || [])]
+      .filter((p) => price(p) !== Infinity && String(p.planCode).startsWith("vps-2027"))
+      .sort((a, b) => price(a) - price(b));
   }, [plans]);
 
   const regions = useMemo(() => {
@@ -110,7 +155,7 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
       <section className="bg-gradient-to-br from-[#0b1a45] via-[#0f2566] to-[#12308f] text-white">
         <div className="mx-auto max-w-7xl px-6 pt-4 pb-14">
           <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-white/70">
-            <span>Metal</span><span className="text-white/40">›</span><span className="text-white">VPS</span>
+            <span>Metal</span><span className="text-white/40">›</span><span className="text-white">{fam.crumb}</span>
             <span className="ml-auto hidden gap-6 text-[11px] normal-case tracking-normal md:flex">
               <a href="#plans" className="hover:text-[#00b7ff]">Our prices</a>
               <a href="#services" className="hover:text-[#00b7ff]">Services and options</a>
@@ -120,12 +165,10 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
           </div>
           <div className="mt-8 grid items-center gap-10 md:grid-cols-[1.2fr_1fr]">
             <div>
-              <h1 className="text-4xl font-black leading-tight md:text-5xl">Metal VPS — Virtual Private Servers</h1>
-              <p className="mt-3 text-lg text-white/80">A simple, powerful cloud platform tailored to your needs</p>
+              <h1 className="text-4xl font-black leading-tight md:text-5xl">{fam.title}</h1>
+              <p className="mt-3 text-lg text-white/80">{fam.subtitle}</p>
               <ul className="mt-6 space-y-2.5 text-sm">
-                {["Maximised value for money, whatever the use",
-                  "Enhanced security with anti-DDoS and daily backup included",
-                  "Unlimited bandwidth, up to 1.5 Gbps*"].map((b) => (
+                {fam.bullets.map((b) => (
                   <li key={b} className="flex items-center gap-2.5">
                     <Check className="h-4 w-4 shrink-0 text-[#00ff88]" /> {b}
                   </li>
@@ -143,7 +186,7 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
 
       {/* ─── Plan cards ─── */}
       <section id="plans" className="mx-auto max-w-7xl px-6 py-14">
-        <h2 className="text-center text-2xl font-black">Metal VPS Range</h2>
+        <h2 className="text-center text-2xl font-black">{fam.rangeTitle}</h2>
         <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-slate-500">
           Choose the configuration that fits your needs — web hosting, gaming, VPNs, development and more.
         </p>

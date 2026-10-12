@@ -186,23 +186,45 @@ const megaMenu: MegaEntry[] = [
     cols: 4,
     highlight: true,
     columns: [
-      { title: "Metal Servers", items: [
-        { label: "Dedicated servers", href: "/dedicated-servers", desc: "All performance levels. Available in minutes." },
-        { label: "VPS", href: "/metal/vps", desc: "The right balance of performance, flexibility and cost control" },
-        { label: "Distributions & Licences", href: "/apps", desc: "Choose an image to deploy on your server" },
-      ]},
-      { title: "Bare Metal Foundations", items: [
-        { label: "Network", href: "/network", desc: "Secure and high-performance connectivity" },
-        { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Backups and business continuity" },
-        { label: "Security & Identities", href: "/security", desc: "Granular control over your environments" },
-        { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
+      { title: "Metal VPS — scalability at the best price", items: [
+        { label: "VPS 2027", href: "/metal/vps", desc: "Virtually isolated CPU, RAM and storage. Reliable performance at lower prices" },
+        { label: "n8n VPS", href: "/metal/vps?s=n8n", desc: "Automate everything. Maintain control." },
+        { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple with a unified interface" },
+        { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },
+        { label: "WordPress VPS", href: "/metal/vps?s=wordpress", desc: "Customisable and scalable server. Unlimited traffic." },
+        { label: "Apps, OS and Panels", href: "/apps", desc: "Available OS and software" },
       ]},
       { groups: [
+        { title: "Who is it for?", items: [
+          { label: "Agency / Multisites", href: "/metal/vps#usecases" },
+          { label: "Developers", href: "/metal/vps#usecases" },
+          { label: "Resellers", href: "/metal/vps#usecases" },
+          { label: "All uses", href: "/metal/vps#usecases" },
+        ]},
+        { title: "Metal Servers", items: [
+          { label: "Dedicated servers", href: "/dedicated-servers", desc: "All performance levels. Available in minutes." },
+          { label: "Distributions & Licences", href: "/apps", desc: "Available OS and software" },
+        ]},
+      ]},
+      { groups: [
+        { title: "Bare Metal Foundations", items: [
+          { label: "Network", href: "/network", desc: "Secure and high-performance connectivity" },
+          { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Backups and business continuity" },
+          { label: "Security & Identities", href: "/security", desc: "Granular control over your environments" },
+          { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
+        ]},
         { title: "Speed up your websites and applications", items: [
-          { label: "WordPress", href: "/vps/wordpress" },
+          { label: "WordPress", href: "/metal/vps?s=wordpress" },
           { label: "Drupal", href: "/solutions/drupal" },
           { label: "PrestaShop", href: "/solutions/prestashop" },
           { label: "Magento", href: "/solutions/magento" },
+        ]},
+      ]},
+      { groups: [
+        { title: "Partners", items: [
+          { label: "Become a GHC Partner", href: "/register" },
+          { label: "Compliance & Certifications", href: "/security" },
+          { label: "GHC Community", href: "/kb" },
         ]},
         { title: "The ideal foundation for your VMs", items: [
           { label: "Proxmox", href: "/solutions/proxmox" },
@@ -211,28 +233,10 @@ const megaMenu: MegaEntry[] = [
           { label: "Microsoft Hyper-V", href: "/solutions/hyper-v" },
         ]},
       ]},
-      { groups: [
-        { title: "Your data, without delay", items: [
-          { label: "ClickHouse", href: "/solutions/clickhouse" },
-          { label: "PostgreSQL", href: "/solutions/postgresql" },
-          { label: "Cassandra", href: "/solutions/cassandra" },
-          { label: "HBase", href: "/solutions/hbase" },
-          { label: "InfluxDB", href: "/solutions/influxdb" },
-        ]},
-        { title: "The power for your critical workloads", items: [
-          { label: "GROMACS", href: "/solutions/gromacs" },
-          { label: "NAMD", href: "/solutions/namd" },
-        ]},
-        { title: "Blockchain infrastructure", items: [
-          { label: "Validator Nodes", href: "/solutions/validator-nodes" },
-          { label: "RPC Nodes", href: "/solutions/rpc-nodes" },
-          { label: "Archive Nodes", href: "/solutions/archive-nodes" },
-        ]},
-      ]},
     ],
     footerLinks: [
       { label: "Prices", href: "/metal/vps" },
-      { label: "Guides & Documentation", href: "/kb" },
+      { label: "Documentation", href: "/kb" },
       { label: "Roadmap & Changelog", href: "/status" },
     ],
   },
