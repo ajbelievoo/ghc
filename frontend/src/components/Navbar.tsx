@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Server, Menu, X, ChevronDown, LogOut, User, Bell, Mail, CreditCard, FileText, Shield, Globe, Users, Settings, Package, Search, ShoppingCart } from "lucide-react";
+import { Server, Menu, X, ChevronDown, ChevronRight, LogOut, User, Bell, Mail, CreditCard, FileText, Shield, Globe, Users, Settings, Package, Search, ShoppingCart } from "lucide-react";
 import { api } from "@/lib/api";
 import { useGhcSettings } from "@/lib/ghcSettings";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -15,13 +15,21 @@ import { Language } from "@/lib/i18n";
 interface MegaLink { label: string; href: string; desc?: string }
 interface MegaGroup { title: string; items: MegaLink[] }
 interface MegaCol { title?: string; items?: MegaLink[]; groups?: MegaGroup[] }
+interface MegaSubMenu {
+  label: string;
+  href: string;
+  tagline?: string;
+  columns: MegaCol[];
+  footerLinks?: MegaLink[];
+}
 interface MegaEntry {
   label: string;
   href: string;
   cols?: number;
-  columns: MegaCol[];
+  columns?: MegaCol[];
   footerLinks?: MegaLink[];
   highlight?: boolean;
+  subMenus?: MegaSubMenu[];
 }
 
 const colGroups = (col: MegaCol): MegaGroup[] =>
@@ -183,53 +191,69 @@ const megaMenu: MegaEntry[] = [
   {
     label: "Metal",
     href: "/metal/vps",
-    cols: 2,
     highlight: true,
-    columns: [
-      { groups: [
-        { title: "Dedicated Servers — maximum performance, no compromise", items: [] },
-        { title: "Our server ranges", items: [
-          { label: "Kimsufi (T1/T2)", href: "/dedicated-servers/eco", desc: "The best value, without compromise" },
-          { label: "Advance (T3)", href: "/dedicated-servers/advance", desc: "Versatility for SMEs" },
-          { label: "Game (T3)", href: "/dedicated-servers/game", desc: "Performance and security for your games" },
-          { label: "Scale (T4)", href: "/dedicated-servers/scale", desc: "Power for heavy workloads" },
-          { label: "High Grade (T5)", href: "/dedicated-servers/high-grade", desc: "The most powerful for critical loads" },
-        ]},
-        { title: "Deployment mode", items: [
-          { label: "Wholesale", href: "/dedicated-servers", desc: "Complete server racks" },
-          { label: "Reseller", href: "/dedicated-servers", desc: "Our infrastructure, your added value" },
-        ]},
-        { title: "Uses", items: [
-          { label: "AZ and resilience", href: "/dedicated-servers", desc: "Business continuity with high availability" },
-          { label: "Grid computing", href: "/dedicated-servers/scale", desc: "Compute-intensive models for critical issues" },
-          { label: "Virtualisation and containerisation", href: "/solutions/proxmox", desc: "Cloud-native flexibility on physical servers" },
-          { label: "Website and business application", href: "/metal/vps", desc: "Scalability and security for your web applications" },
-          { label: "All uses", href: "/dedicated-servers" },
-        ]},
-      ]},
-      { groups: [
-        { title: "VPS — scalability at the best price", items: [] },
-        { title: "Metal VPS", items: [
-          { label: "VPS 2027", href: "/metal/vps", desc: "Virtually isolated CPU, RAM, and storage Reliable performance at lower prices" },
-          { label: "n8n VPS", href: "/metal/vps?s=n8n", desc: "Automate everything. Maintain control." },
-          { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple A unified interface" },
-          { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },
-          { label: "WordPress VPS", href: "/metal/vps?s=wordpress", desc: "Customisable and scalable server. Unlimited traffic." },
-          { label: "Apps, OS, and Panels", href: "/apps", desc: "Available OS and software" },
-        ]},
-        { title: "Who is it for?", items: [
-          { label: "Agency / Multisites", href: "/metal/vps#usecases" },
-          { label: "Developers", href: "/metal/vps#usecases" },
-          { label: "Resellers", href: "/metal/vps#usecases" },
-          { label: "All uses", href: "/metal/vps#usecases" },
-        ]},
-      ]},
-    ],
-    footerLinks: [
-      { label: "Prices", href: "/metal/vps" },
-      { label: "OS & licences", href: "/apps" },
-      { label: "Documentation", href: "/kb" },
-      { label: "Roadmap & Changelog", href: "/status" },
+    subMenus: [
+      {
+        label: "Dedicated servers",
+        href: "/dedicated-servers",
+        tagline: "Maximum performance, no compromise",
+        columns: [
+          { title: "Our server ranges", items: [
+            { label: "Kimsufi (T1/T2)", href: "/dedicated-servers/eco", desc: "The best value, without compromise" },
+            { label: "Advance (T3)", href: "/dedicated-servers/advance", desc: "Versatility for SMEs" },
+            { label: "Game (T3)", href: "/dedicated-servers/game", desc: "Performance and security for your games" },
+            { label: "Scale (T4)", href: "/dedicated-servers/scale", desc: "Power for heavy workloads" },
+            { label: "High Grade (T5)", href: "/dedicated-servers/high-grade", desc: "The most powerful for critical loads" },
+          ]},
+          { title: "Deployment mode", items: [
+            { label: "Wholesale", href: "/dedicated-servers", desc: "Complete server racks" },
+            { label: "Reseller", href: "/dedicated-servers", desc: "Our infrastructure, your added value" },
+          ]},
+          { title: "Uses", items: [
+            { label: "AZ and resilience", href: "/dedicated-servers", desc: "Business continuity with high availability" },
+            { label: "Grid computing", href: "/dedicated-servers/scale", desc: "Compute-intensive models for critical issues" },
+            { label: "Virtualisation and containerisation", href: "/solutions/proxmox", desc: "Cloud-native flexibility on physical servers" },
+            { label: "Website and business application", href: "/metal/vps", desc: "Scalability and security for your web applications" },
+            { label: "All uses", href: "/dedicated-servers" },
+          ]},
+        ],
+        footerLinks: [
+          { label: "Prices", href: "/dedicated-servers" },
+          { label: "OS & licences", href: "/apps" },
+          { label: "Documentation", href: "/kb" },
+          { label: "Roadmap & Changelog", href: "/status" },
+        ],
+      },
+      {
+        label: "VPS",
+        href: "/metal/vps",
+        tagline: "Scalability at the best price",
+        columns: [
+          { title: "Metal VPS", items: [
+            { label: "VPS 2027", href: "/metal/vps", desc: "Virtually isolated CPU, RAM, and storage Reliable performance at lower prices" },
+            { label: "n8n VPS", href: "/metal/vps?s=n8n", desc: "Automate everything. Maintain control." },
+            { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple A unified interface" },
+            { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },
+            { label: "WordPress VPS", href: "/metal/vps?s=wordpress", desc: "Customisable and scalable server. Unlimited traffic." },
+            { label: "Apps, OS, and Panels", href: "/apps", desc: "Available OS and software" },
+          ]},
+          { title: "Who is it for?", items: [
+            { label: "Agency / Multisites", href: "/metal/vps#usecases" },
+            { label: "Developers", href: "/metal/vps#usecases" },
+            { label: "Resellers", href: "/metal/vps#usecases" },
+            { label: "All uses", href: "/metal/vps#usecases" },
+          ]},
+          { title: "Partners", items: [
+            { label: "Become a GHC Partner", href: "/register" },
+            { label: "Compliance & Certifications", href: "/security" },
+            { label: "GHC Community", href: "/kb" },
+          ]},
+        ],
+        footerLinks: [
+          { label: "Documentation", href: "/kb" },
+          { label: "Roadmap & Changelog", href: "/status" },
+        ],
+      },
     ],
   },
   {
@@ -452,6 +476,7 @@ function NotifButton({ dark }: { dark: boolean }) {
 export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMega, setOpenMega] = useState<number | null>(null);
+  const [subIdx, setSubIdx] = useState(0);
   const ghc = useGhcSettings();
   const [user, setUser] = useState<UserData | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -480,6 +505,28 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
   const mobileBg = dark ? "border-t border-white/10 bg-[#0a0a0a]" : "border-t border-slate-200 bg-white";
   const mobileText = dark ? "text-white" : "text-[#0f172a]";
   const mobileSubText = dark ? "text-slate-500" : "text-slate-600";
+
+  const renderMegaColumns = (columns: MegaCol[], gridCls: string) => (
+    <div className={`grid ${gridCls} gap-6 p-6`}>
+      {columns.map((col, ci) => (
+        <div key={col.title || `col-${ci}`} className="space-y-6">
+          {colGroups(col).map((grp) => (
+            <div key={grp.title}>
+              <p className={`mb-3 text-xs font-bold uppercase tracking-wide ${megaColTitle}`}>{grp.title}</p>
+              <div className="space-y-3">
+                {grp.items.map((sub) => (
+                  <Link key={sub.label} href={sub.href} className="group block">
+                    <p className={`text-sm font-semibold ${megaItemTitle}`}>{sub.label}</p>
+                    {sub.desc && <p className={`text-xs ${megaItemDesc}`}>{sub.desc}</p>}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 
   useEffect(() => {
     try {
@@ -577,7 +624,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
             <div
               key={item.label}
               className="static"
-              onMouseEnter={() => setOpenMega(idx)}
+              onMouseEnter={() => { setOpenMega(idx); setSubIdx(0); }}
               onMouseLeave={() => setOpenMega(null)}
             >
               <button className={`flex items-center gap-1 px-3 py-5 text-sm font-medium lg:px-4 ${item.highlight ? "font-bold text-[#ff3d00] hover:text-[#e63700]" : menuText}`}>
@@ -585,28 +632,41 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                 {item.highlight && <span className="rounded-full bg-[#ff3d00] px-1.5 py-px text-[9px] font-black uppercase tracking-wide text-white">New</span>}
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
-              {openMega === idx && (
-                <div className={`absolute left-1/2 top-full -translate-x-1/2 ${widthCls} max-w-[calc(100vw-1rem)] rounded-b-lg ${megaBg}`}>
-                  <div className={`grid ${gridCls} gap-6 p-6`}>
-                    {item.columns.map((col, ci) => (
-                      <div key={col.title || `col-${ci}`} className="space-y-6">
-                        {colGroups(col).map((grp) => (
-                          <div key={grp.title}>
-                            <p className={`mb-3 text-xs font-bold uppercase tracking-wide ${megaColTitle}`}>{grp.title}</p>
-                            <div className="space-y-3">
-                              {grp.items.map((sub) => (
-                                <Link key={sub.label} href={sub.href} className="group block">
-                                  <p className={`text-sm font-semibold ${megaItemTitle}`}>{sub.label}</p>
-                                  {sub.desc && <p className={`text-xs ${megaItemDesc}`}>{sub.desc}</p>}
-                                </Link>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+              {openMega === idx && item.subMenus ? (
+                <div className={`absolute left-1/2 top-full -translate-x-1/2 w-[1120px] max-w-[calc(100vw-1rem)] rounded-b-lg ${megaBg} flex`}>
+                  <div className={`w-52 shrink-0 py-3 ${dark ? "border-r border-white/10 bg-white/5" : "border-r border-slate-200 bg-[#f8faff]"} rounded-bl-lg`}>
+                    {item.subMenus.map((s, si) => (
+                      <Link
+                        key={s.label}
+                        href={s.href}
+                        onMouseEnter={() => setSubIdx(si)}
+                        className={`flex items-center justify-between px-5 py-3.5 text-sm font-bold ${subIdx === si ? "text-[#00b7ff]" : dark ? "text-slate-700 hover:text-[#00b7ff]" : "text-[#0f172a] hover:text-[#00b7ff]"}`}
+                      >
+                        {s.label}
+                        <ChevronRight className={`h-4 w-4 ${subIdx === si ? "text-[#00b7ff]" : "text-slate-400"}`} />
+                      </Link>
                     ))}
                   </div>
-                  <div className={`${megaFooterBg} flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3`}>
+                  {(() => {
+                    const sub = (item.subMenus || [])[subIdx] || (item.subMenus || [])[0];
+                    return (
+                      <div className="min-w-0 flex-1">
+                        {sub.tagline && <p className={`px-6 pt-5 text-sm font-black ${dark ? "text-white" : "text-[#0f172a]"}`}>{sub.tagline}</p>}
+                        {renderMegaColumns(sub.columns, "grid-cols-3")}
+                        <div className={`${megaFooterBg} flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3 rounded-br-lg`}>
+                          <Link href={sub.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>View all {sub.label} solutions</Link>
+                          {(sub.footerLinks || []).map((l) => (
+                            <Link key={l.label} href={l.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>{l.label}</Link>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : openMega === idx && (
+                <div className={`absolute left-1/2 top-full -translate-x-1/2 ${widthCls} max-w-[calc(100vw-1rem)] rounded-b-lg ${megaBg}`}>
+                  {renderMegaColumns(item.columns || [], gridCls)}
+                  <div className={`${megaFooterBg} flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3 rounded-b-lg`}>
                     <Link href={item.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>View all {item.label} solutions</Link>
                     {(item.footerLinks || []).map((l) => (
                       <Link key={l.label} href={l.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>{l.label}</Link>
@@ -715,7 +775,14 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                 </summary>
                 <div className="space-y-1 pb-2">
                   <Link href={item.href} className={`block pl-3 py-1 text-sm font-semibold ${dark ? "text-[#00b7ff]" : "text-[#ff3d00]"}`}>View all {item.label}</Link>
-                  {item.columns.flatMap((c) => colGroups(c).flatMap((g) => g.items)).map((sub) => (
+                  {item.subMenus ? item.subMenus.map((s) => (
+                    <div key={s.label}>
+                      <Link href={s.href} className={`block pl-3 pt-2 pb-1 text-xs font-bold uppercase tracking-wide ${dark ? "text-gray-400" : "text-slate-400"}`}>{s.label}</Link>
+                      {s.columns.flatMap((c) => colGroups(c).flatMap((g) => g.items)).map((sub) => (
+                        <Link key={sub.label} href={sub.href} className={`block pl-5 py-1 text-sm ${mobileSubText}`}>{sub.label}</Link>
+                      ))}
+                    </div>
+                  )) : (item.columns || []).flatMap((c) => colGroups(c).flatMap((g) => g.items)).map((sub) => (
                     <Link key={sub.label} href={sub.href} className={`block pl-3 py-1 text-sm ${mobileSubText}`}>{sub.label}</Link>
                   ))}
                 </div>
