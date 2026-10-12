@@ -14,7 +14,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Metal channel (added 2026-10-12)
 
 - The "Metal" top menu (`megaMenu` in `src/components/Navbar.tsx`, `highlight: true`) sells the SAME upstream VPS catalog under a separate margin + custom display names — so standard VPS margins stay untouched and existing VPS customers keep their original billing.
-- `/metal/vps` (`src/app/metal/vps/`) — OVH-style VPS page; plans come from `GET /api/metal/vps/plans` (never `/api/server/plans` for this channel).
+- `/metal/vps` (`src/app/metal/vps/`) — OVH-style VPS page; plans come from `GET /api/metal/vps/plans` (never `/api/server/plans` for this channel). Only the `vps-2027` range is listed (older families hidden by product decision). `?s=n8n|plesk|cpanel|wordpress` swaps the hero/breadcrumb copy via `METAL_FAMILIES` in `MetalVpsClient.tsx` — same plan set, different app positioning.
 - Configure flow carries `brand=metal` in the URL → `configuration._brand = "metal"` → backend `create_customer_order` prices it with the Metal margin and stores the custom name as `display_name`.
 - Metal margin % + plan names: admin panel `/admin` → Margins tab → orange "METAL" block (`GET/POST /api/admin/metal-vps`, stored in `admin_configs` keys `metal_vps_margin` / `metal_vps_names`).
 - NOTE: build-time `fetch()` responses get cached in `.next/cache` across `next build` runs — stale plan data can persist. If pages show old prices after a backend change, `rm -rf .next/cache` before building. Never use `cache: "no-store"` in page-level fetches — it breaks `output: 'export'` prerendering (plans list renders empty).
