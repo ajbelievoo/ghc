@@ -124,6 +124,8 @@ const megaMenu: MegaEntry[] = [
       { title: "VPS & Dedicated", items: [
         { label: "Dedicated servers", href: "/dedicated-servers", desc: "All performance levels. Available in minutes." },
         { label: "VPS", href: "/vps", desc: "The right balance of performance, flexibility and cost control" },
+        { label: "Eco servers", href: "/dedicated-servers/eco", desc: "Budget bare metal for labs and small projects" },
+        { label: "Rise servers", href: "/dedicated-servers/rise", desc: "Entry-level enterprise bare metal" },
         { label: "Distributions & Licenses", href: "/apps", desc: "Choose an image to deploy on your server" },
       ]},
       { title: "Bare Metal Foundations", items: [
@@ -172,6 +174,51 @@ const megaMenu: MegaEntry[] = [
       { label: "Prices", href: "/dedicated-servers" },
       { label: "Guides & Documentation", href: "/kb" },
       { label: "Roadmap & Changelog", href: "/status" },
+    ],
+  },
+  {
+    label: "Storage & Security",
+    href: "/network",
+    cols: 3,
+    columns: [
+      { groups: [
+        { title: "Storage & Backup", items: [
+          { label: "Object Storage", href: "/products/object-storage" },
+          { label: "Block Storage", href: "/products/block-storage" },
+          { label: "Enterprise File Storage", href: "/products/enterprise-file-storage" },
+          { label: "Cold Archive", href: "/products/cold-archive" },
+          { label: "Managed Veeam Backup", href: "/products/veeam-backup" },
+          { label: "NAS-HA", href: "/products/nas-ha" },
+        ]},
+      ]},
+      { groups: [
+        { title: "Security & Identity", items: [
+          { label: "Anti-DDoS Protection", href: "/products/anti-ddos" },
+          { label: "SSL Certificates", href: "/products/ssl-certificates" },
+          { label: "Key Management Service", href: "/products/kms" },
+          { label: "Identity & Access", href: "/products/iam" },
+          { label: "Security overview", href: "/security" },
+        ]},
+        { title: "Observability", items: [
+          { label: "Logs Data Platform", href: "/products/logs-data-platform" },
+          { label: "Metrics Platform", href: "/products/metrics" },
+          { label: "Operations", href: "/operations" },
+        ]},
+      ]},
+      { groups: [
+        { title: "Network", items: [
+          { label: "Load Balancer", href: "/products/load-balancer" },
+          { label: "Content Delivery Network", href: "/products/cdn" },
+          { label: "Anycast DNS", href: "/products/anycast-dns" },
+          { label: "vRack Private Network", href: "/products/vrack" },
+          { label: "Failover & Additional IPs", href: "/products/ip-failover" },
+          { label: "SMS Gateway", href: "/products/sms" },
+        ]},
+      ]},
+    ],
+    footerLinks: [
+      { label: "All network products", href: "/network" },
+      { label: "Guides & Documentation", href: "/kb" },
     ],
   },
   {
