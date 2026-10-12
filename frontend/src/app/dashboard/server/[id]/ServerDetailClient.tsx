@@ -2375,7 +2375,32 @@ function DedicatedOps({ server }: { server: ServerInstance }) {
           </div>
         </Card>
       )}
+
+      {/* Service contacts (OVH Manager parity — read-only on this account) */}
+      <ServiceContactsCard server={server} />
     </>
+  );
+}
+
+function ServiceContactsCard({ server }: { server: ServerInstance }) {
+  const [data, setData] = useState<any>(null);
+  useEffect(() => {
+    api.server.serviceContacts(server.id).then(setData).catch(() => setData({ available: false }));
+  }, [server.id]);
+  if (!data || data.available === false) return null;
+  const labels: Record<string, string> = { admin: "Administrator", billing: "Billing", tech: "Technical" };
+  return (
+    <Card title="Service contacts" icon={<User className="w-4 h-4 text-[#00b7ff]" />}>
+      <div className="space-y-1.5">
+        {(data.contacts || []).map((c: any) => (
+          <div key={c.role} className="flex items-center justify-between rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5">
+            <p className="text-xs font-medium text-[#0f172a]">{labels[c.role] || c.role}</p>
+            <p className="text-xs font-mono text-slate-600">{c.nichandle || c.contactId || "—"}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[10px] text-slate-500">Contact changes are managed via the provider console for safety.</p>
+    </Card>
   );
 }
 

@@ -399,6 +399,7 @@ export const api = {
     hostingOvhConfig: (id: string) => request(`/server/${id}/hosting/ovh-config`),
     hostingUpdateOvhConfig: (id: string, body: { engineVersion?: string; environment?: string }) =>
       request(`/server/${id}/hosting/ovh-config`, { method: "PUT", body: JSON.stringify(body) }),
+    serviceContacts: (id: string) => request(`/server/${id}/contacts`),
   },
   account: {
     sshKeys: () => request("/account/ssh-keys"),

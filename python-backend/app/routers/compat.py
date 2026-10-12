@@ -2864,6 +2864,39 @@ def hosting_update_ovh_config(server_id: str, body: dict, db: Session = Depends(
         raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
 
 
+# ---------- Service contacts (OVH Manager "Contacts" view — read-only) ----------
+
+@router.get("/server/{server_id}/contacts")
+def service_contacts(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Return the admin/billing/technical nichandles OVH has on record for this service.
+
+    Read-only: contact reassignment is a mutation that must go through OVH
+    support / the upstream manager on the production account.
+    """
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Service not found")
+    sn = sub.service_name or sub.ovh_resource_id
+    if not sn:
+        raise HTTPException(status_code=400, detail="Subscription has no provider resource attached")
+    ovh = get_ovh_client_from_db(db)
+    try:
+        services = ovh.get("/service", resourceName=sn) or []
+        svc_id = services[0] if isinstance(services, list) and services else None
+        if not svc_id:
+            return {"available": False, "contacts": [], "reason": "Provider service id not found"}
+        out = []
+        for role in ("admin", "billing", "tech"):
+            try:
+                c = ovh.get(f"/service/{svc_id}/contact/{role}") or {}
+                out.append({"role": role, "contactId": c.get("contactId") or c.get("id"), "nichandle": c.get("nicHandle") or c.get("nic")})
+            except Exception:
+                out.append({"role": role, "contactId": None, "nichandle": None})
+        return {"available": True, "contacts": out, "serviceId": svc_id}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
 @router.get("/server/{server_id}/vps/overview")
 def vps_overview(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     sub, ovh = _vps_sub_and_client(db, user, server_id)
