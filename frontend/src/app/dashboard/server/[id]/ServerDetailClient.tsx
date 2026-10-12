@@ -47,6 +47,8 @@ import {
   FileText,
   MonitorSmartphone,
   Key,
+  Settings,
+  User,
 } from "lucide-react";
 
 interface ServerInstance {
@@ -178,9 +180,15 @@ export default function ServerDetailClient() {
     <div className="min-h-screen bg-[#f8fcff] text-[#0f172a]">
       <header className="border-b border-slate-200 bg-white/95 backdrop-blur-xl sticky top-0 z-20">
         <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 text-sm text-slate-500 hover:text-[#0f172a] transition">
-            <ArrowLeft className="w-4 h-4" /> Back to dashboard
-          </Link>
+          <nav className="flex items-center gap-1.5 text-sm text-slate-500" aria-label="Breadcrumb">
+            <Link href="/dashboard" className="flex items-center gap-1.5 hover:text-[#0f172a] transition">
+              <ArrowLeft className="w-4 h-4" /> Dashboard
+            </Link>
+            <span className="text-slate-300">/</span>
+            <Link href="/dashboard?tab=servers" className="hover:text-[#0f172a] transition">Servers</Link>
+            <span className="text-slate-300">/</span>
+            <span className="text-[#0f172a] font-medium truncate max-w-[180px]">{server.name || server.serviceName || serverId}</span>
+          </nav>
           <div className="flex items-center gap-2">
             <ServerIcon className="w-5 h-5 text-[#00b7ff]" />
             <span className="font-bold">GHC Control Panel</span>
@@ -2421,4 +2429,389 @@ function Badge({ ok, children }: { ok?: boolean; children: React.ReactNode }) {
 function formatPrice(o: any) {
   if (!o) return "";
   return `${getCurrencySymbol(o.currency)}${(o.total ?? o.price ?? 0).toFixed(2)}`;
+}
+
+/* ================= WEB HOSTING TABS ================= */
+
+function HostingOverviewTab({ server, detail }: { server: ServerInstance; detail: any }) {
+  const [data, setData] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    api.server.hostingOverview(server.id).then(setData).catch((e) => setErr(e.message));
+  }, [server.id]);
+  const h = data?.hosting;
+  const si = h?._serviceInfos;
+  if (err) return <Card title="Web hosting" icon={<Globe className="w-4 h-4 text-[#00b7ff]" />}><p className="text-xs text-slate-500">Hosting details unavailable: {err}</p></Card>;
+  if (!data) return <Card title="Web hosting" icon={<Globe className="w-4 h-4 text-[#00b7ff]" />}><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></Card>;
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card title="Hosting information" icon={<Globe className="w-4 h-4 text-[#00b7ff]" />}>
+        <Row label="Offer" value={h?.offer || server.planCode || "—"} />
+        <Row label="Cluster" value={h?.cluster || h?.hostingCluster || "—"} />
+        <Row label="FQDN" value={h?.fqdn || h?.primaryDns || "—"} mono />
+        <Row label="Hosting IP" value={h?.hostingIp || detail?.network?.ipv4 || server.ipAddress || "—"} mono />
+        <Row label="IPv6" value={h?.hostingIpv6 || detail?.network?.ipv6 || "—"} mono />
+        <Row label="Datacenter" value={h?.datacenter || h?.country || "—"} />
+        <Row label="State" value={h?.state || h?.status || "—"} />
+      </Card>
+      <Card title="Billing" icon={<FileText className="w-4 h-4 text-[#00b7ff]" />}>
+        <Row label="Renewal" value={si?.renewalType || si?.renew?.type || "—"} />
+        <Row label="Next payment" value={si?.renew?.nextPayment ? new Date(si.renew.nextPayment).toLocaleDateString() : (si?.expiration ? new Date(si.expiration).toLocaleDateString() : "—")} />
+        <Row label="Created" value={si?.creation ? new Date(si.creation).toLocaleDateString() : "—"} />
+        <div className="mt-4 rounded-lg bg-[#00b7ff]/5 border border-[#00b7ff]/20 px-4 py-3 text-xs text-slate-600">
+          Manage sites under the <b>Multisite</b> tab, databases under <b>Databases</b>, scheduled jobs under <b>Cron jobs</b>, and PHP version under <b>PHP &amp; config</b>.
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function HostingMultisiteTab({ server }: { server: ServerInstance }) {
+  const { showToast } = useToast();
+  const [domains, setDomains] = useState<any[] | null>(null);
+  const [ssl, setSsl] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [sslBusy, setSslBusy] = useState(false);
+  const load = useCallback(() => {
+    api.server.hostingDomains(server.id).then((d) => setDomains(d.domains || [])).catch((e) => setErr(e.message));
+    api.server.hostingSsl(server.id).then(setSsl).catch(() => {});
+  }, [server.id]);
+  useEffect(load, [load]);
+  const sslMap: Record<string, any> = {};
+  (ssl?.domains || []).forEach((d: any) => { sslMap[d.domain] = d.ssl; });
+  const regen = async () => {
+    setSslBusy(true);
+    try {
+      await api.server.hostingRegenerateSsl(server.id);
+      showToast("SSL regeneration started — it can take a few minutes", "success");
+      setTimeout(load, 8000);
+    } catch (e: any) { showToast(e.message || "SSL request failed", "error"); }
+    finally { setSslBusy(false); }
+  };
+  return (
+    <div className="space-y-6">
+      <Card title="Attached domains (multisite)" icon={<Globe className="w-4 h-4 text-[#00b7ff]" />}>
+        {err ? <p className="text-xs text-slate-500">{err}</p>
+          : domains === null ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+          : domains.length === 0 ? <p className="text-xs text-slate-500">No domains attached to this hosting yet.</p>
+          : (
+            <table className="w-full text-left">
+              <thead><tr className="border-b border-slate-200 text-xs text-slate-500">
+                <th className="py-2">Domain</th><th>Root folder</th><th>CDN</th><th>Firewall</th><th>SSL</th><th>Status</th>
+              </tr></thead>
+              <tbody>
+                {domains.map((d: any, i: number) => {
+                  const s = sslMap[d.domain];
+                  return (
+                    <tr key={d.domain || i} className="border-b border-slate-100 text-sm">
+                      <td className="py-2.5 font-medium text-[#0f172a]">{d.domain}</td>
+                      <td className="text-xs text-slate-500 font-mono">{d.home || d.rootFolder || "—"}</td>
+                      <td className="text-xs text-slate-500">{d.cdn || "—"}</td>
+                      <td className="text-xs text-slate-500">{d.firewall || "—"}</td>
+                      <td><Badge ok={!!(s && s.status !== "none")}>{s?.status || s?.type || "none"}</Badge></td>
+                      <td><Badge ok={d.status === "enabled" || d.status === "ok"}>{d.status || "—"}</Badge></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+      </Card>
+      <Card title="SSL certificates" icon={<Shield className="w-4 h-4 text-[#00b7ff]" />} extra={
+        <button onClick={regen} disabled={sslBusy} className="text-xs font-bold text-[#00b7ff] hover:underline disabled:opacity-50">
+          {sslBusy ? "Requesting…" : "Regenerate Let's Encrypt"}
+        </button>
+      }>
+        {ssl?.certificate ? (
+          <>
+            <Row label="Type" value={ssl.certificate.type || "letsencrypt"} />
+            <Row label="Status" value={ssl.certificate.status || "—"} />
+            {ssl.certificate.expirationDate && <Row label="Expires" value={new Date(ssl.certificate.expirationDate).toLocaleDateString()} />}
+          </>
+        ) : (
+          <p className="text-xs text-slate-500">Certificate info will appear once provisioning completes.</p>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function HostingDatabasesTab({ server }: { server: ServerInstance }) {
+  const { showToast } = useToast();
+  const [dbs, setDbs] = useState<any[] | null>(null);
+  const [users, setUsers] = useState<any[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({ name: "", user: "", password: "", type: "mysql" });
+  const load = useCallback(() => {
+    api.server.hostingDatabases(server.id).then((d) => setDbs(d.databases || [])).catch((e) => setErr(e.message));
+    api.server.hostingUsers(server.id).then((d) => setUsers(d.users || [])).catch(() => {});
+  }, [server.id]);
+  useEffect(load, [load]);
+  const create = async () => {
+    if (!form.name || !form.user || !form.password) { showToast("Fill database name, user and password", "error"); return; }
+    setCreating(true);
+    try {
+      await api.server.hostingCreateDatabase(server.id, { name: form.name, user: form.user, password: form.password, type: form.type });
+      showToast("Database creation started — completes in a few minutes", "success");
+      setForm({ name: "", user: "", password: "", type: "mysql" });
+      setTimeout(load, 10000);
+    } catch (e: any) { showToast(e.message || "Failed to create database", "error"); }
+    finally { setCreating(false); }
+  };
+  return (
+    <div className="space-y-6">
+      <Card title="Databases" icon={<Database className="w-4 h-4 text-[#00b7ff]" />}>
+        {err ? <p className="text-xs text-slate-500">{err}</p>
+          : dbs === null ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+          : dbs.length === 0 ? <p className="text-xs text-slate-500">No databases yet — create one below.</p>
+          : (
+            <table className="w-full text-left">
+              <thead><tr className="border-b border-slate-200 text-xs text-slate-500">
+                <th className="py-2">Name</th><th>Type</th><th>Server</th><th>Quota used</th><th>Status</th>
+              </tr></thead>
+              <tbody>
+                {dbs.map((d: any, i: number) => (
+                  <tr key={d.databaseName || i} className="border-b border-slate-100 text-sm">
+                    <td className="py-2.5 font-medium text-[#0f172a]">{d.databaseName || d.name}</td>
+                    <td className="text-xs text-slate-500">{d.type || "mysql"}</td>
+                    <td className="text-xs text-slate-500 font-mono">{d.server || "—"}</td>
+                    <td className="text-xs text-slate-500">{d.quotaUsed != null && d.quotaSize != null ? `${Math.round((d.quotaUsed / 1e6) * 10) / 10} / ${Math.round(d.quotaSize / 1e6)} MB` : "—"}</td>
+                    <td><Badge ok={d.status === "created" || d.status === "active"}>{d.status || "—"}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+      </Card>
+      <Card title="Create database" icon={<Plus className="w-4 h-4 text-[#00b7ff]" />}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Database name" className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]/50" />
+          <input value={form.user} onChange={(e) => setForm({ ...form, user: e.target.value })} placeholder="Username" className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]/50" />
+          <input value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} type="password" placeholder="Password" className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]/50" />
+          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]/50">
+            <option value="mysql">MySQL</option>
+            <option value="postgresql">PostgreSQL</option>
+          </select>
+        </div>
+        <button onClick={create} disabled={creating} className="mt-3 rounded-lg bg-[#00b7ff] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#009fe0] disabled:opacity-50">
+          {creating ? "Creating…" : "Create database"}
+        </button>
+      </Card>
+      <Card title="FTP / SSH users" icon={<User className="w-4 h-4 text-[#00b7ff]" />}>
+        {users === null ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+          : users.length === 0 ? <p className="text-xs text-slate-500">No additional FTP/SSH users.</p>
+          : (
+            <div className="space-y-2">
+              {users.map((u: any, i: number) => (
+                <div key={u.login || i} className="flex items-center justify-between rounded-lg bg-slate-100 border border-slate-200 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-[#0f172a]">{u.login}</p>
+                    <p className="text-[10px] text-slate-500">home: {u.home || "—"} • SSH: {u.sshState || u.ssh || "—"}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+      </Card>
+    </div>
+  );
+}
+
+function HostingCronTab({ server }: { server: ServerInstance }) {
+  const { showToast } = useToast();
+  const [crons, setCrons] = useState<any[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({ command: "", crontab: "0 * * * *", description: "", email: "", language: "php" });
+  const load = useCallback(() => {
+    api.server.hostingCron(server.id).then((d) => setCrons(d.crons || [])).catch((e) => setErr(e.message));
+  }, [server.id]);
+  useEffect(load, [load]);
+  const create = async () => {
+    if (!form.command || !form.crontab) { showToast("Command and schedule are required", "error"); return; }
+    setCreating(true);
+    try {
+      await api.server.hostingCreateCron(server.id, form);
+      showToast("Cron job created", "success");
+      setForm({ command: "", crontab: "0 * * * *", description: "", email: "", language: "php" });
+      load();
+    } catch (e: any) { showToast(e.message || "Failed to create cron", "error"); }
+    finally { setCreating(false); }
+  };
+  const remove = async (id: number) => {
+    if (!confirm("Delete this cron job?")) return;
+    try {
+      await api.server.hostingDeleteCron(server.id, id);
+      showToast("Cron job deleted", "success");
+      load();
+    } catch (e: any) { showToast(e.message || "Delete failed", "error"); }
+  };
+  return (
+    <div className="space-y-6">
+      <Card title="Scheduled jobs (cron)" icon={<Clock className="w-4 h-4 text-[#00b7ff]" />}>
+        {err ? <p className="text-xs text-slate-500">{err}</p>
+          : crons === null ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+          : crons.length === 0 ? <p className="text-xs text-slate-500">No cron jobs yet.</p>
+          : (
+            <table className="w-full text-left">
+              <thead><tr className="border-b border-slate-200 text-xs text-slate-500">
+                <th className="py-2">Command</th><th>Schedule</th><th>Language</th><th>Status</th><th></th>
+              </tr></thead>
+              <tbody>
+                {crons.map((c: any, i: number) => (
+                  <tr key={c.id || i} className="border-b border-slate-100 text-sm">
+                    <td className="py-2.5 font-mono text-xs text-[#0f172a]">{c.command}</td>
+                    <td className="text-xs text-slate-500 font-mono">{c.crontab}</td>
+                    <td className="text-xs text-slate-500">{c.language || "—"}</td>
+                    <td><Badge ok={c.status === "enabled"}>{c.status || "—"}</Badge></td>
+                    <td className="text-right"><button onClick={() => remove(c.id)} className="text-red-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+      </Card>
+      <Card title="Add a cron job" icon={<Plus className="w-4 h-4 text-[#00b7ff]" />}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input value={form.command} onChange={(e) => setForm({ ...form, command: e.target.value })} placeholder="Command (e.g. www/cron.php)" className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm font-mono text-[#0f172a] outline-none focus:border-[#00b7ff]/50" />
+          <input value={form.crontab} onChange={(e) => setForm({ ...form, crontab: e.target.value })} placeholder="Schedule (e.g. 0 * * * *)" className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm font-mono text-[#0f172a] outline-none focus:border-[#00b7ff]/50" />
+          <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Description (optional)" className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]/50" />
+          <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email for output (optional)" className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]/50" />
+        </div>
+        <button onClick={create} disabled={creating} className="mt-3 rounded-lg bg-[#00b7ff] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#009fe0] disabled:opacity-50">
+          {creating ? "Creating…" : "Create cron job"}
+        </button>
+      </Card>
+    </div>
+  );
+}
+
+function HostingConfigTab({ server }: { server: ServerInstance }) {
+  const { showToast } = useToast();
+  const [cfg, setCfg] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [engine, setEngine] = useState("");
+  const [env, setEnv] = useState("");
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    api.server.hostingOvhConfig(server.id).then((d) => {
+      setCfg(d);
+      setEngine(d?.current?.engineVersion || "");
+      setEnv(d?.current?.environment || "");
+    }).catch((e) => setErr(e.message));
+  }, [server.id]);
+  const save = async () => {
+    setSaving(true);
+    try {
+      await api.server.hostingUpdateOvhConfig(server.id, { engineVersion: engine || undefined, environment: env || undefined });
+      showToast("Config update started — applies in a few minutes", "success");
+    } catch (e: any) { showToast(e.message || "Update failed", "error"); }
+    finally { setSaving(false); }
+  };
+  const cur = cfg?.current;
+  return (
+    <div className="space-y-6">
+      <Card title="Runtime configuration" icon={<Settings className="w-4 h-4 text-[#00b7ff]" />}>
+        {err ? <p className="text-xs text-slate-500">{err}</p>
+          : !cfg ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+          : (
+            <>
+              <Row label="Engine" value={cur?.engineName || "php"} />
+              <Row label="Version" value={cur?.engineVersion || "—"} />
+              <Row label="Environment" value={cur?.environment || "—"} />
+              <Row label="Container" value={cur?.container || "—"} />
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <select value={engine} onChange={(e) => setEngine(e.target.value)} className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]/50">
+                  <option value="">PHP version…</option>
+                  {["8.4", "8.3", "8.2", "8.1", "8.0", "7.4"].map((v) => <option key={v} value={v}>PHP {v}</option>)}
+                </select>
+                <select value={env} onChange={(e) => setEnv(e.target.value)} className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#00b7ff]/50">
+                  <option value="">Environment…</option>
+                  <option value="production">production</option>
+                  <option value="development">development</option>
+                </select>
+              </div>
+              <button onClick={save} disabled={saving || (!engine && !env)} className="mt-3 rounded-lg bg-[#00b7ff] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#009fe0] disabled:opacity-50">
+                {saving ? "Applying…" : "Apply configuration"}
+              </button>
+            </>
+          )}
+      </Card>
+      <HostingTasksCard server={server} />
+    </div>
+  );
+}
+
+function HostingTasksCard({ server }: { server: ServerInstance }) {
+  const [tasks, setTasks] = useState<any[] | null>(null);
+  useEffect(() => { api.server.hostingTasks(server.id).then((d) => setTasks(d.tasks || [])).catch(() => setTasks([])); }, [server.id]);
+  return (
+    <Card title="Recent tasks" icon={<Clock className="w-4 h-4 text-[#00b7ff]" />}>
+      {tasks === null ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+        : tasks.length === 0 ? <p className="text-xs text-slate-500">No recent tasks.</p>
+        : (
+          <div className="space-y-2">
+            {tasks.slice(0, 8).map((t: any, i: number) => (
+              <div key={t.id || i} className="flex items-center justify-between rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5">
+                <div>
+                  <p className="text-xs font-medium text-[#0f172a]">{t.function || t.action || `Task #${t.id}`}</p>
+                  <p className="text-[10px] text-slate-500">{t.startDate ? new Date(t.startDate).toLocaleString() : ""}</p>
+                </div>
+                <Badge ok={t.status === "done" || t.status === "finished"}>{t.status || "—"}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+    </Card>
+  );
+}
+
+function HostingManagementTab({ server, detail }: { server: ServerInstance; detail: any }) {
+  const { showToast } = useToast();
+  const router = useRouter();
+  const [autoRenew, setAutoRenew] = useState<boolean>(server.autoRenew !== false);
+  const [cancelText, setCancelText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const toggleRenew = async () => {
+    const next = !autoRenew;
+    setBusy(true);
+    try {
+      await api.server.setAutoRenew(server.id, next);
+      setAutoRenew(next);
+      showToast(next ? "Auto-renewal enabled" : "Auto-renewal disabled", "success");
+    } catch (e: any) { showToast(e.message || "Failed", "error"); }
+    finally { setBusy(false); }
+  };
+  const cancel = async () => {
+    setBusy(true);
+    try {
+      await api.server.cancelService(server.id);
+      showToast("Cancellation requested — the service ends at its expiry date", "success");
+      router.push("/dashboard");
+    } catch (e: any) { showToast(e.message || "Cancellation failed", "error"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="space-y-6">
+      <Card title="Renewal" icon={<RefreshCw className="w-4 h-4 text-[#00b7ff]" />}>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-[#0f172a]">Automatic renewal</p>
+            <p className="text-xs text-slate-500">Renews this hosting at the provider before it expires</p>
+          </div>
+          <button onClick={toggleRenew} disabled={busy} className={`w-11 h-6 rounded-full p-1 transition-colors ${autoRenew ? "bg-[#00b7ff]" : "bg-slate-300"}`}>
+            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${autoRenew ? "translate-x-5" : ""}`} />
+          </button>
+        </div>
+      </Card>
+      <Card title="Cancel service" icon={<AlertTriangle className="w-4 h-4 text-red-500" />}>
+        <p className="text-xs text-slate-500 mb-3">All sites, databases and files on this hosting will be permanently deleted at termination. Type <b>CANCEL</b> to confirm.</p>
+        <div className="flex gap-3">
+          <input value={cancelText} onChange={(e) => setCancelText(e.target.value)} placeholder="Type CANCEL" className="flex-1 rounded-lg bg-slate-100 border border-red-200 px-4 py-2.5 text-sm text-[#0f172a] outline-none focus:border-red-400" />
+          <button onClick={cancel} disabled={busy || cancelText !== "CANCEL"} className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-40">Cancel service</button>
+        </div>
+      </Card>
+    </div>
+  );
 }
