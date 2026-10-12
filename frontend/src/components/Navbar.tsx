@@ -186,16 +186,9 @@ const megaMenu: MegaEntry[] = [
     cols: 2,
     highlight: true,
     columns: [
-      { title: "VPS — scalability at the best price", items: [
-        { label: "VPS 2027", href: "/metal/vps", desc: "Virtually isolated CPU, RAM and storage. Reliable performance at lower prices" },
-        { label: "n8n VPS", href: "/metal/vps?s=n8n", desc: "Automate everything. Maintain control." },
-        { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple with a unified interface" },
-        { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },
-        { label: "WordPress VPS", href: "/metal/vps?s=wordpress", desc: "Customisable and scalable server. Unlimited traffic." },
-        { label: "Apps, OS and Panels", href: "/apps", desc: "Available OS and software" },
-      ]},
       { groups: [
-        { title: "Dedicated Servers — our ranges", items: [
+        { title: "Dedicated Servers — maximum performance, no compromise", items: [] },
+        { title: "Our server ranges", items: [
           { label: "Kimsufi (T1/T2)", href: "/dedicated-servers/eco", desc: "The best value, without compromise" },
           { label: "Advance (T3)", href: "/dedicated-servers/advance", desc: "Versatility for SMEs" },
           { label: "Game (T3)", href: "/dedicated-servers/game", desc: "Performance and security for your games" },
@@ -205,6 +198,30 @@ const megaMenu: MegaEntry[] = [
         { title: "Deployment mode", items: [
           { label: "Wholesale", href: "/dedicated-servers", desc: "Complete server racks" },
           { label: "Reseller", href: "/dedicated-servers", desc: "Our infrastructure, your added value" },
+        ]},
+        { title: "Uses", items: [
+          { label: "AZ and resilience", href: "/dedicated-servers", desc: "Business continuity with high availability" },
+          { label: "Grid computing", href: "/dedicated-servers/scale", desc: "Compute-intensive models for critical issues" },
+          { label: "Virtualisation and containerisation", href: "/solutions/proxmox", desc: "Cloud-native flexibility on physical servers" },
+          { label: "Website and business application", href: "/metal/vps", desc: "Scalability and security for your web applications" },
+          { label: "All uses", href: "/dedicated-servers" },
+        ]},
+      ]},
+      { groups: [
+        { title: "VPS — scalability at the best price", items: [] },
+        { title: "Metal VPS", items: [
+          { label: "VPS 2027", href: "/metal/vps", desc: "Virtually isolated CPU, RAM, and storage Reliable performance at lower prices" },
+          { label: "n8n VPS", href: "/metal/vps?s=n8n", desc: "Automate everything. Maintain control." },
+          { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple A unified interface" },
+          { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },
+          { label: "WordPress VPS", href: "/metal/vps?s=wordpress", desc: "Customisable and scalable server. Unlimited traffic." },
+          { label: "Apps, OS, and Panels", href: "/apps", desc: "Available OS and software" },
+        ]},
+        { title: "Who is it for?", items: [
+          { label: "Agency / Multisites", href: "/metal/vps#usecases" },
+          { label: "Developers", href: "/metal/vps#usecases" },
+          { label: "Resellers", href: "/metal/vps#usecases" },
+          { label: "All uses", href: "/metal/vps#usecases" },
         ]},
       ]},
     ],
