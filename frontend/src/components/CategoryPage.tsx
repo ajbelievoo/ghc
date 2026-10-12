@@ -343,7 +343,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
   const { currency } = useCurrency();
 
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "card">("card");
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [compareCodes, setCompareCodes] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   useEscapeKey(() => setShowCompare(false), showCompare);
