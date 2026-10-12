@@ -203,11 +203,11 @@ interface UserData {
   role: string;
 }
 
-function CurrencySelector() {
+function CurrencySelector({ mobileOnly }: { mobileOnly?: boolean }) {
   const { currency, setCurrency } = useCurrency();
   const [open, setOpen] = useState(false);
   return (
-    <div className="relative z-50">
+    <div className={`relative z-50 ${mobileOnly ? "" : "hidden sm:block"}`}>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1 rounded-md border border-slate-200 bg-white/80 px-2 py-1.5 text-xs font-bold text-[#0f172a] hover:border-[#00b7ff]"
@@ -234,11 +234,11 @@ function CurrencySelector() {
   );
 }
 
-function LanguageSelector() {
+function LanguageSelector({ mobileOnly }: { mobileOnly?: boolean }) {
   const { lang, setLang } = useI18n();
   const [open, setOpen] = useState(false);
   return (
-    <div className="relative z-50">
+    <div className={`relative z-50 ${mobileOnly ? "" : "hidden sm:block"}`}>
       <button onClick={() => setOpen(!open)} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white/80 px-2 py-1.5 text-xs font-bold text-[#0f172a] hover:border-[#00b7ff]">
         {lang.toUpperCase()} <ChevronDown className="h-3 w-3" />
       </button>
@@ -419,7 +419,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
   return (
     <nav className={`sticky top-0 z-50 ${navBg}`}>
       <MaintenanceBanner />
-      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+      <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
           {ghc.logo_url ? (
             <>
@@ -529,7 +529,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
               {profileOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
-                  <div className={`absolute right-0 top-full z-50 mt-2 w-80 rounded-xl ${dropdownBg} shadow-2xl overflow-hidden`}>
+                  <div className={`absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] rounded-xl ${dropdownBg} shadow-2xl overflow-hidden`}>
                     {/* User Header */}
                     <div className={`${dropdownHeaderBg} px-5 py-4`}>
                       <div className="flex items-center gap-3 mb-3">
@@ -590,15 +590,24 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
         </button>
       </div>
       {mobileOpen && (
-        <div className={`${mobileBg} px-6 py-4 md:hidden`}>
-          <div className="flex flex-col gap-3 text-sm font-medium">
+        <div
+          className={`${mobileBg} px-6 py-4 md:hidden max-h-[calc(100dvh-4rem)] overflow-y-auto`}
+          onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMobileOpen(false); }}
+        >
+          <div className="flex flex-col gap-1 text-sm font-medium">
             {megaMenu.map((item) => (
-              <div key={item.label} className="space-y-2">
-                <Link href={item.href} className={`block font-bold ${mobileText}`}>{item.label}</Link>
-                {item.columns.flatMap((c) => colGroups(c).flatMap((g) => g.items)).map((sub) => (
-                  <Link key={sub.label} href={sub.href} className={`block pl-3 text-sm ${mobileSubText}`}>{sub.label}</Link>
-                ))}
-              </div>
+              <details key={item.label} className="group">
+                <summary className={`flex cursor-pointer items-center justify-between py-2.5 font-bold ${mobileText} list-none`}>
+                  {item.label}
+                  <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="space-y-1 pb-2">
+                  <Link href={item.href} className={`block pl-3 py-1 text-sm font-semibold ${dark ? "text-[#00b7ff]" : "text-[#ff3d00]"}`}>View all {item.label}</Link>
+                  {item.columns.flatMap((c) => colGroups(c).flatMap((g) => g.items)).map((sub) => (
+                    <Link key={sub.label} href={sub.href} className={`block pl-3 py-1 text-sm ${mobileSubText}`}>{sub.label}</Link>
+                  ))}
+                </div>
+              </details>
             ))}
             {user ? (
               <>
@@ -621,8 +630,10 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                 <Link href="/register" className={dark ? "text-[#00b7ff]" : "text-[#ff3d00]"}>Create account</Link>
               </>
             )}
-            <div className="pt-3">
+            <div className={`flex items-center gap-3 pt-3 ${dark ? "border-t border-white/10" : "border-t border-slate-200"}`}>
               <ThemeToggle />
+              <LanguageSelector mobileOnly />
+              <CurrencySelector mobileOnly />
             </div>
           </div>
         </div>

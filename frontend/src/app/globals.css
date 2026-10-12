@@ -435,3 +435,17 @@ html.dark .ghc-dash-sidebar .bg-\[\#0a0f1c\]\/80 { background-color: rgba(10, 15
   border: 1px solid rgba(0, 183, 255, 0.25);
   box-shadow: 0 0 18px rgba(0, 183, 255, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
+
+/* ===== Mobile fit fixes ===== */
+@media (max-width: 768px) {
+  /* Wide tables scroll horizontally instead of breaking the layout */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  table td, table th { white-space: nowrap; }
+  /* Long unbreakable strings (emails, domains, IPs) wrap instead of overflowing */
+  td, p, span, a, code { overflow-wrap: anywhere; }
+}
