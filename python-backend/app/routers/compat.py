@@ -63,6 +63,7 @@ from app.services.order_service import (
     get_vps_option_catalog,
     pay_order_with_wallet,
     _resolve_plan_code,
+    _normalize_public_plan_code,
     log_ovh_step,
 )
 from app.services.ovh_client import get_ovh_client_from_db, apply_margin
