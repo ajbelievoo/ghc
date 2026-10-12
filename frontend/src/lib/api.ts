@@ -32,6 +32,12 @@ async function request(path: string, options: RequestInit & { formData?: boolean
       emit("ghc:api-limited");
       throw new Error("Too many requests — please wait a moment and try again");
     }
+    if (res.status === 401 && token) {
+      // An authenticated call came back 401 — the JWT is expired/invalid.
+      // Emit so the app can clear the session and bounce to /login.
+      emit("ghc:unauthorized");
+      throw new Error("Your session has expired — please log in again");
+    }
     const err = await res.json().catch(() => ({}));
     const detail = err.detail ?? err.error;
     throw new Error(typeof detail === "string" ? detail : `HTTP ${res.status}`);

@@ -19,11 +19,16 @@ export default function LoginPage() {
   const [tempToken, setTempToken] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [notVerified, setNotVerified] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const googleBtnRef = useRef<HTMLDivElement>(null);
   const { captcha, setCaptcha, image: captchaImage, refresh: refreshCaptcha } = useCaptcha();
 
   useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("expired") === "1") {
+      setSessionExpired(true);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     api.auth.getConfig()
       .then((config: any) => {
         const clientId = config.googleClientId;
@@ -219,6 +224,12 @@ export default function LoginPage() {
         </form>
       ) : (
         <>
+          {sessionExpired && (
+            <div className="mb-4 rounded-lg bg-amber-500/10 border border-amber-500/20 px-4 py-3 text-sm text-amber-700 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>Your session expired — please sign in again.</span>
+            </div>
+          )}
           {error && (
             <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-600 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />

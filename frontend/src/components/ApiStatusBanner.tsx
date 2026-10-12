@@ -17,9 +17,20 @@ export default function ApiStatusBanner() {
       if (limitedTimer) clearTimeout(limitedTimer);
       limitedTimer = setTimeout(() => setLimited(false), 8000);
     };
+    const onUnauthorized = () => {
+      // Mid-session 401 — the JWT died under our feet. Clear the stale session
+      // and bounce to login (only if we thought we were logged in).
+      if (!localStorage.getItem("token")) return;
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login?expired=1";
+      }
+    };
     window.addEventListener("ghc:api-offline", onOffline);
     window.addEventListener("ghc:api-ok", onOk);
     window.addEventListener("ghc:api-limited", onLimited);
+    window.addEventListener("ghc:unauthorized", onUnauthorized);
 
     // Global error capture → backend system_logs (best-effort, deduped)
     const seen = new Set<string>();
@@ -44,6 +55,7 @@ export default function ApiStatusBanner() {
       window.removeEventListener("ghc:api-offline", onOffline);
       window.removeEventListener("ghc:api-ok", onOk);
       window.removeEventListener("ghc:api-limited", onLimited);
+      window.removeEventListener("ghc:unauthorized", onUnauthorized);
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onRejection);
       if (limitedTimer) clearTimeout(limitedTimer);
