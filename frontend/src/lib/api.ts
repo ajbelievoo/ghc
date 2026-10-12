@@ -168,6 +168,10 @@ export const api = {
     getMargins: () => request("/admin/margins"),
     updateMargin: (body: { category: string; percent: number }) =>
       request("/admin/margins", { method: "POST", body: JSON.stringify(body) }),
+    // Metal channel (Metal menu → VPS plans, separate margin + names)
+    getMetalVps: () => request("/admin/metal-vps"),
+    saveMetalVps: (body: { marginPercent?: number; names?: Record<string, string> }) =>
+      request("/admin/metal-vps", { method: "POST", body: JSON.stringify(body) }),
     // Catalog
     getCatalog: (params?: { category?: string; search?: string }) =>
       request(`/admin/plans?${new URLSearchParams(params as any).toString()}`),
@@ -226,6 +230,8 @@ export const api = {
       const qs = params.toString();
       return request(`/server/plans?${qs}`).then(sanitizePlans);
     },
+    metalVpsPlans: () =>
+      request(`/metal/vps/plans?currency=${selectedCurrency()}`).then(sanitizePlans),
     planConfiguration: (body: { planCode: string; category?: string; durationLabel?: string }) =>
       request(`/server/plans/configuration?planCode=${encodeURIComponent(body.planCode)}${body.category ? `&category=${encodeURIComponent(body.category)}` : ""}${body.durationLabel ? `&durationLabel=${encodeURIComponent(body.durationLabel)}` : ""}`),
     gateways: () => request("/server/gateways"),

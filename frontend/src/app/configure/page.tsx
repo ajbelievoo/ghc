@@ -127,6 +127,7 @@ function ConfigurePageContent() {
   const category = params.get("category") || "VPS";
   const planCode = params.get("plan") || "";
   const subCategory = params.get("subCategory") || "";
+  const brand = params.get("brand") || "";
 
   const subCategoryApps: Record<string, { name: string; icon: string; description: string }> = {
     "plesk": { name: "Plesk Obsidian", icon: "🎛️", description: "Plesk control panel pre-installed. Manage websites, domains, and emails easily." },
@@ -215,7 +216,7 @@ function ConfigurePageContent() {
     const t = setTimeout(() => {
       try {
         localStorage.setItem(draftKeyFor(planCode), JSON.stringify({
-          planCode, category, subCategory, durationLabel, datacenter, image, imageVersion, imageTab,
+          planCode, category, subCategory, brand, durationLabel, datacenter, image, imageVersion, imageTab,
           region, gateway, quantity, backup, snapshot, storage, selectedApp, couponCode, savedAt: Date.now(),
         }));
         const idx = readDraftIndex();
@@ -236,7 +237,7 @@ function ConfigurePageContent() {
     const load = () => {
       setLoading(true);
       Promise.all([
-        api.server.plans(category),
+        brand === "metal" ? api.server.metalVpsPlans() : api.server.plans(category),
         api.server.gateways(),
         localStorage.getItem("token") ? api.auth.me().catch(() => null) : Promise.resolve(null),
       ])
@@ -254,7 +255,7 @@ function ConfigurePageContent() {
     const onCurrency = () => { if (alive) load(); };
     window.addEventListener("currencychange", onCurrency);
     return () => { alive = false; window.removeEventListener("currencychange", onCurrency); };
-  }, [category, currency]);
+  }, [category, currency, brand]);
 
   const plan = useMemo(() => plans.find((p: any) => p.planCode === planCode) || plans[0], [plans, planCode]);
   const planCurrency = plan?.currency || plan?.durations?.[0]?.currency || currency || "USD";
@@ -345,6 +346,7 @@ function ConfigurePageContent() {
       const configuration: any = {};
       if (osValue) configuration.os = osValue;
       if (datacenter) configuration.datacenter = datacenter;
+      if (brand === "metal") configuration._brand = "metal";
 
       if (!gateway) { showToast("No payment gateway is configured. Please contact support or set up a gateway in admin.", "error"); setPaying(false); return; }
 
@@ -407,7 +409,7 @@ function ConfigurePageContent() {
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-9 max-w-7xl items-center gap-2 px-6 text-xs text-slate-500">
           <Link href="/" className="hover:text-[#00b7ff]">🏠</Link><span className="text-slate-300">›</span>
-          <Link href="/vps" className="hover:text-[#00b7ff]">VPS</Link><span className="text-slate-300">›</span>
+          <Link href={brand === "metal" ? "/metal/vps" : "/vps"} className="hover:text-[#00b7ff]">{brand === "metal" ? "Metal VPS" : "VPS"}</Link><span className="text-slate-300">›</span>
           <span className="text-[#0f172a]">Configurator</span>
         </div>
       </div>
@@ -423,7 +425,10 @@ function ConfigurePageContent() {
       <main className="mx-auto grid max-w-7xl gap-8 px-6 py-8 lg:grid-cols-[1fr_380px]">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-[#00b7ff]">{category} Configurator</p>
-          <h1 className="mt-1 text-3xl font-black">Configure your Virtual Private Server</h1>
+          <h1 className="mt-1 text-3xl font-black">
+            Configure your {brand === "metal" ? "Metal " : ""}Virtual Private Server
+            {brand === "metal" && <span className="ml-2 rounded-full bg-[#ff3d00] px-2 py-0.5 align-middle text-[10px] font-black uppercase tracking-wide text-white">Metal</span>}
+          </h1>
 
           {draftBanner && (
             <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
@@ -436,6 +441,7 @@ function ConfigurePageContent() {
                   onClick={() => {
                     const q = new URLSearchParams({ category: draftBanner.category || "VPS", plan: draftBanner.planCode });
                     if (draftBanner.subCategory) q.set("subCategory", draftBanner.subCategory);
+                    if (draftBanner.brand) q.set("brand", draftBanner.brand);
                     window.location.href = `/configure?${q.toString()}`;
                   }}
                   className="rounded-lg bg-amber-500 px-3 py-1 text-xs font-bold text-white hover:bg-amber-600"

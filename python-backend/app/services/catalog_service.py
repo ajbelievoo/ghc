@@ -254,6 +254,57 @@ def get_margin_for_category(db: Session, category: ServiceCategory) -> Decimal:
     return Decimal("20.0")
 
 
+# ---------- Metal channel (same upstream VPS plans, own margin + display names) ----------
+
+METAL_MARGIN_KEY = "metal_vps_margin"
+METAL_NAMES_KEY = "metal_vps_names"
+METAL_DEFAULT_MARGIN = Decimal("20.0")
+
+
+def get_metal_vps_margin(db: Session) -> Decimal:
+    row = db.query(AdminConfig).filter(AdminConfig.key == METAL_MARGIN_KEY).first()
+    if row and row.value:
+        try:
+            return Decimal(str(float(row.value)))
+        except (ValueError, TypeError):
+            pass
+    return METAL_DEFAULT_MARGIN
+
+
+def set_metal_vps_margin(db: Session, percent: float) -> None:
+    row = db.query(AdminConfig).filter(AdminConfig.key == METAL_MARGIN_KEY).first()
+    if not row:
+        row = AdminConfig(key=METAL_MARGIN_KEY, value=str(percent))
+        db.add(row)
+    else:
+        row.value = str(percent)
+    db.commit()
+
+
+def get_metal_vps_names(db: Session) -> Dict[str, str]:
+    """Custom public display names for Metal VPS plans, keyed by real plan_code."""
+    row = db.query(AdminConfig).filter(AdminConfig.key == METAL_NAMES_KEY).first()
+    if row and row.value:
+        try:
+            data = json.loads(row.value)
+            if isinstance(data, dict):
+                return {str(k): str(v) for k, v in data.items() if str(v).strip()}
+        except Exception:
+            pass
+    return {}
+
+
+def set_metal_vps_names(db: Session, names: Dict[str, str]) -> None:
+    clean = {str(k): str(v).strip() for k, v in (names or {}).items() if str(v).strip()}
+    row = db.query(AdminConfig).filter(AdminConfig.key == METAL_NAMES_KEY).first()
+    if not row:
+        row = AdminConfig(key=METAL_NAMES_KEY, value=json.dumps(clean))
+        db.add(row)
+    else:
+        row.value = json.dumps(clean)
+    db.commit()
+
+
 COMMITMENT_MONTHS = (3, 6, 12)
 DEFAULT_COMMITMENT_DISCOUNTS = {"3_month": 0.0, "6_month": 5.0, "12_month": 10.0}
 

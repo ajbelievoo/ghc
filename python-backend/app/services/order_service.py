@@ -26,7 +26,7 @@ from app.models.models import (
     WalletTransaction,
     WalletTransactionType,
 )
-from app.services.catalog_service import get_margin_for_category
+from app.services.catalog_service import get_margin_for_category, get_metal_vps_margin, get_metal_vps_names
 from app.services.currency_service import convert
 from app.services.wallet_service import get_or_create_wallet
 from app.services.email_service import (
@@ -147,12 +147,23 @@ def create_customer_order(
     if not duration:
         raise ValueError(f"Duration {duration_label} not available for plan {plan_code}")
 
-    # Apply override if admin set it
-    final_price = float(apply_margin(Decimal(str(duration.raw_price)), get_margin_for_category(db, plan.category)))
-    if plan.override_price is not None:
+    # Metal channel (Metal menu → VPS): same upstream plans, priced with the
+    # Metal margin instead of the standard VPS margin/overrides.
+    is_metal = str((config or {}).get("_brand") or "").lower() == "metal" and plan.category == ServiceCategory.VPS
+    if is_metal:
+        final_price = float(apply_margin(Decimal(str(duration.raw_price)), get_metal_vps_margin(db)))
+        metal_names = get_metal_vps_names(db)
+        metal_names_norm = {_normalize_public_plan_code(k): v for k, v in metal_names.items()}
+        metal_name = metal_names.get(resolved_code) or metal_names_norm.get(_normalize_public_plan_code(resolved_code))
+        if metal_name:
+            config = {**(config or {}), "display_name": metal_name}
+    elif plan.override_price is not None:
         final_price = float(plan.override_price)
     elif plan.override_margin is not None:
         final_price = float(apply_margin(Decimal(str(duration.raw_price)), Decimal(str(plan.override_margin))))
+    else:
+        # Apply category margin
+        final_price = float(apply_margin(Decimal(str(duration.raw_price)), get_margin_for_category(db, plan.category)))
 
     # Convert final price and base cost into the customer's selected currency
     target_currency = (currency or duration.currency or get_settings().currency or "USD").upper()

@@ -314,6 +314,67 @@ def server_plans(category: Optional[str] = None, family: Optional[str] = None, c
     return [_plan_to_frontend(p, currency, db) for p in plans]
 
 
+@router.get("/metal/vps/plans")
+def metal_vps_plans(currency: Optional[str] = None, db: Session = Depends(get_db)):
+    """VPS plans sold under the Metal menu — same upstream catalog, but priced
+    with the Metal margin and custom display names (both set in admin)."""
+    from app.services.catalog_service import get_metal_vps_margin, get_metal_vps_names
+    margin_pct = float(get_metal_vps_margin(db))
+    names = get_metal_vps_names(db)
+    names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
+    plans = get_active_plans(db, ServiceCategory.VPS)
+    out = []
+    for p in plans:
+        d = _plan_to_frontend(p, currency, db)
+        for dur in d.get("durations") or []:
+            raw = dur.get("rawPrice") or 0
+            dur["finalPrice"] = round(raw * (1 + margin_pct / 100.0), 2)
+            dur["monthlyPrice"] = round(_monthly_price(dur["finalPrice"], dur.get("interval") or 1, dur.get("intervalUnit") or "month"), 2)
+        custom = names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code))
+        if custom:
+            d["invoiceName"] = custom
+        d["brand"] = "metal"
+        out.append(d)
+    return out
+
+
+@router.get("/admin/metal-vps")
+def admin_get_metal_vps(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import get_metal_vps_margin, get_metal_vps_names
+    names = get_metal_vps_names(db)
+    names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
+    plans = get_active_plans(db, ServiceCategory.VPS)
+    return {
+        "marginPercent": float(get_metal_vps_margin(db)),
+        "names": names,
+        "plans": [
+            {
+                "planCode": p.plan_code,
+                "invoiceName": p.invoice_name,
+                "metalName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or "",
+                "rawPrice": p.durations[0].raw_price if p.durations else None,
+                "currency": (p.durations[0].currency if p.durations else p.currency),
+            }
+            for p in plans
+        ],
+    }
+
+
+@router.post("/admin/metal-vps")
+def admin_save_metal_vps(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import set_metal_vps_margin, set_metal_vps_names
+    if "marginPercent" in body and body["marginPercent"] is not None:
+        percent = float(body["marginPercent"])
+        if percent < 0 or percent > 1000:
+            raise HTTPException(status_code=400, detail="marginPercent out of range")
+        set_metal_vps_margin(db, percent)
+    if "names" in body and body["names"] is not None:
+        if not isinstance(body["names"], dict):
+            raise HTTPException(status_code=400, detail="names must be an object {planCode: name}")
+        set_metal_vps_names(db, body["names"])
+    return {"success": True}
+
+
 @router.get("/server/plans/configuration")
 def plan_configuration(
     planCode: str,

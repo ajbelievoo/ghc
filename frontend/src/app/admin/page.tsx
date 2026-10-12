@@ -58,6 +58,9 @@ export default function AdminPage() {
   const [brand, setBrand] = useState({ siteName: "GHC", companyName: "Believoo Pvt Ltd", logoUrl: "", faviconUrl: "", primaryColor: "#00f0ff", accentColor: "#b500ff", customCss: "" });
   const [syncing, setSyncing] = useState(false);
   const [margins, setMargins] = useState<Record<string, number>>({});
+  const [metalMargin, setMetalMargin] = useState<number>(20);
+  const [metalPlans, setMetalPlans] = useState<any[]>([]);
+  const [metalNames, setMetalNames] = useState<Record<string, string>>({});
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
   const [catalogPlans, setCatalogPlans] = useState<PlanEntry[]>([]);
@@ -131,7 +134,10 @@ export default function AdminPage() {
       if (t === "users") { const u = await api.admin.getUsers({ search: userSearch || undefined, page: usersPage, limit: 20 }); setUsers(u.users || []); setUsersTotal(u.total || 0); }
       if (t === "credentials") { const c = await api.admin.getCredentials(); setProvider({ provider_app_key: c.credentials.provider_app_key || "", provider_app_secret: c.credentials.provider_app_secret || "", provider_consumer_key: c.credentials.provider_consumer_key || "", provider_endpoint: c.credentials.provider_endpoint || "", provider_subsidiary: c.credentials.provider_subsidiary || "" }); setGoogleCreds({ google_client_id: c.credentials.google_client_id || "", google_client_secret: c.credentials.google_client_secret || "" }); setSmtp({ smtp_host: c.credentials.smtp_host || "", smtp_port: c.credentials.smtp_port || "", smtp_user: c.credentials.smtp_user || "", smtp_pass: c.credentials.smtp_pass || "" }); const gws: Record<string, any> = {}; (c.gateways || []).forEach((g: any) => { gws[g.name] = { ...(g.config || {}), isActive: g.isActive }; }); setGwInputs(gws); }
       if (t === "brand") { const b = await api.admin.getBrand(); setBrand(b); }
-      if (t === "margins") { const m = await api.admin.getMargins(); const map: Record<string, number> = {}; m.forEach((x: any) => map[x.category] = x.percent); setMargins(map); }
+      if (t === "margins") {
+        const m = await api.admin.getMargins(); const map: Record<string, number> = {}; m.forEach((x: any) => map[x.category] = x.percent); setMargins(map);
+        try { const mv = await api.admin.getMetalVps(); setMetalMargin(mv.marginPercent ?? 20); setMetalPlans(mv.plans || []); setMetalNames(mv.names || {}); } catch {}
+      }
       if (t === "coupons") { const c = await api.admin.getCoupons(); setCoupons(c || []); }
       if (t === "catalog") { setCatalogLoading(true); const params: any = { search: catalogSearch || undefined }; if (catalogCategory !== "ALL") params.category = catalogCategory; const p = await api.admin.getCatalog(params); setCatalogPlans(p || []); setCatalogLoading(false); }
       if (t === "subscriptions") { const params: any = {}; if (subFilter !== "ALL") params.status = subFilter; if (subCategory !== "ALL") params.category = subCategory; const subs = await api.admin.getSubscriptions(params); setSubscriptions(subs || []); }
@@ -195,6 +201,8 @@ export default function AdminPage() {
   const logout = () => { localStorage.removeItem("token"); localStorage.removeItem("user"); router.push("/login"); };
   const handleMarginChange = (cat: string, val: string) => { setMargins((p) => ({ ...p, [cat]: parseFloat(val) || 0 })); };
   const saveMargin = async (cat: string) => { try { await api.admin.updateMargin({ category: cat, percent: margins[cat] || 0 }); showToast(`Margin for ${cat} saved`, "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveMetalMargin = async () => { try { await api.admin.saveMetalVps({ marginPercent: metalMargin }); showToast("Metal margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveMetalNames = async () => { try { await api.admin.saveMetalVps({ names: metalNames }); showToast("Metal plan names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handlePlanOverride = async (planCode: string, overridePrice: string, overrideMargin: string) => { try { await api.admin.updatePlanOverride(planCode, { overridePrice: overridePrice === "" ? null : parseFloat(overridePrice), overrideMargin: overrideMargin === "" ? null : parseFloat(overrideMargin) }); showToast("Override saved for " + planCode, "success"); loadTabData("catalog"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleFulfillPayment = async (sessionId: string) => { try { await api.payments.fulfillSession(sessionId); showToast("Payment fulfilled and service activated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleRetryProvision = async (orderId: string) => { try { await api.admin.retryProvision(orderId); showToast("Provisioning retry initiated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
@@ -623,6 +631,53 @@ export default function AdminPage() {
                   <p className="text-xs text-slate-500 mt-3">Applied to all {cat.replace("_", " ").toLowerCase()} plans on next sync.</p>
                 </div>
               ))}
+            </div>
+
+            {/* ===== METAL CHANNEL ===== */}
+            <div className="mt-8 rounded-2xl border-2 border-[#ff3d00]/40 bg-white/60 backdrop-blur-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 flex items-center justify-center"><Percent className="w-5 h-5 text-[#ff3d00]" /></div>
+                <div>
+                  <p className="text-sm font-bold text-[#0f172a]">METAL — Metal menu VPS plans</p>
+                  <p className="text-xs text-slate-500">Separate profit % for plans sold via the Metal menu (/metal/vps). Applied instantly at order time.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 max-w-sm">
+                <input type="number" value={metalMargin} onChange={(e) => setMetalMargin(parseFloat(e.target.value) || 0)} className="flex-1 rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#ff3d00]/50 outline-none" />
+                <button onClick={saveMetalMargin} className="rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 px-4 py-2.5 text-sm text-[#ff3d00] hover:bg-[#ff3d00]/20 transition-all font-bold">Save</button>
+              </div>
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-[#0f172a]">Metal display names <span className="font-normal text-slate-500">(customer-facing names on /metal/vps — blank = original name)</span></p>
+                  <button onClick={saveMetalNames} className="rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 px-4 py-2 text-xs font-bold text-[#ff3d00] hover:bg-[#ff3d00]/20 transition-all">Save names</button>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
+                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Base cost</th><th className="px-3 py-2 w-56">Metal name</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {metalPlans.map((p: any) => (
+                        <tr key={p.planCode}>
+                          <td className="px-3 py-2 font-mono text-[11px]">{p.planCode}</td>
+                          <td className="px-3 py-2">{p.invoiceName}</td>
+                          <td className="px-3 py-2">{p.rawPrice != null ? `${p.currency || ""} ${p.rawPrice}` : "—"}</td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={metalNames[p.planCode] ?? p.metalName ?? ""}
+                              onChange={(e) => setMetalNames((prev) => ({ ...prev, [p.planCode]: e.target.value }))}
+                              placeholder={p.invoiceName}
+                              className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#ff3d00]/50"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                      {metalPlans.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         )}

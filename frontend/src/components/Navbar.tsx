@@ -182,13 +182,13 @@ const megaMenu: MegaEntry[] = [
   },
   {
     label: "Metal",
-    href: "/dedicated-servers",
+    href: "/metal/vps",
     cols: 4,
     highlight: true,
     columns: [
       { title: "Metal Servers", items: [
         { label: "Dedicated servers", href: "/dedicated-servers", desc: "All performance levels. Available in minutes." },
-        { label: "VPS", href: "/vps", desc: "The right balance of performance, flexibility and cost control" },
+        { label: "VPS", href: "/metal/vps", desc: "The right balance of performance, flexibility and cost control" },
         { label: "Distributions & Licences", href: "/apps", desc: "Choose an image to deploy on your server" },
       ]},
       { title: "Bare Metal Foundations", items: [
@@ -231,7 +231,7 @@ const megaMenu: MegaEntry[] = [
       ]},
     ],
     footerLinks: [
-      { label: "Prices", href: "/dedicated-servers" },
+      { label: "Prices", href: "/metal/vps" },
       { label: "Guides & Documentation", href: "/kb" },
       { label: "Roadmap & Changelog", href: "/status" },
     ],

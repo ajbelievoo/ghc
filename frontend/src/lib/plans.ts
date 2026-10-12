@@ -13,3 +13,15 @@ export async function fetchPlans(category: string): Promise<any[]> {
     return [];
   }
 }
+
+export async function fetchMetalVpsPlans(): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE}/metal/vps/plans`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return sanitizePlans(Array.isArray(data) ? data : []);
+  } catch (e: any) {
+    console.warn("[fetchMetalVpsPlans] failed:", e?.message || e);
+    return [];
+  }
+}
