@@ -183,9 +183,17 @@ const megaMenu: MegaEntry[] = [
   {
     label: "Metal",
     href: "/metal/vps",
-    cols: 6,
+    cols: 2,
     highlight: true,
     columns: [
+      { title: "VPS — scalability at the best price", items: [
+        { label: "VPS 2027", href: "/metal/vps", desc: "Virtually isolated CPU, RAM and storage. Reliable performance at lower prices" },
+        { label: "n8n VPS", href: "/metal/vps?s=n8n", desc: "Automate everything. Maintain control." },
+        { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple with a unified interface" },
+        { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },
+        { label: "WordPress VPS", href: "/metal/vps?s=wordpress", desc: "Customisable and scalable server. Unlimited traffic." },
+        { label: "Apps, OS and Panels", href: "/apps", desc: "Available OS and software" },
+      ]},
       { groups: [
         { title: "Dedicated Servers — our ranges", items: [
           { label: "Kimsufi (T1/T2)", href: "/dedicated-servers/eco", desc: "The best value, without compromise" },
@@ -197,61 +205,6 @@ const megaMenu: MegaEntry[] = [
         { title: "Deployment mode", items: [
           { label: "Wholesale", href: "/dedicated-servers", desc: "Complete server racks" },
           { label: "Reseller", href: "/dedicated-servers", desc: "Our infrastructure, your added value" },
-        ]},
-      ]},
-      { title: "VPS — scalability at the best price", items: [
-        { label: "VPS 2027", href: "/metal/vps", desc: "Virtually isolated CPU, RAM and storage. Reliable performance at lower prices" },
-        { label: "n8n VPS", href: "/metal/vps?s=n8n", desc: "Automate everything. Maintain control." },
-        { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple with a unified interface" },
-        { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },
-        { label: "WordPress VPS", href: "/metal/vps?s=wordpress", desc: "Customisable and scalable server. Unlimited traffic." },
-        { label: "Apps, OS and Panels", href: "/apps", desc: "Available OS and software" },
-      ]},
-      { title: "Storage & Backup", items: [
-        { label: "Enterprise File Storage", href: "/products/enterprise-file-storage", desc: "Managed file storage based on NetApp ONTAP Select" },
-        { label: "Backup Licenses", href: "/products/veeam-backup", desc: "Protect your data with Veeam's flexibility, without the complexity" },
-        { label: "Backup Agent", href: "/products/veeam-backup", desc: "Simplified, automated data backup and protection solution" },
-        { label: "HA-NAS", href: "/products/nas-ha", desc: "Redundant storage architecture based on the OpenZFS standard" },
-        { label: "Cloud Disk Array", href: "/products/block-storage", desc: "Scalable block storage based on Ceph technology" },
-      ]},
-      { groups: [
-        { title: "Network — connectivity", items: [
-          { label: "vRack Private Network", href: "/products/vrack", desc: "All your GHC services on a private network" },
-          { label: "Link Aggregation", href: "/products/internet-connectivity", desc: "High-speed private network with redundancy" },
-          { label: "Additional IP", href: "/products/ip-failover", desc: "Dynamic movable public IPs" },
-          { label: "Bring Your Own IP", href: "/products/byoip", desc: "Your public IP ranges and identity are yours to keep" },
-        ]},
-        { title: "Network services", items: [
-          { label: "Load Balancer", href: "/products/load-balancer", desc: "Balanced traffic, enhanced performance and resilience" },
-          { label: "GHC Connect", href: "/products/ovh-connect", desc: "The shortest path to GHC" },
-          { label: "Anti-DDoS Infrastructure", href: "/products/anti-ddos", desc: "Deployed by default on all products" },
-          { label: "DNSSEC", href: "/products/anycast-dns", desc: "Data protected against cache poisoning" },
-        ]},
-      ]},
-      { groups: [
-        { title: "Security & Identity", items: [
-          { label: "Key Management Service (KMS)", href: "/products/kms", desc: "Securing your encryption keys in one place" },
-          { label: "Identity and Access Management", href: "/products/iam", desc: "Optimised access management and productivity boost" },
-          { label: "Secret Manager", href: "/products/kms", desc: "Professionally manage all of your secrets in one place" },
-          { label: "Hardware Security Module (HSM)", href: "/products/secnumcloud", desc: "Hardware security for protecting cryptographic keys" },
-        ]},
-        { title: "Operations", items: [
-          { label: "Logs Data Platform", href: "/products/logs-data-platform", desc: "Collect, store and visualise your logs" },
-          { label: "Logs Service", href: "/products/metrics", desc: "Monitor the performance and security of your environments" },
-        ]},
-      ]},
-      { groups: [
-        { title: "Uses", items: [
-          { label: "AZ and resilience", href: "/dedicated-servers", desc: "Business continuity with high availability" },
-          { label: "Grid computing", href: "/dedicated-servers/scale", desc: "Compute-intensive models for critical issues" },
-          { label: "Virtualisation and containers", href: "/solutions/proxmox", desc: "Cloud-native flexibility on physical servers" },
-          { label: "Website & business applications", href: "/metal/vps", desc: "Scalability and security for web applications" },
-          { label: "All uses", href: "/dedicated-servers" },
-        ]},
-        { title: "Partners", items: [
-          { label: "Become a GHC Partner", href: "/register" },
-          { label: "Compliance & Certifications", href: "/security" },
-          { label: "GHC Community", href: "/kb" },
         ]},
       ]},
     ],
