@@ -2623,6 +2623,247 @@ def _vps_sub_and_client(db: Session, user: User, server_id: str):
     return sub, get_ovh_client_from_db(db)
 
 
+def _hosting_sub_and_client(db: Session, user: User, server_id: str):
+    sub = get_subscription(db, user.id, server_id)
+    if not sub:
+        raise HTTPException(status_code=404, detail="Service not found")
+    if sub.category != ServiceCategory.WEB_HOSTING:
+        raise HTTPException(status_code=400, detail="This section is available for web hosting services only")
+    return sub, get_ovh_client_from_db(db)
+
+
+def _hosting_name(sub: Subscription) -> str:
+    name = sub.service_name or sub.ovh_resource_id
+    if not name:
+        raise HTTPException(status_code=400, detail="Subscription has no provider resource attached")
+    return name
+
+
+# ---------- Web hosting management ----------
+
+
+@router.get("/server/{server_id}/hosting/overview")
+def hosting_overview(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        info = ovh.get(f"/hosting/web/{sn}") or {}
+        try:
+            info["_serviceInfos"] = ovh.get(f"/hosting/web/{sn}/serviceInfos") or {}
+        except Exception:
+            pass
+        return {"available": True, "hosting": info}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/hosting/domains")
+def hosting_domains(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        names = ovh.get(f"/hosting/web/{sn}/attachedDomain") or []
+        out = []
+        for d in names[:50]:
+            try:
+                out.append(ovh.get(f"/hosting/web/{sn}/attachedDomain/{d}"))
+            except Exception:
+                out.append({"domain": d})
+        return {"domains": out}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/hosting/databases")
+def hosting_databases(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        names = ovh.get(f"/hosting/web/{sn}/database") or []
+        out = []
+        for d in names[:50]:
+            try:
+                out.append(ovh.get(f"/hosting/web/{sn}/database/{d}"))
+            except Exception:
+                out.append({"databaseName": d})
+        return {"databases": out}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/hosting/databases")
+def hosting_create_database(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        task = ovh.post(
+            f"/hosting/web/{sn}/database",
+            name=body.get("name"),
+            type=body.get("type", "mysql"),
+            mode=body.get("mode", "best-effort"),
+            password=body.get("password"),
+            user=body.get("user"),
+        )
+        return {"success": True, "task": task}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/hosting/cron")
+def hosting_cron(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        ids = ovh.get(f"/hosting/web/{sn}/cron") or []
+        out = []
+        for cid in ids[:50]:
+            try:
+                out.append(ovh.get(f"/hosting/web/{sn}/cron/{cid}"))
+            except Exception:
+                out.append({"id": cid})
+        return {"crons": out}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/hosting/cron")
+def hosting_create_cron(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        task = ovh.post(
+            f"/hosting/web/{sn}/cron",
+            command=body.get("command"),
+            crontab=body.get("crontab"),
+            description=body.get("description") or "",
+            email=body.get("email") or "",
+            language=body.get("language", "php"),
+            status=body.get("status", "enabled"),
+        )
+        return {"success": True, "cron": task}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.delete("/server/{server_id}/hosting/cron/{cron_id}")
+def hosting_delete_cron(server_id: str, cron_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        ovh.delete(f"/hosting/web/{sn}/cron/{cron_id}")
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/hosting/ssl")
+def hosting_ssl(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        ssl = None
+        try:
+            ssl = ovh.get(f"/hosting/web/{sn}/ssl")
+        except Exception:
+            pass
+        doms = []
+        try:
+            doms = ovh.get(f"/hosting/web/{sn}/attachedDomain") or []
+        except Exception:
+            pass
+        ssl_doms = []
+        for d in doms[:50]:
+            try:
+                det = ovh.get(f"/hosting/web/{sn}/attachedDomain/{d}/ssl")
+                ssl_doms.append({"domain": d, "ssl": det})
+            except Exception:
+                ssl_doms.append({"domain": d, "ssl": None})
+        return {"available": ssl is not None or bool(ssl_doms), "certificate": ssl, "domains": ssl_doms}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.post("/server/{server_id}/hosting/ssl")
+def hosting_order_ssl(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Request/regenerate the free Let's Encrypt certificate for the hosting."""
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        task = ovh.post(f"/hosting/web/{sn}/ssl/regenerate", certificateType="letsencrypt")
+        return {"success": True, "task": task}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/hosting/users")
+def hosting_users(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        logins = ovh.get(f"/hosting/web/{sn}/user") or []
+        out = []
+        for u in logins[:50]:
+            try:
+                out.append(ovh.get(f"/hosting/web/{sn}/user/{u}"))
+            except Exception:
+                out.append({"login": u})
+        return {"users": out}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/hosting/tasks")
+def hosting_tasks(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        ids = ovh.get(f"/hosting/web/{sn}/tasks") or []
+        out = []
+        for t in ids[:20]:
+            try:
+                out.append(ovh.get(f"/hosting/web/{sn}/tasks/{t}"))
+            except Exception:
+                out.append({"id": t})
+        return {"tasks": out}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.get("/server/{server_id}/hosting/ovh-config")
+def hosting_ovh_config(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        cur = ovh.get(f"/hosting/web/{sn}/ovhConfig") or {}
+        hist = []
+        try:
+            hist = ovh.get(f"/hosting/web/{sn}/ovhConfig/history") or []
+        except Exception:
+            pass
+        return {"current": cur, "history": hist}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
+@router.put("/server/{server_id}/hosting/ovh-config")
+def hosting_update_ovh_config(server_id: str, body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Change PHP engine/version/environment (e.g. php8.2 + production)."""
+    sub, ovh = _hosting_sub_and_client(db, user, server_id)
+    sn = _hosting_name(sub)
+    try:
+        task = ovh.put(
+            f"/hosting/web/{sn}/ovhConfig",
+            engineName=body.get("engineName"),
+            engineVersion=body.get("engineVersion"),
+            environment=body.get("environment"),
+            httpSupported=body.get("httpSupported"),
+            container=body.get("container"),
+        )
+        return {"success": True, "task": task}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"OVH API error: {e}")
+
+
 @router.get("/server/{server_id}/vps/overview")
 def vps_overview(server_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     sub, ovh = _vps_sub_and_client(db, user, server_id)

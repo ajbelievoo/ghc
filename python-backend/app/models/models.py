@@ -111,6 +111,7 @@ class User(Base):
     email_verified = Column(Boolean, default=False, nullable=False)
     totp_secret = Column(String(64), nullable=True)
     totp_enabled = Column(Boolean, default=False, nullable=False)
+    backup_codes = Column(JSON, default=list, nullable=True)  # sha256 hashes of one-time recovery codes
     wallet_autopay = Column(Boolean, default=False, nullable=False)
     preferred_gateway = Column(String(30), nullable=True)
     referred_by = Column(String(36), nullable=True)

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
 import { useToast } from "@/components/ToastProvider";
 import NetworkHub from "@/components/NetworkHub";
@@ -43,6 +44,7 @@ export default function ProductHub({ view, servers, myDomains, invoices, wallet,
   const [orderModal, setOrderModal] = useState<string | null>(null);
   const [orderNotes, setOrderNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  useEscapeKey(() => setOrderModal(null), !!orderModal);
   const [services, setServices] = useState<any[]>([]);
 
   useEffect(() => {

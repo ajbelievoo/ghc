@@ -10,6 +10,7 @@ import segno
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -117,6 +118,33 @@ def _start_2fa(user: User) -> dict:
     }
 
 
+# ---------- 2FA backup (recovery) codes ----------
+
+
+def _hash_backup_code(code: str) -> str:
+    import hashlib
+    return hashlib.sha256(code.strip().upper().replace("-", "").encode()).hexdigest()
+
+
+def _gen_backup_codes(n: int = 8) -> tuple[list[str], list[str]]:
+    """Return (plaintext codes, sha256 hashes). Plaintext shown once, never stored."""
+    import secrets
+    plaintext = [f"{secrets.token_hex(2).upper()}-{secrets.token_hex(2).upper()}" for _ in range(n)]
+    return plaintext, [_hash_backup_code(c) for c in plaintext]
+
+
+def _consume_backup_code(user: User, code: str, db: Session) -> bool:
+    """True if `code` is an unused backup code — consumes it (one-time use)."""
+    hashes = user.backup_codes or []
+    h = _hash_backup_code(code)
+    if h not in hashes:
+        return False
+    user.backup_codes = [x for x in hashes if x != h]
+    flag_modified(user, "backup_codes")
+    db.commit()
+    return True
+
+
 # ---------- Registration / Login ----------
 
 
@@ -211,7 +239,10 @@ def login_2fa(payload: Login2FA, response: Response, request: Request = None, db
     user = db.query(User).filter(User.id == user_id).first() if user_id else None
     if not user or not user.totp_enabled or not user.totp_secret:
         raise HTTPException(status_code=401, detail="Invalid 2FA session")
-    if not pyotp.TOTP(user.totp_secret).verify(payload.code, valid_window=1):
+    ok = pyotp.TOTP(user.totp_secret).verify(payload.code, valid_window=1)
+    if not ok:
+        ok = _consume_backup_code(user, payload.code, db)
+    if not ok:
         raise HTTPException(status_code=401, detail="Invalid 2FA code")
     if user.is_suspended:
         raise HTTPException(status_code=403, detail="Account suspended")
@@ -364,8 +395,24 @@ def twofa_confirm(payload: TwoFactorCode, db: Session = Depends(get_db), user: U
     if not pyotp.TOTP(user.totp_secret).verify(payload.code.strip(), valid_window=2):
         raise HTTPException(status_code=400, detail="Invalid code — make sure you are using the newest 'BelieVoo GHC' entry in your authenticator app")
     user.totp_enabled = True
+    plaintext, hashes = _gen_backup_codes()
+    user.backup_codes = hashes
     db.commit()
-    return {"success": True, "message": "2FA enabled"}
+    return {"success": True, "message": "2FA enabled", "backupCodes": plaintext}
+
+
+@router.post("/2fa/backup-codes")
+def twofa_backup_codes(payload: TwoFactorCode, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Regenerate one-time recovery codes — requires a fresh TOTP code so a stolen
+    session alone can't mint new bypass codes."""
+    if not user.totp_enabled or not user.totp_secret:
+        raise HTTPException(status_code=400, detail="2FA is not enabled")
+    if not pyotp.TOTP(user.totp_secret).verify(payload.code.strip(), valid_window=2):
+        raise HTTPException(status_code=400, detail="Invalid code")
+    plaintext, hashes = _gen_backup_codes()
+    user.backup_codes = hashes
+    db.commit()
+    return {"success": True, "backupCodes": plaintext}
 
 
 @router.post("/2fa/disable")
@@ -376,6 +423,7 @@ def twofa_disable(payload: TwoFactorCode, db: Session = Depends(get_db), user: U
         raise HTTPException(status_code=400, detail="Invalid code")
     user.totp_enabled = False
     user.totp_secret = None
+    user.backup_codes = []
     db.commit()
     return {"success": True, "message": "2FA disabled"}
 

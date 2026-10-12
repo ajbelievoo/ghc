@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import { useToast } from "@/components/ToastProvider";
 import { getCurrencySymbol } from "@/components/CurrencyProvider";
 import ServerDetailCards from "@/components/ServerDetailCards";
@@ -81,6 +82,15 @@ const TABS = [
   { id: "management", label: "Management" },
 ] as const;
 
+const HOSTING_TABS = [
+  { id: "home", label: "Home" },
+  { id: "multisite", label: "Multisite" },
+  { id: "h-databases", label: "Databases" },
+  { id: "cron", label: "Cron jobs" },
+  { id: "h-config", label: "PHP & config" },
+  { id: "management", label: "Management" },
+] as const;
+
 export default function ServerDetailClient() {
   const { id } = useParams();
   const router = useRouter();
@@ -97,7 +107,8 @@ export default function ServerDetailClient() {
   const [renewState, setRenewState] = useState<any>(null);
 
   const isVps = server?.category === "VPS";
-  const tabs = TABS.filter((t) => !(t as any).vpsOnly || isVps);
+  const isHosting = server?.category === "WEB_HOSTING";
+  const tabs = isHosting ? HOSTING_TABS as any as typeof TABS : TABS.filter((t) => !(t as any).vpsOnly || isVps);
 
   const load = useCallback(() => {
     Promise.all([
@@ -336,19 +347,26 @@ export default function ServerDetailClient() {
         )}
 
         {tab === "home" && (
-          <HomeTab server={server} detail={detail} metrics={metrics} additionalIps={additionalIps} setTab={setTab} />
+          isHosting
+            ? <HostingOverviewTab server={server} detail={detail} />
+            : <HomeTab server={server} detail={detail} metrics={metrics} additionalIps={additionalIps} setTab={setTab} />
         )}
+        {tab === "multisite" && isHosting && <HostingMultisiteTab server={server} />}
+        {tab === "h-databases" && isHosting && <HostingDatabasesTab server={server} />}
+        {tab === "cron" && isHosting && <HostingCronTab server={server} />}
+        {tab === "h-config" && isHosting && <HostingConfigTab server={server} />}
+        {tab === "management" && isHosting && <HostingManagementTab server={server} detail={detail} />}
         {tab === "secondary-dns" && isVps && <SecondaryDnsTab server={server} />}
         {tab === "backup" && isVps && <BackupTab server={server} />}
         {tab === "disk" && isVps && <DiskTab server={server} />}
         {tab === "monitoring" && <MonitoringTab server={server} detail={detail} metrics={metrics} />}
         {tab === "network" && <NetworkTab server={server} detail={detail} isVps={isVps} />}
         {tab === "databases" && <DatabasesTab server={server} />}
-        {tab === "management" && (
+        {tab === "management" && !isHosting && (
           <ManagementTab server={server} detail={detail} setServer={setServer} isVps={isVps} />
         )}
 
-        {tab === "home" && <ServerDetailCards server={server} detail={detail} metrics={metrics} />}
+        {tab === "home" && !isHosting && <ServerDetailCards server={server} detail={detail} metrics={metrics} />}
       </div>
     </div>
   );
@@ -979,6 +997,7 @@ function DiskTab({ server }: { server: ServerInstance }) {
 
 function UpgradeModal({ serverId, upgrades, recs, isDedicated, onClose }: { serverId: string; upgrades: any[]; recs?: any[]; isDedicated?: boolean; onClose: () => void }) {
   const [order, setOrder] = useState<any>(null);
+  useEscapeKey(onClose);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-2xl rounded-2xl bg-white border border-slate-200 p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -1045,6 +1064,7 @@ function OptionOrderModal({ serverId, option, onClose, onDone }: { serverId: str
   const [gateway, setGateway] = useState("");
   const [wallet, setWallet] = useState<any>(null);
   const [paying, setPaying] = useState(false);
+  useEscapeKey(onClose);
 
   useEffect(() => {
     api.server.gateways().then((g: any[]) => {

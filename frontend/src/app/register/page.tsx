@@ -209,6 +209,35 @@ export default function RegisterPage() {
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+          {password.length > 0 && (() => {
+            const checks = [
+              { ok: password.length >= 8, label: "8+ characters" },
+              { ok: /[A-Z]/.test(password) && /[a-z]/.test(password), label: "Upper & lower case" },
+              { ok: /\d/.test(password), label: "Number" },
+              { ok: /[^A-Za-z0-9]/.test(password), label: "Special character" },
+            ];
+            const score = checks.filter((c) => c.ok).length;
+            const pct = (score / 4) * 100;
+            const color = score <= 1 ? "bg-red-500" : score === 2 ? "bg-amber-500" : score === 3 ? "bg-yellow-400" : "bg-emerald-500";
+            const label = score <= 1 ? "Weak" : score === 2 ? "Fair" : score === 3 ? "Good" : "Strong";
+            return (
+              <div className="mt-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-1.5 flex-1 rounded-full bg-slate-200 overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className={`text-[10px] font-bold ${score >= 3 ? "text-emerald-600" : score === 2 ? "text-amber-600" : "text-red-500"}`}>{label}</span>
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                  {checks.map((c) => (
+                    <span key={c.label} className={`text-[10px] ${c.ok ? "text-emerald-600" : "text-slate-400"}`}>
+                      {c.ok ? "✓" : "○"} {c.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <div>

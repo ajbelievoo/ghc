@@ -7,6 +7,7 @@ import { Server, Menu, X, ChevronDown, LogOut, User, Bell, Mail, CreditCard, Fil
 import { api } from "@/lib/api";
 import { useGhcSettings } from "@/lib/ghcSettings";
 import ThemeToggle from "@/components/ThemeToggle";
+import MaintenanceBanner from "@/components/MaintenanceBanner";
 import { useCurrency, CURRENCIES } from "@/components/CurrencyProvider";
 import { useI18n } from "@/components/LanguageProvider";
 import { Language } from "@/lib/i18n";
@@ -417,6 +418,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
 
   return (
     <nav className={`sticky top-0 z-50 ${navBg}`}>
+      <MaintenanceBanner />
       <div className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
           {ghc.logo_url ? (

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import { useToast } from "@/components/ToastProvider";
 import { Globe, Plus, Pencil, Trash2, X, Loader2, Save, RefreshCw, Lock, LockOpen, KeySquare, Shield, Mail } from "lucide-react";
 
@@ -32,6 +33,7 @@ export default function DomainDnsPanel({ domain, onClose }: DomainDnsPanelProps)
   const [glue, setGlue] = useState<any[]>([]);
   const [glueHost, setGlueHost] = useState("");
   const [glueIps, setGlueIps] = useState("");
+  useEscapeKey(onClose);
 
   const fetchRecords = async () => {
     setLoading(true);

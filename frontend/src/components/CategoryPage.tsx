@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import {
   Check, Loader2, ShoppingCart, ChevronDown, ChevronUp,
   List, LayoutGrid, RefreshCw, ArrowUpDown, Search, X,
@@ -343,6 +344,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const [compareCodes, setCompareCodes] = useState<string[]>([]);
   const [showCompare, setShowCompare] = useState(false);
+  useEscapeKey(() => setShowCompare(false), showCompare);
   const toggleCompare = (planCode: string) => {
     setCompareCodes(prev => prev.includes(planCode)
       ? prev.filter(c => c !== planCode)

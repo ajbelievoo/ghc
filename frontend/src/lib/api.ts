@@ -69,6 +69,8 @@ export const api = {
     setup2FA: () => request("/auth/2fa/setup", { method: "POST" }),
     confirm2FA: (body: { code: string }) =>
       request("/auth/2fa/confirm", { method: "POST", body: JSON.stringify(body) }),
+    regenerateBackupCodes: (body: { code: string }) =>
+      request("/auth/2fa/backup-codes", { method: "POST", body: JSON.stringify(body) }),
     disable2FA: (body: { code: string }) =>
       request("/auth/2fa/disable", { method: "POST", body: JSON.stringify(body) }),
     changePassword: (body: { currentPassword: string; newPassword: string }) =>
@@ -379,6 +381,24 @@ export const api = {
     dedicatedMonitoring: (id: string) => request(`/server/${id}/dedicated/monitoring`),
     dedicatedSetMonitoring: (id: string, body: { monitoring?: boolean; noIntervention?: boolean }) =>
       request(`/server/${id}/dedicated/monitoring`, { method: "POST", body: JSON.stringify(body) }),
+    // ---- Web hosting ----
+    hostingOverview: (id: string) => request(`/server/${id}/hosting/overview`),
+    hostingDomains: (id: string) => request(`/server/${id}/hosting/domains`),
+    hostingDatabases: (id: string) => request(`/server/${id}/hosting/databases`),
+    hostingCreateDatabase: (id: string, body: { name: string; type?: string; password: string; user?: string }) =>
+      request(`/server/${id}/hosting/databases`, { method: "POST", body: JSON.stringify(body) }),
+    hostingCron: (id: string) => request(`/server/${id}/hosting/cron`),
+    hostingCreateCron: (id: string, body: { command: string; crontab: string; description?: string; email?: string; language?: string }) =>
+      request(`/server/${id}/hosting/cron`, { method: "POST", body: JSON.stringify(body) }),
+    hostingDeleteCron: (id: string, cronId: number) =>
+      request(`/server/${id}/hosting/cron/${cronId}`, { method: "DELETE" }),
+    hostingSsl: (id: string) => request(`/server/${id}/hosting/ssl`),
+    hostingRegenerateSsl: (id: string) => request(`/server/${id}/hosting/ssl`, { method: "POST" }),
+    hostingUsers: (id: string) => request(`/server/${id}/hosting/users`),
+    hostingTasks: (id: string) => request(`/server/${id}/hosting/tasks`),
+    hostingOvhConfig: (id: string) => request(`/server/${id}/hosting/ovh-config`),
+    hostingUpdateOvhConfig: (id: string, body: { engineVersion?: string; environment?: string }) =>
+      request(`/server/${id}/hosting/ovh-config`, { method: "PUT", body: JSON.stringify(body) }),
   },
   account: {
     sshKeys: () => request("/account/ssh-keys"),

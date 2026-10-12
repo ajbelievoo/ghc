@@ -134,6 +134,7 @@ export default function DashboardPage() {
   const [twoFactorQr, setTwoFactorQr] = useState<string | null>(null);
   const [twoFactorSecret, setTwoFactorSecret] = useState<string | null>(null);
   const [twoFactorCodeInput, setTwoFactorCodeInput] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
   const [teamData, setTeamData] = useState<any>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [invitePermissions, setInvitePermissions] = useState<string[]>(["VIEW_SERVERS"]);
@@ -305,12 +306,25 @@ export default function DashboardPage() {
   const handleConfirm2FA = async () => {
     setSecurityLoading(true);
     try {
-      await api.auth.confirm2FA({ code: twoFactorCodeInput });
+      const res = await api.auth.confirm2FA({ code: twoFactorCodeInput });
       setTwoFactorQr(null);
       setTwoFactorSecret(null);
       setTwoFactorCodeInput("");
+      if (res?.backupCodes?.length) setBackupCodes(res.backupCodes);
       showToast("2FA enabled successfully!", "success");
       api.auth.me().then((data: any) => setUser(data.user));
+    } catch (e: any) { showToast(e.message, "error"); }
+    setSecurityLoading(false);
+  };
+
+  const handleRegenerateBackupCodes = async () => {
+    const code = prompt("Enter a fresh 6-digit code from your authenticator app to regenerate backup codes:");
+    if (!code) return;
+    setSecurityLoading(true);
+    try {
+      const res = await api.auth.regenerateBackupCodes({ code: code.trim() });
+      if (res?.backupCodes?.length) setBackupCodes(res.backupCodes);
+      showToast("New backup codes generated — old ones are now invalid", "success");
     } catch (e: any) { showToast(e.message, "error"); }
     setSecurityLoading(false);
   };
@@ -2368,6 +2382,13 @@ export default function DashboardPage() {
                       <button onClick={handleDisable2FA} disabled={securityLoading || twoFactorCodeInput.length !== 6} className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-500/20 transition-all disabled:opacity-50">Disable 2FA</button>
                     </div>
                   </div>
+                  <div className="flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3">
+                    <div>
+                      <p className="text-xs font-medium text-[#0f172a]">Backup codes</p>
+                      <p className="text-[10px] text-slate-500">One-time recovery codes for when your phone isn't available</p>
+                    </div>
+                    <button onClick={handleRegenerateBackupCodes} disabled={securityLoading} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-3 py-1.5 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20 disabled:opacity-50">Regenerate</button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -2405,6 +2426,38 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+
+            {/* Backup codes — shown once after enable/regenerate */}
+            {backupCodes && (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 space-y-3">
+                <h3 className="text-sm font-bold text-amber-800 flex items-center gap-2"><ShieldAlert className="w-4 h-4" /> Save your backup codes</h3>
+                <p className="text-xs text-amber-700">These one-time codes let you sign in if you lose your phone. <b>They are shown only once</b> — store them somewhere safe.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl bg-white border border-amber-200 p-4">
+                  {backupCodes.map((c) => (
+                    <code key={c} className="rounded bg-slate-100 px-2 py-1.5 text-center text-xs font-mono font-bold text-[#0f172a]">{c}</code>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([`GHC 2FA backup codes (one-time use each)\nGenerated: ${new Date().toISOString()}\n\n${backupCodes.join("\n")}\n`], { type: "text/plain" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "ghc-backup-codes.txt";
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="rounded-lg bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700"
+                  >Download codes</button>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(backupCodes.join("\n")); showToast("Codes copied", "success"); }}
+                    className="rounded-lg border border-amber-300 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                  >Copy all</button>
+                  <button onClick={() => setBackupCodes(null)} className="ml-auto text-xs text-amber-700 hover:underline">I've saved them — dismiss</button>
+                </div>
+              </div>
+            )}
 
             {/* SSH Keys */}
             <SshKeysCard />

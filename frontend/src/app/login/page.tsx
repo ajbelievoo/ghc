@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const [tempToken, setTempToken] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [useBackupCode, setUseBackupCode] = useState(false);
   const [notVerified, setNotVerified] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
@@ -199,25 +200,32 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[#0f172a] mb-1.5">6-Digit Code</label>
+            <label className="block text-sm font-medium text-[#0f172a] mb-1.5">{useBackupCode ? "Backup Code" : "6-Digit Code"}</label>
             <div className="relative">
               <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
+                inputMode={useBackupCode ? "text" : "numeric"}
+                pattern={useBackupCode ? undefined : "[0-9]{6}"}
+                maxLength={useBackupCode ? 9 : 6}
                 value={twoFactorCode}
-                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, ""))}
+                onChange={(e) => setTwoFactorCode(useBackupCode ? e.target.value.toUpperCase() : e.target.value.replace(/\D/g, ""))}
                 required
                 className={`${inputClass} tracking-widest text-center`}
-                placeholder="000000"
+                placeholder={useBackupCode ? "XXXX-XXXX" : "000000"}
                 autoFocus
               />
             </div>
+            <button
+              type="button"
+              onClick={() => { setUseBackupCode(!useBackupCode); setTwoFactorCode(""); }}
+              className="mt-2 text-xs text-[#00b7ff] hover:underline"
+            >
+              {useBackupCode ? "Use authenticator code instead" : "Lost your phone? Use a backup code"}
+            </button>
           </div>
 
-          <button type="submit" disabled={loading || twoFactorCode.length !== 6} className={btnClass}>
+          <button type="submit" disabled={loading || (useBackupCode ? twoFactorCode.replace(/-/g, "").length !== 8 : twoFactorCode.length !== 6)} className={btnClass}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : null}
             {loading ? "Verifying..." : "Verify & Sign In"}
           </button>

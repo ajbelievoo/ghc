@@ -6,6 +6,7 @@ import { ShoppingCart, Trash2, Loader2, Package, ArrowRight } from "lucide-react
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { api } from "@/lib/api";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import { useToast } from "@/components/ToastProvider";
 import { getCurrencySymbol } from "@/components/CurrencyProvider";
 
@@ -18,6 +19,7 @@ export default function CartPage() {
   const [paying, setPaying] = useState(false);
   const [manual, setManual] = useState<any>(null);
   const [loggedIn, setLoggedIn] = useState(true);
+  useEscapeKey(() => setManual(null), !!manual);
 
   const load = useCallback(() => {
     api.cart.list().then((d) => setItems(d.items || [])).catch((e) => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { useEscapeKey } from "@/lib/useEscapeKey";
 import { useToast } from "@/components/ToastProvider";
 import { X, Loader2, Power, RotateCcw, Terminal, Save, Check } from "lucide-react";
 
@@ -19,6 +20,7 @@ export default function AdminServerModal({ subscriptionId, onClose }: AdminServe
   const [reverseIp, setReverseIp] = useState("");
   const [reverseValue, setReverseValue] = useState("");
   const [reverseLoading, setReverseLoading] = useState(false);
+  useEscapeKey(onClose);
 
   useEffect(() => { fetchDetails(); }, [subscriptionId]);
 
