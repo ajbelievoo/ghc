@@ -125,16 +125,20 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
     return () => { alive = false; };
   }, [currency]);
 
-  const sorted = useMemo(() => {
+  const { sorted, lzPlans } = useMemo(() => {
     const price = (p: any) => {
       const d = (p.durations || []).find((x: any) => x.durationLabel === "1_month") || p.durations?.[0];
       return d?.monthlyPrice ?? d?.finalPrice ?? Infinity;
     };
     // Only the current-gen VPS 2027 range is sold under Metal — older families
     // (starter/value/essential/comfort/elite/le) stay hidden per product decision.
-    return [...(plans || [])]
+    const all = [...(plans || [])]
       .filter((p) => price(p) !== Infinity && String(p.planCode).startsWith("vps-2027"))
       .sort((a, b) => price(a) - price(b));
+    return {
+      sorted: all.filter((p) => !/\.lz$/i.test(String(p.planCode))),
+      lzPlans: all.filter((p) => /\.lz$/i.test(String(p.planCode))),
+    };
   }, [plans]);
 
   const regions = useMemo(() => {
@@ -207,7 +211,7 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
                 <div key={p.planCode} className="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-[#00b7ff] hover:shadow-xl">
                   <div className="p-5">
                     <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-emerald-700">New</span>
-                    <h3 className="mt-2 text-lg font-bold text-[#0f172a]">{p.invoiceName || p.planCode}</h3>
+                    <h3 className="mt-2 text-lg font-bold text-[#0f172a]">{p.displayName || p.invoiceName || p.planCode}</h3>
                     <p className="mt-1 text-xs text-slate-500">From</p>
                     <p className="text-2xl font-black text-[#0f172a]">{money(d?.monthlyPrice ?? d?.finalPrice, d?.currency)}</p>
                     <p className="text-[11px] text-slate-400">ex. taxes/month</p>
@@ -225,6 +229,33 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Local Zone variants — same hardware, closer to specific cities */}
+        {lzPlans.length > 0 && (
+          <div className="mt-12">
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-black">Also available in Local Zones</h3>
+              <span className="rounded-full bg-[#00b7ff]/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#0050d7]">Lower latency</span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">Same Metal VPS hardware deployed in city-edge zones — pick during configuration for the closest location to your users.</p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {lzPlans.map((p) => {
+                const d = (p.durations || []).find((x: any) => x.durationLabel === "1_month") || p.durations?.[0];
+                return (
+                  <div key={p.planCode} className="flex flex-col rounded-lg border border-dashed border-[#00b7ff]/50 bg-[#f0f9ff] p-5">
+                    <span className="w-fit rounded bg-[#00b7ff]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#0050d7]">Local Zone</span>
+                    <h3 className="mt-2 text-base font-bold text-[#0f172a]">{p.displayName || p.invoiceName || p.planCode}</h3>
+                    <p className="mt-1 text-xl font-black text-[#0f172a]">{money(d?.monthlyPrice ?? d?.finalPrice, d?.currency)}<span className="text-[10px] font-normal text-slate-400"> ex. taxes/month</span></p>
+                    <p className="mt-1 text-[11px] text-slate-500">{p.cpuCores} vCores · {p.ramGb} GB RAM · {p.diskGb} GB {p.diskType || "NVMe"}</p>
+                    <button onClick={() => configure(p.planCode)} className="mt-4 inline-flex items-center gap-2 rounded bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">
+                      <ShoppingCart className="h-3.5 w-3.5" /> Configure
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </section>
