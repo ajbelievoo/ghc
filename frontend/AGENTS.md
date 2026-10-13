@@ -31,3 +31,9 @@ get explicit user approval first. See python-backend/AGENTS.md for details.
 - `/api/server/plans?category=DEDICATED` now returns `displayName` + `spec` ({cpu,ram,storage,bandwidth} human strings) per plan. `displayName` = admin override (`admin_configs.metal_ded_names`, keyed by real plan_code) else auto `Metal <Range> <n> (<year>)`.
 - Admin editor: `/admin` → Margins tab → "Metal dedicated names" table (`GET/POST /api/admin/metal-dedicated`).
 - `AdvanceRangePage.tsx` groups regional plan variants (`24adv02-v3-syd` etc.) into ONE row per model+revision (key = first two planCode segments), OVH-style spec table, 6 rows + "Show more servers".
+
+## use-cases hub page (added 2026-10-13)
+
+- `/dedicated-servers/use-cases/` (`DedicatedUseCasesPage.tsx`) — OVH-style hub: carousel of range+use-case cards with real min prices, feature-card grid, all linking to `/dedicated-servers/prices?use_cases=<key>`.
+- `DedicatedRangeList.tsx` reads `?use_cases=` (+`?usecase=`) query param to pre-select use-case chips.
+- ⚠️ Next 16 export quirk: a parent `page.tsx` beside child dirs (use-cases/) emits `.next/server/app/.../index.html` but does NOT copy it to `dist2/`. After build, manually: `cp .next/server/app/dedicated-servers/use-cases/index.html dist2/dedicated-servers/use-cases/index.html` before rsync to dist/.
