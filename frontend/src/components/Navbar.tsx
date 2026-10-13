@@ -705,7 +705,6 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                 <div className={`flex h-6 w-6 items-center justify-center rounded-full ${profileAvatar} text-[10px] font-bold`}>
                   {user.name?.charAt(0).toUpperCase() || "U"}
                 </div>
-                <span className={`max-w-[80px] truncate hidden xl:block ${dark ? "text-white" : ""}`}>{user.name}</span>
                 <ChevronDown className="h-3 w-3" />
               </button>
               {profileOpen && (
