@@ -150,7 +150,7 @@ const megaMenu: MegaEntry[] = [
         columns: [
       { title: "VPS & Dedicated", items: [
         { label: "Dedicated servers", href: "/dedicated-servers", desc: "All performance levels. Available in minutes." },
-        { label: "VPS", href: "/vps", desc: "The right balance of performance, flexibility and cost control" },
+        { label: "Essential VPS", href: "/vps", desc: "The right balance of performance, flexibility and cost control" },
         { label: "Eco servers", href: "/dedicated-servers/eco", desc: "Budget bare metal for labs and small projects" },
         { label: "Rise servers", href: "/dedicated-servers/rise", desc: "Entry-level enterprise bare metal" },
         { label: "Distributions & Licenses", href: "/apps", desc: "Choose an image to deploy on your server" },

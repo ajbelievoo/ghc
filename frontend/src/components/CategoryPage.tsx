@@ -28,7 +28,7 @@ interface CategoryDef {
 }
 
 const categoryMap: Record<string, CategoryDef> = {
-  VPS: { key: "VPS", label: "VPS", heroTitle: "Virtual Private Servers (VPS)", heroSubtitle: "A simple, powerful cloud platform tailored to your needs", heroBullets: ["More resources, still at the best price","Enhanced security, anti-DDoS and backup included","Unlimited bandwidth, up to 1.5Gbps"] },
+  VPS: { key: "VPS", label: "VPS", heroTitle: "Essential VPS — simple, powerful virtual servers", heroSubtitle: "A simple, powerful cloud platform tailored to your needs", heroBullets: ["More resources, still at the best price","Enhanced security, anti-DDoS and backup included","Unlimited bandwidth, up to 1.5Gbps"] },
   DEDICATED: { key: "DEDICATED", label: "Dedicated servers", heroTitle: "GHC Full Dedicated Server Range", heroSubtitle: "Select the specifications you require and complete your server order in a few clicks.", heroBullets: ["Bare metal performance","DDoS protection included","Custom RAID and IPMI"] },
   WEB_HOSTING: { key: "WEB_HOSTING", label: "Web Hosting", heroTitle: "Web Hosting Solutions", heroSubtitle: "Reliable cPanel, Plesk and CMS hosting for every project", heroBullets: ["Free SSL certificate","Daily backups included","cPanel / Plesk control panels"] },
   CDN: { key: "CDN", label: "CDN & Security", heroTitle: "CDN & Security Solutions", heroSubtitle: "Global edge acceleration and DDoS protection", heroBullets: ["Global edge nodes","DDoS mitigation","HTTP/3 and real-time analytics"] },
@@ -37,7 +37,7 @@ const categoryMap: Record<string, CategoryDef> = {
 };
 
 const subCategoryHero: Record<string, { title: string; subtitle: string; bullets: string[] }> = {
-  "vps-2027": { title: "Virtual Private Servers (VPS)", subtitle: "A simple, powerful cloud platform tailored to your needs", bullets: ["More resources, still at the best price","Enhanced security, anti-DDoS and backup included","Unlimited bandwidth, up to 1.5Gbps"] },
+  "vps-2027": { title: "Essential VPS — simple, powerful virtual servers", subtitle: "A simple, powerful cloud platform tailored to your needs", bullets: ["More resources, still at the best price","Enhanced security, anti-DDoS and backup included","Unlimited bandwidth, up to 1.5Gbps"] },
   "plesk": { title: "GHC Plesk VPS Offer", subtitle: "Efficiently manage websites, domains, and emails with Plesk's user-friendly control panel using high-performance GHC VPS.", bullets: ["Plesk Obsidian control panel pre-installed","Manage multiple websites from one interface","Automated backups and security tools"] },
   "n8n": { title: "VPS n8n: a solution for your workflow automations", subtitle: "Transform your business operations with n8n, the flexible workflow automation tool. Seamlessly connect integrations and streamline complex processes with ease.", bullets: ["n8n pre-installed and ready to use","Automate workflows without coding","Connect 400+ integrations"] },
   "cpanel": { title: "Discover our cPanel-compatible VPSs", subtitle: "Centralised multi-site management, reliable, scalable web hosting, and transparent and predictable pricing.", bullets: ["cPanel & WHM pre-installed","Manage multiple websites easily","Automatic SSL and backups"] },
@@ -80,7 +80,7 @@ const subCategoryHero: Record<string, { title: string; subtitle: string; bullets
 
 
 interface Plan {
-  planCode: string; invoiceName: string; description?: string;
+  planCode: string; invoiceName: string; displayName?: string; description?: string;
   family?: string; category: string;
   cpuCores?: number; ramGb?: number; diskGb?: number;
   diskType?: string; bandwidthMbps?: number;
@@ -488,7 +488,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
     return (
       <div key={plan.planCode} className="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-[#00b7ff] hover:shadow-xl">
         <div className="border-b border-slate-200 p-6">
-          <h3 className="text-lg font-bold text-[#0f172a]">{plan.invoiceName || plan.planCode}</h3>
+          <h3 className="text-lg font-bold text-[#0f172a]">{plan.displayName || plan.invoiceName || plan.planCode}</h3>
         </div>
         <div className="border-b border-slate-200 p-6">
           <p className="text-xs font-medium text-slate-500">From</p>
@@ -566,7 +566,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
               <button onClick={() => setExpandedPlan(isExpanded ? null : plan.planCode)} className="text-[#00b7ff] p-1 hover:bg-slate-100 rounded">
                 {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
-              <span className="font-bold text-sm text-[#0f172a]">{plan.invoiceName || plan.planCode}</span>
+              <span className="font-bold text-sm text-[#0f172a]">{plan.displayName || plan.invoiceName || plan.planCode}</span>
               {bestValueCodes.has(plan.planCode) && <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 uppercase">Best value</span>}
             </div>
           </td>
@@ -897,7 +897,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
             <div className="flex flex-wrap gap-2">
               {comparePlans.map(p => (
                 <span key={p.planCode} className="inline-flex items-center gap-1 rounded-full bg-[#f8faff] border border-slate-200 px-3 py-1 text-xs font-medium text-[#0f172a]">
-                  {p.invoiceName || p.planCode}
+                  {p.displayName || p.invoiceName || p.planCode}
                   <button onClick={() => toggleCompare(p.planCode)} className="text-slate-400 hover:text-red-500"><X className="h-3 w-3" /></button>
                 </span>
               ))}
@@ -929,7 +929,7 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
                     const cheapest = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
                     return (
                       <th key={p.planCode} className="min-w-[180px] px-4 py-4 text-left">
-                        <p className="font-black text-[#0f172a]">{p.invoiceName || p.planCode}</p>
+                        <p className="font-black text-[#0f172a]">{p.displayName || p.invoiceName || p.planCode}</p>
                         <p className="mt-1 text-xl font-black text-[#00b7ff]">{money(cheapest?.monthlyPrice, cheapest?.currency)}</p>
                         <p className="text-[10px] font-normal text-slate-500">ex. taxes/month</p>
                       </th>

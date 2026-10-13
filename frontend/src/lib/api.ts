@@ -175,6 +175,13 @@ export const api = {
     getMetalDedicated: () => request("/admin/metal-dedicated"),
     saveMetalDedicated: (body: { marginPercent?: number; names?: Record<string, string> }) =>
       request("/admin/metal-dedicated", { method: "POST", body: JSON.stringify(body) }),
+    // Essential channel (standard /vps + /dedicated-servers storefront)
+    getEssentialVps: () => request("/admin/essential-vps"),
+    saveEssentialVps: (body: { marginPercent?: number; names?: Record<string, string> }) =>
+      request("/admin/essential-vps", { method: "POST", body: JSON.stringify(body) }),
+    getEssentialDedicated: () => request("/admin/essential-dedicated"),
+    saveEssentialDedicated: (body: { marginPercent?: number; names?: Record<string, string> }) =>
+      request("/admin/essential-dedicated", { method: "POST", body: JSON.stringify(body) }),
     // Catalog
     getCatalog: (params?: { category?: string; search?: string }) =>
       request(`/admin/plans?${new URLSearchParams(params as any).toString()}`),

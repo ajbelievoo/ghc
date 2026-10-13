@@ -64,6 +64,12 @@ export default function AdminPage() {
   const [dedPlans, setDedPlans] = useState<any[]>([]);
   const [dedNames, setDedNames] = useState<Record<string, string>>({});
   const [dedMargin, setDedMargin] = useState<number>(20);
+  const [essVpsPlans, setEssVpsPlans] = useState<any[]>([]);
+  const [essVpsNames, setEssVpsNames] = useState<Record<string, string>>({});
+  const [essVpsMargin, setEssVpsMargin] = useState<number>(10);
+  const [essDedPlans, setEssDedPlans] = useState<any[]>([]);
+  const [essDedNames, setEssDedNames] = useState<Record<string, string>>({});
+  const [essDedMargin, setEssDedMargin] = useState<number>(12);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
   const [catalogPlans, setCatalogPlans] = useState<PlanEntry[]>([]);
@@ -141,6 +147,8 @@ export default function AdminPage() {
         const m = await api.admin.getMargins(); const map: Record<string, number> = {}; m.forEach((x: any) => map[x.category] = x.percent); setMargins(map);
         try { const mv = await api.admin.getMetalVps(); setMetalMargin(mv.marginPercent ?? 20); setMetalPlans(mv.plans || []); setMetalNames(mv.names || {}); } catch {}
         try { const md = await api.admin.getMetalDedicated(); setDedPlans(md.plans || []); setDedNames(md.names || {}); setDedMargin(md.marginPercent ?? 20); } catch {}
+        try { const ev = await api.admin.getEssentialVps(); setEssVpsPlans(ev.plans || []); setEssVpsNames(ev.names || {}); setEssVpsMargin(ev.marginPercent ?? 10); } catch {}
+        try { const ed = await api.admin.getEssentialDedicated(); setEssDedPlans(ed.plans || []); setEssDedNames(ed.names || {}); setEssDedMargin(ed.marginPercent ?? 12); } catch {}
       }
       if (t === "coupons") { const c = await api.admin.getCoupons(); setCoupons(c || []); }
       if (t === "catalog") { setCatalogLoading(true); const params: any = { search: catalogSearch || undefined }; if (catalogCategory !== "ALL") params.category = catalogCategory; const p = await api.admin.getCatalog(params); setCatalogPlans(p || []); setCatalogLoading(false); }
@@ -209,6 +217,10 @@ export default function AdminPage() {
   const saveMetalNames = async () => { try { await api.admin.saveMetalVps({ names: metalNames }); showToast("Metal plan names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveDedNames = async () => { try { await api.admin.saveMetalDedicated({ names: dedNames }); showToast("Dedicated names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveDedMargin = async () => { try { await api.admin.saveMetalDedicated({ marginPercent: dedMargin }); showToast("Metal dedicated margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveEssVpsMargin = async () => { try { await api.admin.saveEssentialVps({ marginPercent: essVpsMargin }); showToast("Essential VPS margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveEssVpsNames = async () => { try { await api.admin.saveEssentialVps({ names: essVpsNames }); showToast("Essential VPS names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveEssDedMargin = async () => { try { await api.admin.saveEssentialDedicated({ marginPercent: essDedMargin }); showToast("Essential dedicated margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveEssDedNames = async () => { try { await api.admin.saveEssentialDedicated({ names: essDedNames }); showToast("Essential dedicated names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handlePlanOverride = async (planCode: string, overridePrice: string, overrideMargin: string) => { try { await api.admin.updatePlanOverride(planCode, { overridePrice: overridePrice === "" ? null : parseFloat(overridePrice), overrideMargin: overrideMargin === "" ? null : parseFloat(overrideMargin) }); showToast("Override saved for " + planCode, "success"); loadTabData("catalog"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleFulfillPayment = async (sessionId: string) => { try { await api.payments.fulfillSession(sessionId); showToast("Payment fulfilled and service activated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleRetryProvision = async (orderId: string) => { try { await api.admin.retryProvision(orderId); showToast("Provisioning retry initiated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
@@ -637,6 +649,98 @@ export default function AdminPage() {
                   <p className="text-xs text-slate-500 mt-3">Applied to all {cat.replace("_", " ").toLowerCase()} plans on next sync.</p>
                 </div>
               ))}
+            </div>
+
+            {/* ===== ESSENTIAL CHANNEL (standard /vps + /dedicated-servers) ===== */}
+            <div className="mt-8 rounded-2xl border-2 border-[#00b7ff]/40 bg-white/60 backdrop-blur-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 flex items-center justify-center"><Percent className="w-5 h-5 text-[#00b7ff]" /></div>
+                <div>
+                  <p className="text-sm font-bold text-[#0f172a]">ESSENTIAL — standard storefront</p>
+                  <p className="text-xs text-slate-500">Names and margins for the regular /vps and /dedicated-servers pages — kept deliberately different from Metal so customers never confuse the two channels.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm font-bold text-[#0f172a]">Essential VPS margin % <span className="font-normal text-slate-500">(= the VPS category margin above — applies on next sync)</span></p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <input type="number" value={essVpsMargin} onChange={(e) => setEssVpsMargin(parseFloat(e.target.value) || 0)} className="flex-1 rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none" />
+                    <button onClick={saveEssVpsMargin} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2.5 text-sm text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all font-bold">Save</button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#0f172a]">Essential dedicated margin % <span className="font-normal text-slate-500">(= the DEDICATED category margin above)</span></p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <input type="number" value={essDedMargin} onChange={(e) => setEssDedMargin(parseFloat(e.target.value) || 0)} className="flex-1 rounded-lg bg-slate-100 border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#00b7ff]/50 outline-none" />
+                    <button onClick={saveEssDedMargin} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2.5 text-sm text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all font-bold">Save</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-[#0f172a]">Essential VPS display names <span className="font-normal text-slate-500">(public names on /vps — blank = auto Essential name)</span></p>
+                  <button onClick={saveEssVpsNames} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all">Save names</button>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
+                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Essential name</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {essVpsPlans.map((p: any) => (
+                        <tr key={p.planCode}>
+                          <td className="px-3 py-2 font-mono text-[11px]">{p.planCode}</td>
+                          <td className="px-3 py-2">{p.invoiceName}</td>
+                          <td className="px-3 py-2 text-slate-500">{p.autoName}</td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={essVpsNames[p.planCode] ?? p.essentialName ?? ""}
+                              onChange={(e) => setEssVpsNames((prev) => ({ ...prev, [p.planCode]: e.target.value }))}
+                              placeholder={p.autoName}
+                              className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#00b7ff]/50"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                      {essVpsPlans.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-[#0f172a]">Essential dedicated names <span className="font-normal text-slate-500">(public names on /dedicated-servers — blank = auto Essential name)</span></p>
+                  <button onClick={saveEssDedNames} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all">Save names</button>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
+                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Essential name</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {essDedPlans.map((p: any) => (
+                        <tr key={p.planCode}>
+                          <td className="px-3 py-2 font-mono text-[11px]">{p.planCode}</td>
+                          <td className="px-3 py-2">{p.invoiceName}</td>
+                          <td className="px-3 py-2 text-slate-500">{p.autoName}</td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={essDedNames[p.planCode] ?? p.essentialName ?? ""}
+                              onChange={(e) => setEssDedNames((prev) => ({ ...prev, [p.planCode]: e.target.value }))}
+                              placeholder={p.autoName}
+                              className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#00b7ff]/50"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                      {essDedPlans.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">No dedicated plans synced yet</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
             {/* ===== METAL CHANNEL ===== */}
