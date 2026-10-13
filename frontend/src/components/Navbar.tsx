@@ -143,62 +143,68 @@ const megaMenu: MegaEntry[] = [
     href: "/dedicated-servers",
     subMenus: [
       {
-        label: "VPS & Dedicated",
+        label: "Dedicated servers",
         href: "/dedicated-servers",
-        tagline: "Performance servers at the best price",
-        cols: 4,
+        tagline: "Bare metal power, predictable pricing",
         columns: [
-      { title: "VPS & Dedicated", items: [
-        { label: "Dedicated servers", href: "/dedicated-servers", desc: "All performance levels. Available in minutes." },
-        { label: "Essential VPS", href: "/vps", desc: "The right balance of performance, flexibility and cost control" },
-        { label: "Eco servers", href: "/dedicated-servers/eco", desc: "Budget bare metal for labs and small projects" },
-        { label: "Rise servers", href: "/dedicated-servers/rise", desc: "Entry-level enterprise bare metal" },
-        { label: "Distributions & Licenses", href: "/apps", desc: "Choose an image to deploy on your server" },
+      { title: "Our server ranges", items: [
+        { label: "Advance", href: "/dedicated-servers/advance", desc: "Versatile bare metal for SMEs" },
+        { label: "Game", href: "/dedicated-servers/game", desc: "Performance and security for games" },
+        { label: "Scale", href: "/dedicated-servers/scale", desc: "Power for heavy workloads" },
+        { label: "High Grade", href: "/dedicated-servers/high-grade", desc: "Mission-critical bare metal" },
+        { label: "Storage", href: "/dedicated-servers/storage", desc: "High-capacity storage servers" },
+        { label: "Rise", href: "/dedicated-servers/rise", desc: "Entry-level enterprise bare metal" },
+        { label: "Eco", href: "/dedicated-servers/eco", desc: "Budget bare metal for labs" },
       ]},
-      { title: "Bare Metal Foundations", items: [
-        { label: "Network", href: "/network", desc: "Secure and high-performance connectivity" },
+      { title: "Uses", items: [
+        { label: "AZ resilience", href: "/dedicated-servers/use-cases/az-resilience", desc: "Multi-AZ business continuity" },
+        { label: "Virtualisation", href: "/dedicated-servers/use-cases/virtualisation", desc: "VMware, Proxmox, containers" },
+        { label: "Web & business apps", href: "/dedicated-servers/use-cases/web-applications", desc: "Host websites at scale" },
+        { label: "Grid computing", href: "/dedicated-servers/use-cases/grid-computing", desc: "Compute-intensive workloads" },
+        { label: "All uses", href: "/dedicated-servers/use-cases" },
+      ]},
+      { title: "Foundations", items: [
         { label: "Anti-DDoS Protection", href: "/products/anti-ddos", desc: "Always-on attack mitigation, free with every server" },
         { label: "Failover & Additional IPs", href: "/products/ip-failover", desc: "Moveable IPs for high availability" },
         { label: "vRack Private Network", href: "/products/vrack", desc: "Isolated L2 network across your services" },
-        { label: "Storage & Backup", href: "/dedicated-servers/storage", desc: "Backups and business continuity" },
-        { label: "Security & Identities", href: "/security", desc: "Granular control over your environments" },
-        { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
-      ]},
-      { groups: [
-        { title: "Speed up your websites and applications", items: [
-          { label: "WordPress", href: "/vps/wordpress" },
-          { label: "Drupal", href: "/solutions/drupal" },
-          { label: "PrestaShop", href: "/solutions/prestashop" },
-          { label: "Magento", href: "/solutions/magento" },
-        ]},
-        { title: "The ideal foundation for your VMs", items: [
-          { label: "Proxmox", href: "/solutions/proxmox" },
-          { label: "KVM", href: "/solutions/kvm" },
-          { label: "VMware ESXi", href: "/solutions/vmware-esxi" },
-          { label: "Microsoft Hyper-V", href: "/solutions/hyper-v" },
-        ]},
-      ]},
-      { groups: [
-        { title: "Your data, without data loss", items: [
-          { label: "ClickHouse", href: "/solutions/clickhouse" },
-          { label: "PostgreSQL", href: "/solutions/postgresql" },
-          { label: "Cassandra", href: "/solutions/cassandra" },
-          { label: "HBase", href: "/solutions/hbase" },
-          { label: "InfluxDB", href: "/solutions/influxdb" },
-        ]},
-        { title: "The power for your critical workloads", items: [
-          { label: "GROMACS", href: "/solutions/gromacs" },
-          { label: "NAMD", href: "/solutions/namd" },
-        ]},
-        { title: "Blockchain infrastructure", items: [
-          { label: "Validator Nodes", href: "/solutions/validator-nodes" },
-          { label: "RPC Nodes", href: "/solutions/rpc-nodes" },
-          { label: "Archive Nodes", href: "/solutions/archive-nodes" },
-        ]},
+        { label: "Distributions & Licenses", href: "/apps", desc: "Choose an image to deploy on your server" },
+        { label: "Wholesale", href: "/dedicated-servers/wholesale", desc: "Complete server racks" },
       ]},
         ],
         footerLinks: [
-          { label: "Prices", href: "/dedicated-servers" },
+          { label: "Prices", href: "/dedicated-servers/prices" },
+          { label: "Guides & Documentation", href: "/kb" },
+          { label: "Roadmap & Changelog", href: "/status" },
+        ],
+      },
+      {
+        label: "VPS",
+        href: "/vps",
+        tagline: "Scalable virtual servers at the best price",
+        columns: [
+      { title: "Essential VPS", items: [
+        { label: "Essential VPS range", href: "/vps", desc: "The right balance of performance, flexibility and cost control" },
+        { label: "VPS for WordPress", href: "/vps/wordpress", desc: "Easy website design at scale" },
+        { label: "Plesk VPS", href: "/vps/plesk", desc: "Web hosting made simple" },
+        { label: "cPanel VPS", href: "/vps/cpanel", desc: "Centralised web hosting" },
+        { label: "Comfort VPS", href: "/vps/comfort", desc: "Balanced performance and storage" },
+        { label: "Distributions & Licenses", href: "/apps", desc: "OS and software to deploy" },
+      ]},
+      { title: "Who is it for?", items: [
+        { label: "Agency / Multisites", href: "/vps", desc: "Host many client sites on one VPS" },
+        { label: "Developers", href: "/vps", desc: "Fast, flexible dev environments" },
+        { label: "Resellers", href: "/vps", desc: "Resell VPS under your own brand" },
+      ]},
+      { title: "Speed up your projects", items: [
+        { label: "WordPress", href: "/vps/wordpress" },
+        { label: "Drupal", href: "/solutions/drupal" },
+        { label: "PrestaShop", href: "/solutions/prestashop" },
+        { label: "Magento", href: "/solutions/magento" },
+        { label: "Proxmox", href: "/solutions/proxmox" },
+      ]},
+        ],
+        footerLinks: [
+          { label: "Prices", href: "/vps" },
           { label: "Guides & Documentation", href: "/kb" },
           { label: "Roadmap & Changelog", href: "/status" },
         ],
