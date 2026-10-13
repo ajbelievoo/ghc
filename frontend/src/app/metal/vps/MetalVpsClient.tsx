@@ -65,6 +65,7 @@ const METAL_FAMILIES: Record<string, {
   crumb: string; rangeTitle: string; title: string; subtitle: string; bullets: string[];
   exploreTitle?: string; exploreSub?: string;
   benefits?: { t: string; d: string }[];
+  whyTitle?: string; whyIntro?: string;
   whyChoose?: { t: string; d: string }[];
   howTo?: { title: string; body: string };
   heroNote?: string;
@@ -151,18 +152,60 @@ const METAL_FAMILIES: Record<string, {
     ],
   },
   "cpanel": {
-    crumb: "cPanel VPS",
-    rangeTitle: "Metal cPanel VPS",
-    title: "Metal cPanel VPS",
-    subtitle: "Centralised web hosting. Unified management.",
-    bullets: ["cPanel & WHM pre-installed", "Manage multiple websites easily", "Automatic SSL and backups"],
+    crumb: "VPS cPanel",
+    rangeTitle: "Metal cPanel VPS Offer",
+    title: "Discover our cPanel-compatible VPS range",
+    subtitle: "",
+    bullets: ["Centralised multi-site management", "Reliable, scalable web hosting", "Transparent and predictable pricing"],
+    exploreTitle: "Metal cPanel VPS Offer",
+    exploreSub: "Combine the power of cPanel & WHM with dedicated resources — host unlimited websites, manage clients, and scale effortlessly on NVMe-backed Metal VPS.",
+    whyTitle: "Why deploy cPanel on a Metal VPS?",
+    whyIntro: "Our VPS solutions are designed to give you even more freedom when it comes to hosting your websites. The main advantage is that you can add resources to it as needed — so you can keep control over your budget. To make managing your websites even easier, you can deploy the cPanel management platform on our VPS solutions. With its user-friendly interface, you can manage your websites and online shops with just a few clicks. It offers a range of features, including centralised multi-site management. What's more, when you receive your VPS in your Control Panel, cPanel is already pre-installed to save you time.",
+    whyChoose: [
+      { t: "Optimised resources at the best price", d: "Get smooth performance without breaking the bank. Our VPS solutions are equipped with a powerful next-gen architecture and NVMe storage, guaranteeing speed and reliability." },
+      { t: "An isolated, scalable environment", d: "Host your projects in an isolated, flexible environment and upgrade your configuration in one click via the Control Panel." },
+      { t: "Simplicity and total control", d: "Gain full control over your VPS via root access and the Control Panel. Choose and install your preferred distribution, then use tools like Plesk or cPanel to manage your resources." },
+      { t: "Unlimited traffic", d: "With your VPS server, you get unlimited traffic* and bandwidth of up to 3 Gbps. This is perfect for services that require high data flows, such as hosting a website, streaming or gaming." },
+      { t: "Backup options", d: "Your data is automatically backed up for protection. You can also choose additional options, such as Premium backup and snapshots." },
+      { t: "Availability", d: "Backed by a 99.9% SLA, our VPS solutions ensure reliable hosting for your websites, applications, and critical projects." },
+    ],
+    faqs: [
+      { q: "What is cPanel?", a: "It's a graphical management interface based on a Linux OS (operating system). It simplifies the way you manage your projects, with features that centralise management in one interface. It's compatible with our shared hosting plans, VPS plans, and dedicated servers." },
+      { q: "What is the difference between cPanel Hosting and a cPanel VPS?", a: "cPanel hosting is generally a solution for hosting a website or application that uses cPanel, for example, at GHC. cPanel is used on our shared hosting servers. The main difference between a VPS and a shared hosting plan is the freedom of management. With shared hosting, the resources are distributed between the different users of the hosting solution, and you can then perform your configurations via the solution. You can't customise it. A VPS, on the other hand, offers a dedicated environment. By definition, it's a virtual server that is cut from a physical machine, so you have allocated hosting space. You can add resources as your business grows. These solutions are hosted in our own datacentres, and help you stay online worldwide." },
+      { q: "What is the difference between the cPanel dedicated server and the cPanel VPS?", a: "A cPanel dedicated server is an entire server managed with this interface. All of its resources are allocated to you (CPU, RAM, storage space, bandwidth, etc.). It's best suited for advanced web projects, intensive usage, and companies that require increased security. Although your VPS has a lot in common with the dedicated server in terms of administration, some of its resources are shared. Your environment stays private, giving you excellent balance between your hosted solutions, strong scalability and greater management flexibility." },
+      { q: "What are the specific features of cPanel?", a: "cPanel offers various possibilities and options you can manage your website however you want: file, database, and domain management; email management, including contact and security controls; metrics, which allow you to view your website visitors and resource usage; security options with several control tools, such as 2FA and SSL; application installation, platform management and PHP; Softaculous App Installer, which allows you to install hundreds of applications directly from cPanel; advanced tools, such as cron task management and error pages." },
+      { q: "How do I install cPanel on a VPS?", a: "You must have a VPS compatible with the cPanel interface, and a GHC customer account. Once you have this, please refer to our step-by-step guide on 'How to install cPanel on my VPS'." },
+      { q: "Which hosting solution should I use with cPanel?", a: "Shared hosting, VPS or dedicated server at GHC, all of these solutions are cPanel-compatible. They each offer their own advantages, depending on the nature and growth of your project: Shared hosting is a managed solution (monitoring, updates, etc.); Virtual Private Server offers unlimited monthly traffic, anti-DDoS protection, multisite management, PHP management, regular backup options, a dedicated environment, dedicated resources and customisation; Dedicated Server adds full hardware isolation and maximum performance. Remember that before you choose a hosting plan, you need to have a domain name." },
+      { q: "Which operating systems are compatible with a VPS?", a: "Our virtual private servers are compatible with a wide range of operating systems. You can have a VPS on Windows or Linux (including the Debian and Ubuntu VPS options). This includes Linux distributions that you're already familiar with. Please note that Windows licences are not included with our solutions and are billed separately. Linux licences are not subject to additional billing, so there are no surprises. You can choose the OS you want to use when ordering your VPS from the Control Panel." },
+    ],
   },
   "wordpress": {
-    crumb: "WordPress VPS",
+    crumb: "VPS for WordPress",
     rangeTitle: "Metal WordPress VPS",
-    title: "Metal VPS for WordPress",
-    subtitle: "Customisable and scalable server. Unlimited traffic.",
-    bullets: ["WordPress pre-installed", "Scalable resources as you grow", "Up to 1.5 Gbps unlimited bandwidth and traffic"],
+    title: "Explore Metal VPS servers, compatible with WordPress",
+    subtitle: "",
+    bullets: ["Performance at a competitive price", "A customisable and scalable VPS, compatible with WordPress", "Up to 3 Gbps unlimited bandwidth*"],
+    exploreTitle: "Metal VPS for WordPress",
+    exploreSub: "Launch WordPress sites on dedicated resources — predictable performance, daily backups and one-click scaling on every Metal VPS.",
+    benefits: [
+      { t: "Total scalability", d: "Manage your budget with a virtual private server (VPS) — designed to match your needs, and adapt to your growing activity and requirements. Only pay for what you need by adding the exact resources you want, with no need to provision them in advance." },
+    ],
+    whyChoose: [
+      { t: "Optimised resources at the best price", d: "Get ample resources without breaking the bank. Our VPS solutions, equipped with next-generation architecture and NVMe storage, guarantee speed and reliability." },
+      { t: "An isolated, scalable environment", d: "Host your projects in an isolated, flexible environment, and upgrade your configuration in one click via your Control Panel." },
+      { t: "Simplicity and total control", d: "Gain full control over your VPS via root access and the Control Panel. Choose and install your preferred distribution, then use tools like Plesk or cPanel to manage your resources." },
+      { t: "Unlimited traffic", d: "With your VPS server, you get unlimited traffic* and bandwidth of up to 3 Gbps. This is perfect for services that require high throughput, and does not incur extra costs. *Excluding our datacentres in Asia-Pacific." },
+      { t: "Backup options", d: "Your data is protected thanks to the automatic backup included. You can also opt for additional options, such as Premium backup and snapshots." },
+      { t: "Availability", d: "Backed by a 99.9% SLA, our VPS solutions ensure reliable hosting for your websites, applications, and critical projects." },
+    ],
+    faqs: [
+      { q: "What is a WordPress VPS?", a: "A virtual private server, otherwise known as a VPS, is a virtual machine. It gives you an environment with dedicated resources for your website and business application projects. The RAM and CPU capacities of our VPS platforms make them particularly well adapted to hosting websites that are built using WordPress. You can adapt them to fit growing needs for your web projects by adding resources via the GHC Control Panel." },
+      { q: "How do I install WordPress on a VPS?", a: "WordPress is quick and easy to install on a VPS: 1. First of all, configure your machine with a web environment and database. 2. Next, go to the official WordPress website to download the latest CMS version. 3. Finally, upload the files to your VPS, then launch the configuration process — i.e. creating the administrator account, linking to the database, etc. There you go, your VPS for WordPress is ready! Need help setting up your machine? Please read our dedicated guide on the topic 'Getting started with a VPS'." },
+      { q: "What is the best hosting plan for a WordPress website?", a: "If you have technical knowledge of server administration, a WordPress VPS will be the best option for you. It gives you full control over your virtual machine. You can quickly and easily increase your allocated resources via the GHC Control Panel, and your website will experience minimal latency with high availability." },
+      { q: "What are the advantages of using a VPS to host a WordPress website?", a: "With our virtual machines, you get high performance to host your WordPress websites. Because of their RAM, CPU, storage capacity and scalability, you can manage traffic spikes and adapt your VPS to suit your needs." },
+      { q: "Does a VPS platform offer optimal speed for a WordPress website?", a: "With a dedicated environment and allocated resources, your WordPress website would have higher performance metrics compared to a basic web hosting plan. Our WordPress VPS solutions can also be hosted in one of our datacentres — in France and in the rest of Europe. Choose a location closest to your users in order to minimise latency, offering an optimal browsing experience. Our physical servers are also equipped with next-generation components, and RAM that offers quick access to your website or application." },
+      { q: "What are the differences between a VPS and shared hosting?", a: "The best hosting solution for you will depend on both your requirements, and your technical skill level. GHC's web hosting plans are designed for people who do not have much experience with server configuration. It is a turnkey solution, but it has shared resources — i.e. resources shared between several users. A VPS offers a dedicated environment with dedicated resources, but requires technical knowledge of server administration and management. It is fully configurable, and can be used with a number of different operating systems — so you can create and manage your web hosting platform to suit your needs." },
+    ],
   },
 };
 
@@ -370,7 +413,8 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
       )}
       {fam.whyChoose && (
         <section className="mx-auto max-w-7xl px-6 pb-14">
-          <h2 className="text-center text-2xl font-black"><span className="ghc-metal-text-grad">Why Choose GHC for Your {fam.crumb.replace(" VPS", "")} VPS?</span></h2>
+          <h2 className="text-center text-2xl font-black"><span className="ghc-metal-text-grad">{fam.whyTitle || `Why Choose GHC for Your ${fam.crumb.replace(" VPS", "")} VPS?`}</span></h2>
+          {fam.whyIntro && <p className="mx-auto mt-4 max-w-3xl text-center text-sm leading-6 text-white/55">{fam.whyIntro}</p>}
           <div className="mt-8 grid gap-5 md:grid-cols-3">
             {fam.whyChoose.map((c) => (
               <div key={c.t} className="ghc-metal-card rounded-xl p-6">

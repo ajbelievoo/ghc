@@ -245,7 +245,7 @@ const megaMenu: MegaEntry[] = [
             { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple A unified interface" },
             { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },
             { label: "WordPress VPS", href: "/metal/vps?s=wordpress", desc: "Customisable and scalable server. Unlimited traffic." },
-            { label: "Apps, OS, and Panels", href: "/apps", desc: "Available OS and software" },
+            { label: "Apps, OS, and Panels", href: "/metal/vps/distributions", desc: "Available OS and software" },
           ]},
           { title: "Who is it for?", items: [
             { label: "Agency / Multisites", href: "/metal/vps#usecases" },
