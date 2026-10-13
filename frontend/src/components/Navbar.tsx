@@ -374,9 +374,9 @@ const megaMenu: MegaEntry[] = [
           { groups: [
             { title: "Uses", items: [
               { label: "How do I create a website?", href: "/web-hosting/create-website", desc: "Complete guide to launching your website" },
-              { label: "Host your WordPress website", href: "/web-hosting/wordpress", desc: "Choose the best hosting plan for a WordPress blog" },
-              { label: "Create your website in 1 click", href: "/web-hosting", desc: "Turnkey solution to get started" },
-              { label: "Create an online store", href: "/solutions/prestashop", desc: "Quickly and efficiently sell online" },
+              { label: "Host your WordPress website", href: "/web-hosting/host-wordpress", desc: "Choose the best hosting plan for a WordPress blog" },
+              { label: "Create your website in 1 click", href: "/web-hosting/create-your-website", desc: "Turnkey solution to get started" },
+              { label: "Create an online store", href: "/web-hosting/ecommerce", desc: "Quickly and efficiently sell online" },
             ]},
             { title: "Partners", items: [
               { label: "Become a GHC Partner", href: "/register" },
