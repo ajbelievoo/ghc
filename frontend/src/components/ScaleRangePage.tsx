@@ -37,26 +37,65 @@ const RANGE_META: Record<string, { href: string; desc: string }> = {
   "High Grade": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
 };
 
-const MATRIX: { label: string; vals: Record<string, string> }[] = [
-  { label: "CPU cores", vals: { Game: "From 8 – 16 cores", Advance: "From 6 – 16 cores", Scale: "From 16 – 384 cores", "High Grade": "From 16 – 192 cores" } },
-  { label: "RAM", vals: { Game: "64 – 96 GB DDR5", Advance: "From 64 GB – 256 GB", Scale: "From 128 GB – 2 TB", "High Grade": "From 128 GB – 2 TB" } },
-  { label: "Storage disks", vals: { Game: "2 disks", Advance: "2 – 4 disks", Scale: "2 – 26 disks", "High Grade": "2 – 36 disks" } },
-  { label: "Public bandwidth", vals: { Game: "1 Gbps", Advance: "500 Mbps – 1 Gbps", Scale: "1 – 25 Gbps", "High Grade": "1 – 25 Gbps" } },
-  { label: "Private bandwidth", vals: { Game: "1 Gbps", Advance: "25 Gbps", Scale: "50 Gbps", "High Grade": "50 Gbps" } },
-  { label: "Anti-DDoS", vals: { Game: "✓", Advance: "✓", Scale: "✓", "High Grade": "✓" } },
-  { label: "SLA", vals: { Game: "99.90%", Advance: "99.95%", Scale: "99.99%", "High Grade": "99.99%" } },
+type Row = { label: string; vals: string[]; summary?: boolean };
+const R4 = (a: string, b: string, c: string, d: string) => [a, b, c, d];
+const DETAIL: { title: string; rows: Row[] }[] = [
+  { title: "CPU", rows: [
+    { label: "CPU single socket", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "CPU dual socket", vals: R4("–", "–", "✓", "✓") },
+    { label: "GPU", vals: R4("–", "–", "✓", "✓") },
+    { label: "Cores span", vals: R4("from 8 – 16 cores", "from 6 – 24 cores", "from 16 – 384 cores", "from 16 – 192 cores"), summary: true },
+  ] },
+  { title: "RAM", rows: [
+    { label: "RAM type", vals: R4("DDR5 On-Die ECC", "DDR5 On-Die ECC / DDR5 ECC", "DDR5 ECC", "DDR4 ECC / DDR5 ECC") },
+    { label: "RAM quantity", vals: R4("from 64 GB – 256 GB", "from 32 GB – 1 TB", "from 128 GB – 3 TB", "from 128 GB – 3 TB"), summary: true },
+  ] },
+  { title: "Storage", rows: [
+    { label: "Storage interface", vals: R4("PCIe Gen 4.0", "PCIe Gen 4.0 / Gen 5.0", "PCIe Gen 4.0 / Gen 5.0", "PCIe Gen 4.0 / Gen 5.0") },
+    { label: "Storage disks quantity", vals: R4("2 disks", "from 2 – 8 disks", "from 2 – 6 disks", "from 2 – 36 disks"), summary: true },
+    { label: "Storage type", vals: R4("NVMe", "HDD SAS, NVMe", "NVMe", "HDD SAS, NVMe, SSD") },
+  ] },
+  { title: "Network", rows: [
+    { label: "Public bandwidth", vals: R4("1 Gbps", "from 1 – 5 Gbps", "from 1 – 25 Gbps", "from 1 – 25 Gbps"), summary: true },
+    { label: "Private bandwidth", vals: R4("1 Gbps", "25 Gbps", "50 Gbps", "from 50 – 100 Gbps"), summary: true },
+    { label: "DDoS protection", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "Anti-DDoS Game", vals: R4("✓", "–", "–", "–") },
+    { label: "IPMI", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "Load balancer", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "Link aggregation", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "vRack private network", vals: R4("✓", "✓", "✓", "✓") },
+  ] },
+  { title: "Features", rows: [
+    { label: "FTP backup", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "Dual power supply", vals: R4("–", "–", "✓", "✓") },
+    { label: "Hot swap disks", vals: R4("–", "–", "✓", "✓") },
+    { label: "Capacity upgrade (RAM, storage)", vals: R4("–", "✓", "✓", "✓") },
+  ] },
+  { title: "Observability", rows: [
+    { label: "OS installation logs", vals: R4("Coming soon", "Coming soon", "Coming soon", "Coming soon") },
+    { label: "PXE boot logs", vals: R4("Coming soon", "Coming soon", "Coming soon", "Coming soon") },
+    { label: "Netboot logs", vals: R4("Coming soon", "Coming soon", "Coming soon", "Coming soon") },
+    { label: "BMC logs & metrics", vals: R4("Coming soon", "Coming soon", "Coming soon", "Coming soon") },
+  ] },
+  { title: "SLA", rows: [
+    { label: "Rate", vals: R4("99.90%", "99.95%", "99.99%", "99.99%") },
+  ] },
+  { title: "Infrastructure", rows: [
+    { label: "Cooling system", vals: R4("Air", "Industrial watercooling", "Industrial watercooling", "Industrial watercooling") },
+  ] },
 ];
 
 export default function ScaleRangePage({ plans }: { plans: any[] }) {
   const router = useRouter();
   const { currency } = useCurrency();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
-  const [visible, setVisible] = useState(8);
+  const [visible, setVisible] = useState(6);
+  const [showMatrix, setShowMatrix] = useState(false);
   const sym = (c: string) => getCurrencySymbol((c || currency || "USD").toUpperCase());
 
   const { scaleRows, regionCount, rangeMin } = useMemo(() => {
     const regs = new Set<string>();
-    const scaleRows: { p: any; d: any }[] = [];
+    const groups = new Map<string, { p: any; d: any; locations: number; isRegional: boolean }>();
     const rangeMin: Record<string, { price: number; cur: string }> = {};
     for (const p of plans) {
       if (p.isActive === false) continue;
@@ -66,12 +105,18 @@ export default function ScaleRangePage({ plans }: { plans: any[] }) {
         const cur = d.currency || p.currency || "USD";
         if (!rangeMin[r] || d.monthlyPrice < rangeMin[r].price) rangeMin[r] = { price: d.monthlyPrice, cur };
       }
-      if (r === "Scale" && d) {
-        scaleRows.push({ p, d });
-        (p.regions || []).forEach((x: string) => regs.add(x));
+      if (r !== "Scale" || !d) continue;
+      (p.regions || []).forEach((x: string) => regs.add(x));
+      const key = String(p.planCode || "").split("-").slice(0, 2).join("-");
+      const isRegional = /-(syd|mum|sgp|waw|gra|rbx|sbg|bhs|lon|eri|lim|par)$/i.test(String(p.planCode));
+      const prev = groups.get(key);
+      if (!prev || (prev.isRegional && !isRegional) || (prev.isRegional === isRegional && d.monthlyPrice < prev.d.monthlyPrice)) {
+        groups.set(key, { p, d, locations: (prev?.locations || 0) + 1, isRegional });
+      } else {
+        prev.locations += 1;
       }
     }
-    scaleRows.sort((a, b) => a.d.monthlyPrice - b.d.monthlyPrice);
+    const scaleRows = Array.from(groups.values()).sort((a, b) => a.d.monthlyPrice - b.d.monthlyPrice);
     return { scaleRows, regionCount: regs.size || 10, rangeMin };
   }, [plans]);
 
@@ -281,81 +326,116 @@ export default function ScaleRangePage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Discover ranges */}
+      {/* Discover ranges — aligned comparison grid, expands in place */}
       <section className="border-t border-white/10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-14">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-14">
           <h2 className="text-xl font-black text-center">Discover GHC dedicated servers</h2>
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Object.entries(RANGE_META).map(([r, meta]) => {
-              const mn = rangeMin[r];
-              const active = r === "Scale";
-              return (
-                <a key={r} href={meta.href} className={`rounded-2xl border-2 p-5 transition-all ${active ? "border-[#00b7ff] bg-[#00b7ff]/10 shadow-md" : "border-white/10 bg-white/[0.03] hover:border-white/25"}`}>
-                  <p className="text-sm font-black">{r}</p>
-                  <p className="mt-1 text-[11px] text-white/50 leading-4 h-9">{meta.desc}</p>
-                  {mn && <p className="mt-3 text-xs text-white/50">Starting from <span className="text-base font-black">{sym(mn.cur)}{mn.price.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span><span className="text-[10px] text-white/40">/mo</span></p>}
-                  <span className={`mt-3 inline-block w-full text-center rounded-lg py-2 text-xs font-bold ${active ? "bg-[#00b7ff] text-[#16181d]" : "bg-white/10 text-white"}`}>Discover →</span>
-                </a>
-              );
-            })}
+          <div className="mt-8 overflow-x-auto">
+            <div className="min-w-[760px] grid grid-cols-[170px_repeat(4,minmax(0,1fr))] gap-x-3">
+              <div />
+              {Object.entries(RANGE_META).map(([r, meta]) => {
+                const mn = rangeMin[r];
+                const active = r === "Scale";
+                return (
+                  <div key={r} className={`rounded-t-xl p-4 flex flex-col bg-white/[0.04] ${active ? "border-2 border-b-0 border-[#00b7ff] bg-[#00b7ff]/10" : ""}`}>
+                    <p className="text-lg font-black">{r}</p>
+                    <p className="mt-1 text-[11px] leading-4 min-h-[44px] text-white/50">{meta.desc}</p>
+                    {mn && (
+                      <p className="mt-3 text-[10px] text-white/50">Starting from
+                        <span className="block text-xl font-black text-white">{sym(mn.cur)}{mn.price.toLocaleString("en-IN", { maximumFractionDigits: 0 })}<span className="text-[10px] font-normal text-white/40"> ex. VAT/month</span></span>
+                      </p>
+                    )}
+                    <a href={meta.href} className="mt-3 block rounded-md bg-[#0050d7] py-2 text-center text-xs font-bold text-white hover:bg-[#0043b3]">Discover →</a>
+                  </div>
+                );
+              })}
+
+              {DETAIL.map((sec, si) => {
+                const rows = showMatrix ? sec.rows : sec.rows.filter((x) => x.summary);
+                if (!rows.length) return null;
+                const lastSection = showMatrix ? si === DETAIL.length - 1 : si === DETAIL.findLastIndex((d) => d.rows.some((x) => x.summary));
+                return (
+                  <div key={sec.title} className="contents">
+                    <p className="col-span-5 mt-4 mb-1 text-[11px] font-black text-white border-b border-white/10 pb-1">{sec.title}</p>
+                    {rows.map((row, ri) => {
+                      const lastRow = lastSection && ri === rows.length - 1;
+                      return (
+                        <div key={row.label} className="contents">
+                          <div className="py-2 pr-2 text-[11px] text-white/40 self-center">{row.label}</div>
+                          {Object.keys(RANGE_META).map((r, ci) => {
+                            const v = row.vals[ci];
+                            const active = r === "Scale";
+                            return (
+                              <div key={r} className={`py-2 px-2 text-center text-[11px] self-center ${active ? `bg-[#00b7ff]/10 border-x-2 border-[#00b7ff] ${lastRow ? "border-b-2 rounded-b-xl pb-3" : ""}` : "bg-white/[0.03]"} ${v === "✓" ? "text-emerald-400 font-bold" : v === "–" ? "text-white/20" : v === "Coming soon" ? "text-white/30" : "text-white font-semibold"}`}>{v}</div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="mt-8 rounded-2xl border border-white/10 overflow-hidden overflow-x-auto">
-            <table className="w-full min-w-[640px] text-xs">
-              <thead>
-                <tr className="bg-white/5">
-                  <th className="text-left px-4 py-3 font-black text-white/40 w-36"></th>
-                  {Object.keys(RANGE_META).map((r) => (
-                    <th key={r} className={`px-4 py-3 text-center font-black ${r === "Scale" ? "text-[#00b7ff] bg-[#00b7ff]/10" : "text-white"}`}>{r}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {MATRIX.map((row) => (
-                  <tr key={row.label} className="hover:bg-white/[0.03]">
-                    <td className="px-4 py-2.5 font-bold text-white/50">{row.label}</td>
-                    {Object.keys(RANGE_META).map((r) => (
-                      <td key={r} className={`px-4 py-2.5 text-center text-white/60 ${r === "Scale" ? "bg-[#00b7ff]/5 font-semibold text-white" : ""}`}>{row.vals[r]}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-5 text-center">
-            <a href="/dedicated-servers" className="inline-block rounded-lg border border-[#00b7ff] px-6 py-2.5 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/10">View more →</a>
+          <div className="mt-6 text-center">
+            <button onClick={() => setShowMatrix((v) => !v)} className="inline-flex items-center gap-1 text-xs font-bold text-[#00b7ff] hover:underline">
+              {showMatrix ? "View less" : "View more"} <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMatrix ? "rotate-180" : ""}`} />
+            </button>
           </div>
         </div>
       </section>
 
       {/* Scale plan table */}
-      <section id="scale-plans" className="mx-auto max-w-6xl px-4 sm:px-6 pb-14">
+      <section id="scale-plans" className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl font-black">Explore our selection of Scale servers</h2>
-        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden">
-          <div className="divide-y divide-white/5">
-            {scaleRows.slice(0, visible).map(({ p, d }) => {
-              const cur = d?.currency || p.currency || "USD";
-              const isNew = !!p.features?.["last-generation"];
-              return (
-                <div key={p.planCode} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 hover:bg-white/[0.05] transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-black uppercase truncate">{(p.invoiceName || p.planCode).split("|")[0].trim()}</p>
-                      {isNew && <span className="rounded-full bg-violet-500/20 text-violet-300 px-2 py-0.5 text-[9px] font-black uppercase shrink-0">New</span>}
-                    </div>
-                    <p className="text-[11px] text-white/40 truncate">{p.description}</p>
-                  </div>
-                  <div className="flex items-center gap-5 shrink-0">
-                    <p className="text-sm font-black">{sym(cur)}{d.monthlyPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}<span className="text-[10px] font-normal text-white/40">/mo</span></p>
-                    <button onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}`)} className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-bold text-[#16181d] hover:bg-sky-400">Order</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[860px] text-xs">
+            <thead>
+              <tr className="bg-white/5 text-left">
+                <th className="px-5 py-3 font-black text-white/40">Name</th>
+                <th className="px-4 py-3 font-black text-white/40">Processor</th>
+                <th className="px-4 py-3 font-black text-white/40">Memory</th>
+                <th className="px-4 py-3 font-black text-white/40">Storage</th>
+                <th className="px-4 py-3 font-black text-white/40">Bandwidth</th>
+                <th className="px-4 py-3 font-black text-white/40 text-right">Price</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {scaleRows.slice(0, visible).map(({ p, d, locations }: any) => {
+                const cur = d?.currency || p.currency || "USD";
+                const isNew = String(p.features?.["release-year"] || "") === "2026" || String(p.features?.["last-generation"]) === "true";
+                const spec = p.spec || {};
+                const name = p.displayName || (p.invoiceName || p.planCode).split("|")[0].trim();
+                return (
+                  <tr key={p.planCode} className="hover:bg-white/[0.05] transition-colors">
+                    <td className="px-5 py-3.5 align-top">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-black">{name}</span>
+                        {isNew && <span className="rounded-full bg-violet-500/20 text-violet-300 px-2 py-0.5 text-[9px] font-black uppercase shrink-0">New</span>}
+                      </div>
+                      {locations > 1 && <p className="mt-0.5 text-[10px] text-white/30">{locations} locations</p>}
+                    </td>
+                    <td className="px-4 py-3.5 align-top text-white/60">{spec.cpu || p.description || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-white/60 whitespace-nowrap">{spec.ram || (p.ramGb ? `${p.ramGb} GB` : "—")}</td>
+                    <td className="px-4 py-3.5 align-top text-white/60 whitespace-nowrap">{spec.storage || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-white/60 whitespace-nowrap">{spec.bandwidth || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap">
+                      <span className="text-sm font-black">{sym(cur)}{d.monthlyPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                      <span className="text-[10px] font-normal text-white/40">/mo</span>
+                    </td>
+                    <td className="px-5 py-3.5 align-top text-right">
+                      <button onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}`)} className="rounded-lg bg-[#00b7ff] px-4 py-2 text-xs font-bold text-[#16181d] hover:bg-sky-400 whitespace-nowrap">Configure</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
         {scaleRows.length > visible && (
           <div className="mt-5 text-center">
-            <button onClick={() => setVisible((v) => v + 10)} className="inline-block rounded-lg bg-white/10 px-6 py-2.5 text-xs font-bold hover:bg-white/20">Show more servers ({scaleRows.length - visible})</button>
+            <a href="/dedicated-servers/prices?range=scale" className="inline-block rounded-lg bg-[#0050d7] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#0043b3]">Show more servers →</a>
           </div>
         )}
       </section>
