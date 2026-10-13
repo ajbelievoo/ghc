@@ -25,13 +25,27 @@ export default function AzResiliencePage({ plans }: { plans: any[] }) {
   const sym = (c: string) => getCurrencySymbol((c || currency || "USD").toUpperCase());
 
   const rows = useMemo(() => {
-    return plans
-      .filter((p) => p.isActive !== false)
-      .map((p) => {
-        const d = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
-        return { p, d };
-      })
-      .sort((a, b) => (a.d?.monthlyPrice || 0) - (b.d?.monthlyPrice || 0));
+    // 3-AZ compatible ranges per our catalog: Scale + High Grade (multi-AZ use-case plans)
+    const groups = new Map<string, { p: any; d: any; locations: number; isRegional: boolean }>();
+    for (const p of plans) {
+      if (p.isActive === false) continue;
+      const name = (p.invoiceName || "").toLowerCase();
+      const useCases = (p.useCases || p.use_cases || []).join(" ").toLowerCase();
+      const isScale = name.startsWith("scale") || name.startsWith("hgr");
+      const isMultiAz = useCases.includes("multi-az") || useCases.includes("multi az");
+      if (!isScale && !isMultiAz) continue;
+      const d = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
+      if (!d) continue;
+      const key = String(p.planCode || "").split("-").slice(0, 2).join("-");
+      const isRegional = /-(syd|mum|sgp|waw|gra|rbx|sbg|bhs|lon|eri|lim|par)$/i.test(String(p.planCode));
+      const prev = groups.get(key);
+      if (!prev || (prev.isRegional && !isRegional) || (prev.isRegional === isRegional && d.monthlyPrice < prev.d.monthlyPrice)) {
+        groups.set(key, { p, d, locations: (prev?.locations || 0) + 1, isRegional });
+      } else {
+        prev.locations += 1;
+      }
+    }
+    return Array.from(groups.values()).sort((a, b) => a.d.monthlyPrice - b.d.monthlyPrice);
   }, [plans]);
 
   return (
@@ -152,35 +166,57 @@ export default function AzResiliencePage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Server table */}
-      <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
+      {/* Server table — 3-AZ compatible ranges, real specs */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl font-black text-[#0f172a]">Deploy on our dedicated servers</h2>
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          <div className="divide-y divide-slate-100">
-            {rows.slice(0, visible).map(({ p, d }) => {
-              const cur = d?.currency || p.currency || "USD";
-              const dcCount = (p.regions || []).length;
-              return (
-                <div key={p.planCode} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 hover:bg-sky-50/50 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-black text-[#0f172a] uppercase truncate">{(p.invoiceName || p.planCode).split("|")[0].trim()}</p>
-                      {dcCount >= 5 && <span className="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-[9px] font-black uppercase shrink-0">Multi-DC</span>}
-                    </div>
-                    <p className="text-[11px] text-slate-400 truncate">{p.description}</p>
-                  </div>
-                  <div className="flex items-center gap-5 shrink-0">
-                    {d && <p className="text-sm font-black text-[#0f172a]">{sym(cur)}{d.monthlyPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}<span className="text-[10px] font-normal text-slate-400">/mo</span></p>}
-                    <button onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}`)} className="rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Configure</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <p className="mt-2 text-sm text-slate-500 max-w-2xl">Compatible ranges for multi-AZ deployments: Scale and High Grade servers with high private bandwidth for cross-zone replication.</p>
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-white overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[860px] text-xs">
+            <thead>
+              <tr className="bg-slate-50 text-left">
+                <th className="px-5 py-3 font-black text-slate-500">Name</th>
+                <th className="px-4 py-3 font-black text-slate-500">Processor</th>
+                <th className="px-4 py-3 font-black text-slate-500">Memory</th>
+                <th className="px-4 py-3 font-black text-slate-500">Storage</th>
+                <th className="px-4 py-3 font-black text-slate-500">Bandwidth</th>
+                <th className="px-4 py-3 font-black text-slate-500 text-right">Price</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {rows.slice(0, visible).map(({ p, d, locations }: any) => {
+                const cur = d?.currency || p.currency || "USD";
+                const spec = p.spec || {};
+                const name = p.displayName || (p.invoiceName || p.planCode).split("|")[0].trim();
+                return (
+                  <tr key={p.planCode} className="hover:bg-sky-50/50 transition-colors">
+                    <td className="px-5 py-3.5 align-top">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-black text-[#0f172a]">{name}</span>
+                        {locations >= 3 && <span className="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-[9px] font-black uppercase shrink-0">Multi-DC</span>}
+                      </div>
+                      {locations > 1 && <p className="mt-0.5 text-[10px] text-slate-400">{locations} locations</p>}
+                    </td>
+                    <td className="px-4 py-3.5 align-top text-slate-500">{spec.cpu || p.description || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-500 whitespace-nowrap">{spec.ram || (p.ramGb ? `${p.ramGb} GB` : "—")}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-500 whitespace-nowrap">{spec.storage || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-500 whitespace-nowrap">{spec.bandwidth || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap">
+                      <span className="text-sm font-black text-[#0f172a]">{sym(cur)}{d.monthlyPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                      <span className="text-[10px] font-normal text-slate-400">/mo</span>
+                    </td>
+                    <td className="px-5 py-3.5 align-top text-right">
+                      <button onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}`)} className="rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Configure</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
         {rows.length > visible && (
           <div className="mt-5 text-center">
-            <button onClick={() => setVisible((v) => v + 10)} className="text-xs font-bold text-[#0284c7] hover:underline">Show more servers →</button>
+            <button onClick={() => setVisible((v) => v + 10)} className="text-xs font-bold text-[#0284c7] hover:underline">Show more servers ({rows.length - visible}) →</button>
           </div>
         )}
       </section>
