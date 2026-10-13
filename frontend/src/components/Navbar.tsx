@@ -216,7 +216,7 @@ const megaMenu: MegaEntry[] = [
             { label: "High Grade (T5)", href: "/dedicated-servers/high-grade", desc: "The most powerful for critical loads" },
           ]},
           { title: "Deployment mode", items: [
-            { label: "Wholesale", href: "/dedicated-servers", desc: "Complete server racks" },
+            { label: "Wholesale", href: "/dedicated-servers/wholesale", desc: "Complete server racks" },
             { label: "Reseller", href: "/dedicated-servers", desc: "Our infrastructure, your added value" },
           ]},
           { title: "Uses", items: [
