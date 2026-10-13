@@ -28,10 +28,12 @@ company stack. Do not trigger reinstall/terminate/suspend/IP/rDNS/netboot/firewa
 any other mutating OVH call, and do not place test orders that spend account balance —
 get explicit user approval first. See python-backend/AGENTS.md for details.
 
-## Dedicated servers (Metal-branded display names, added 2026-10-13)
+## Dedicated servers (Metal channel, added 2026-10-13)
 
-- `/api/server/plans?category=DEDICATED` now returns `displayName` + `spec` ({cpu,ram,storage,bandwidth} human strings) per plan. `displayName` = admin override (`admin_configs.metal_ded_names`, keyed by real plan_code) else auto `Metal <Range> <n> (<year>)`.
-- Admin editor: `/admin` → Margins tab → "Metal dedicated names" table (`GET/POST /api/admin/metal-dedicated`).
+- `/metal/dedicated` — molten-dark page listing all real OVH dedicated ranges (Advance/Game/Scale/Scale GPU/High Grade) via `GET /api/metal/dedicated/plans`, which returns `displayName` (admin override `admin_configs.metal_ded_names` else auto `Metal <Range> <n> (<year>)`) + `spec` + **Metal dedicated margin** (`admin_configs.metal_ded_margin`, currently 35%) applied to every duration price. Order path carries `brand=metal` → `order_service` uses the dedicated margin + custom name, same as Metal VPS.
+- `/api/server/plans?category=DEDICATED` returns `spec` but NOT metal displayName — the normal pages keep original names so Metal branding never leaks into the Essential channel.
+- Admin: `/admin` → Margins tab → METAL block has TWO margin inputs (VPS + dedicated) and both name tables (`GET/POST /api/admin/metal-vps`, `/api/admin/metal-dedicated`).
+- The standard "VPS & Dedicated Servers" top menu is renamed **"Essential"** — Metal = premium/high-margin channel, Essential = cheaper channel. Both sell the same upstream catalog; margins differ.
 - `AdvanceRangePage.tsx` groups regional plan variants (`24adv02-v3-syd` etc.) into ONE row per model+revision (key = first two planCode segments), OVH-style spec table, 6 rows + "Show more servers".
 
 ## use-cases hub page (added 2026-10-13)

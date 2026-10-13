@@ -109,5 +109,6 @@ every site offline permanently.
 
 - `catalog_sync_loop` in `main.py` runs `sync_all_catalogs` every 6h automatically (first run ~2 min after boot). Manual: `POST /api/admin/sync` or catalog.py router.
 - Dedicated specs come from product `blobs.technical.server.cpu` + plan `addonFamilies[].default` (memory `ram-Ng`, storage `NxSIZEtech`, bandwidth `bandwidth-N` / `traffic-*-N`). Parsed extras land in `plan_catalogs.catalog_metadata._ghc` (cpu_model/threads/freq, ram/storage/bandwidth labels).
-- `metal_ded_names` admin config = per-plan display-name overrides for dedicated (public name shown as `displayName` in `/server/plans`); auto-fallback `default_dedicated_display_name()` → "Metal Advance 2 (2024)" style.
-- Admin API: `GET/POST /api/admin/metal-dedicated` (names only; dedicated margin stays the category margin).
+- `metal_ded_names` admin config = per-plan display-name overrides for dedicated; auto-fallback `default_dedicated_display_name()` → "Metal Advance 2 (2024)" style. `displayName`/`spec`/`metal margin` are exposed ONLY via `GET /api/metal/dedicated/plans` — `/api/server/plans` returns `spec` but no Metal names (keeps Metal branding out of the Essential channel).
+- `metal_ded_margin` admin config = dedicated Metal margin % (independent of category margin; currently 35). Applied in `metal_dedicated_plans` and in `order_service` when `configuration._brand == "metal"` + category DEDICATED.
+- Admin API: `GET/POST /api/admin/metal-dedicated` accepts `{names, marginPercent}`; `/api/admin/metal-vps` same shape for VPS.
