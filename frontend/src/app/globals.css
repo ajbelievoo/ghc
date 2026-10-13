@@ -449,3 +449,71 @@ html.dark .ghc-dash-sidebar .bg-\[\#0a0f1c\]\/80 { background-color: rgba(10, 15
   /* Long unbreakable strings (emails, domains, IPs) wrap instead of overflowing */
   td, p, span, a, code { overflow-wrap: anywhere; }
 }
+
+/* ===== Metal channel — molten dark theme ===== */
+.ghc-metal-bg { background: #0a0a10; color: #f4f4f5; }
+.ghc-metal-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.ghc-metal-orb {
+  position: absolute; border-radius: 9999px; pointer-events: none;
+  filter: blur(90px); opacity: .45; animation: ghc-orb 10s ease-in-out infinite;
+}
+.ghc-metal-orb-a { background: radial-gradient(circle, rgba(255,122,24,.55), transparent 70%); }
+.ghc-metal-orb-b { background: radial-gradient(circle, rgba(255,61,0,.4), transparent 70%); animation-duration: 14s; animation-delay: -6s; animation-direction: reverse; }
+.ghc-metal-orb-c { background: radial-gradient(circle, rgba(255,190,80,.3), transparent 70%); animation-duration: 12s; animation-delay: -3s; }
+.ghc-metal-text-grad {
+  background: linear-gradient(100deg, #ffd194 0%, #ff8a2a 25%, #ff3d00 50%, #ffb347 75%, #ffd194 100%);
+  background-size: 220% auto;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: ghc-shine 7s ease-in-out infinite;
+}
+.ghc-metal-card {
+  position: relative; background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.09); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  transition: transform .3s cubic-bezier(.2,.8,.25,1), border-color .3s, box-shadow .3s;
+}
+.ghc-metal-card:hover {
+  border-color: rgba(255,154,46,.55); transform: translateY(-4px);
+  box-shadow: 0 0 0 1px rgba(255,154,46,.2), 0 0 46px rgba(255,110,20,.18), 0 22px 44px rgba(0,0,0,.5);
+}
+.ghc-metal-card-glow {
+  box-shadow: 0 0 0 1px rgba(255,154,46,.25), 0 0 52px rgba(255,110,20,.22), 0 22px 44px rgba(0,0,0,.5);
+}
+.ghc-metal-btn {
+  background: linear-gradient(135deg, #ff8a2a 0%, #ff3d00 100%);
+  color: #fff; box-shadow: 0 0 22px rgba(255,90,0,.45), inset 0 1px 0 rgba(255,255,255,.25);
+  transition: box-shadow .25s, transform .25s, filter .25s;
+}
+.ghc-metal-btn:hover { box-shadow: 0 0 38px rgba(255,122,24,.75), inset 0 1px 0 rgba(255,255,255,.3); transform: translateY(-1px); filter: brightness(1.06); }
+.ghc-metal-btn-ghost {
+  border: 1px solid rgba(255,154,46,.4); color: #ffb347;
+  transition: all .25s;
+}
+.ghc-metal-btn-ghost:hover { background: rgba(255,122,24,.12); border-color: rgba(255,154,46,.7); }
+.ghc-metal-chip {
+  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  transition: border-color .25s, background .25s;
+}
+.ghc-metal-chip:hover { border-color: rgba(255,154,46,.5); background: rgba(255,122,24,.1); }
+.ghc-metal-row { transition: background .2s, box-shadow .2s; }
+.ghc-metal-row:hover { background: rgba(255,122,24,.07); box-shadow: inset 3px 0 0 #ff7a18; }
+.ghc-metal-fade { animation: ghc-fadeup .55s cubic-bezier(.2,.8,.25,1) both; animation-delay: var(--d, 0ms); }
+.ghc-metal-hr { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,154,46,.5), transparent); border: none; }
+.ghc-metal-tab { transition: color .2s, border-color .2s; border-bottom: 2px solid transparent; }
+.ghc-metal-tab-active { color: #ffb347; border-bottom-color: #ff7a18; }
+.ghc-metal-scan {
+  position: relative; overflow: hidden;
+}
+.ghc-metal-scan::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,170,80,.14) 48%, rgba(255,255,255,.22) 50%, rgba(255,170,80,.14) 52%, transparent 70%);
+  transform: translateX(-120%); animation: ghc-metal-scan 5.5s ease-in-out infinite;
+}
+@keyframes ghc-metal-scan { 0%, 55% { transform: translateX(-120%); } 90%, 100% { transform: translateX(120%); } }
+.ghc-metal-led { box-shadow: 0 0 6px currentColor; animation: ghc-pulse 1.6s ease-in-out infinite; }
+html.dark .ghc-metal-card { background: rgba(255,255,255,.04); }

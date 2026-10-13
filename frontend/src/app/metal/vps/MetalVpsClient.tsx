@@ -10,6 +10,7 @@ import { getCurrencySymbol, useCurrency } from "@/components/CurrencyProvider";
 import {
   Check, ChevronDown, ShoppingCart, Server, Cpu, Shield, Gauge,
   HardDrive, Globe, Lock, RefreshCw, Settings2, Network, Database,
+  Zap, Flame, Layers, Terminal,
 } from "lucide-react";
 
 function money(value?: number, currency?: string) {
@@ -50,13 +51,14 @@ const SERVICE_TABS: Record<string, { title: string; desc: string; tag: string }[
 };
 
 const USE_CASES = [
-  { title: "Web hosting", desc: "Host your websites on a flexible, high-powered VPS, with dedicated resources and high availability to deliver fast load times and a smooth user experience." },
-  { title: "Software hosting", desc: "Deploy your applications on a secure, scalable VPS, with configurations tailored to your business development and usage." },
-  { title: "Database hosting", desc: "Store and manage your databases on our fast and reliable VPS, designed to scale and adapt to the most demanding workloads." },
-  { title: "Hosting a WordPress multisite platform", desc: "Build and manage your multisite platform on the cloud, at the very best price." },
-  { title: "Game hosting", desc: "Host your online games on a scalable, secure VPS. It's the perfect solution for creating private servers for Minecraft, Counter-Strike, Rust, and many other titles." },
-  { title: "Test server deployment", desc: "In just a few seconds, create a dynamic virtual sandbox to accelerate your workflow from concept to production." },
-  { title: "Hosting trading applications", desc: "Run your Forex trading strategies on a high-performing and stable VPS built to handle market demands." },
+  { icon: Globe, title: "Web hosting", desc: "Host your websites on a flexible, high-powered VPS, with dedicated resources and high availability to deliver fast load times and a smooth user experience." },
+  { icon: Layers, title: "Software hosting", desc: "Deploy your applications on a secure, scalable VPS, with configurations tailored to your business development and usage." },
+  { icon: Database, title: "Database hosting", desc: "Store and manage your databases on our fast and reliable VPS, designed to scale and adapt to the most demanding workloads." },
+  { icon: Network, title: "WordPress multisite", desc: "Build and manage your multisite platform on the cloud, at the very best price." },
+  { icon: Flame, title: "Game hosting", desc: "Host your online games on a scalable, secure VPS. It's the perfect solution for creating private servers for Minecraft, Counter-Strike, Rust, and many other titles." },
+  { icon: Terminal, title: "Test deployments", desc: "In just a few seconds, create a dynamic virtual sandbox to accelerate your workflow from concept to production." },
+  { icon: Gauge, title: "Trading applications", desc: "Run your Forex trading strategies on a high-performing and stable VPS built to handle market demands." },
+  { icon: Zap, title: "AI & automation", desc: "Run n8n workflows, AI agents and automation pipelines on dedicated resources with full root control." },
 ];
 
 const METAL_FAMILIES: Record<string, {
@@ -97,13 +99,13 @@ const METAL_FAMILIES: Record<string, {
       body: "Keeping your n8n instance updated on your server is vital for maintaining robust security, accessing the latest features, and ensuring the overall stability of your automations. For detailed step-by-step instructions, we recommend consulting the official n8n documentation, which provides comprehensive upgrade guides tailored to your specific installation method (e.g. Docker, npm). Regularly performing updates ensures your workflows remain secure and efficient.",
     },
     faqs: [
-      { q: "What is n8n hosting?", a: "n8n hosting means running the n8n workflow-automation platform on your own server. Self-hosting on a Metal VPS gives you full data ownership, unlimited workflow executions and the freedom to install community nodes — unlike metered SaaS plans." },
-      { q: "How to set up n8n on a VPS?", a: "Choose a Metal VPS plan, pick the n8n application image during configuration (or install via Docker/npm), point your domain, and secure it with HTTPS. Your instance is ready in minutes." },
-      { q: "Is n8n VPS hosting secure?", a: "Yes — you control the OS, firewall rules, updates and authentication. Combined with always-on anti-DDoS protection and daily backups, your workflows and data stay under your control." },
-      { q: "Can I build AI apps with n8n on VPS?", a: "Yes. n8n supports AI agents, LLM chains and vector-store integrations. A Metal VPS with sufficient RAM lets you run AI workflows, connect local models via Ollama, or call external AI APIs." },
-      { q: "Is n8n better than Zapier?", a: "For technical teams, self-hosted n8n offers far more flexibility: custom code nodes, self-hosting, no per-task pricing and unlimited executions. Zapier is simpler but metered and closed-source." },
-      { q: "What support is available for n8n VPS hosting?", a: "We provide 24/7 ticket support for the VPS infrastructure (network, hardware, provisioning). For n8n-specific questions, the n8n community and official docs are the best resources." },
-      { q: "Does n8n offer an Enterprise version for organisations with advanced security, compliance, or collaboration needs?", a: "Yes — n8n has an Enterprise edition with SSO/SAML, audit logging and team features. A Metal VPS gives you the dedicated resources and isolation enterprise deployments need." },
+      { q: "What is n8n hosting?", a: "n8n hosting refers to running your own instance of the n8n workflow tool on a server, such as a VPS Linux or VPS Debian. Specifically, an n8n server refers to deploying n8n on a Virtual Private Server, providing dedicated resources, complete control over the n8n installation (including versioning and custom nodes), and enhanced data privacy compared to shared or multi-tenant solutions." },
+      { q: "How to set up n8n on a VPS?", a: "Setting up n8n on GHC generally involves: Choosing and provisioning your Metal VPS plan. Connecting to your server via SSH and performing initial server setup (like updating the OS). Installing n8n, typically with Docker (recommended for ease of management and updates) or npm. Configuring n8n with a domain name, SSL certificate for HTTPS, and any necessary environment variables for databases or settings. While GHC provides a robust VPS platform, you can find detailed n8n installation guides in the official n8n documentation." },
+      { q: "Is n8n VPS hosting secure?", a: "When we consider what a virtual private server (VPS) is, security questions naturally arise. Yes, hosting n8n on an GHC VPS can be very secure, leveraging a shared responsibility model. GHC ensures the security of the underlying infrastructure, including hardware and network, and provides features such as anti-DDoS protection. You are responsible for securing your VPS operating system (including updates and firewall rules) and the n8n application itself (using strong credentials, enabling HTTPS, keeping n8n updated, and managing user access). By following best practices, you can create a highly secure n8n environment." },
+      { q: "Can I build AI apps with n8n on VPS?", a: "Absolutely. Using n8n on an GHC VPS provides the flexibility and resources needed to build AI-powered applications. You can integrate n8n with various AI services and APIs (like OpenAI, Hugging Face, or other model providers) using its HTTP request node or dedicated community nodes. Furthermore, a cheap VPS provides the control to install dependencies and run smaller, self-hosted AI models directly on the server if your server plan has sufficient CPU, RAM, and storage." },
+      { q: "Is n8n better than Zapier?", a: "n8n and Zapier are both robust automation solutions, but they cater to different needs and preferences. n8n, especially when self-hosted, offers greater flexibility, control, and data sovereignty. It's open source, highly customizable (allowing for custom code and nodes), and can be more cost-effective for high-volume or complex workflows as you're utilising your VPS resources. Zapier is known for its ease of use, a vast library of pre-built integrations, and being a fully managed SaaS solution. The 'better' choice depends on your technical comfort, specific feature requirements, budget, and desire for mastery over your data." },
+      { q: "What support is available for n8n VPS hosting?", a: "GHC provides comprehensive support for the VPS infrastructure itself. This includes assistance with hardware issues, network connectivity, virtualization platform stability, and questions related to your GHC control panel. For support concerning the n8n application, such as workflow design, troubleshooting specific errors, node configurations, or n8n software updates, you would typically turn to the extensive resources provided by the n8n community (e.g., forums, Discord) or the official n8n documentation and support channels." },
+      { q: "Does n8n offer an Enterprise version for organizations with advanced security, compliance, or collaboration needs?", a: "Yes, for organizations with advanced requirements in compliance, security, or team collaboration, n8n offers a dedicated Enterprise plan. This includes, among other features: Audit logs for full traceability, SSO/SAML for centralized authentication, Encryption of credentials at rest, Advanced team management and collaboration capabilities. You can find out more on the n8n website." },
     ],
   },
   "plesk": {
@@ -184,53 +186,77 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#0f172a]">
+    <div className="ghc-metal-bg min-h-screen">
       <Navbar />
 
       {/* ─── Hero ─── */}
-      <section className="bg-gradient-to-br from-[#0b1a45] via-[#0f2566] to-[#12308f] text-white">
-        <div className="mx-auto max-w-7xl px-6 pt-4 pb-14">
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-white/70">
-            <span>Metal</span><span className="text-white/40">›</span><span className="text-white">{fam.crumb}</span>
+      <section className="ghc-metal-grid relative overflow-hidden bg-gradient-to-br from-[#0a0a10] via-[#14090a] to-[#1c0d04] text-white">
+        <div className="ghc-metal-orb ghc-metal-orb-a -left-24 top-10 h-96 w-96" />
+        <div className="ghc-metal-orb ghc-metal-orb-b right-0 top-1/3 h-[28rem] w-[28rem]" />
+        <div className="ghc-metal-orb ghc-metal-orb-c left-1/3 bottom-0 h-72 w-72" />
+        <div className="relative mx-auto max-w-7xl px-6 pt-4 pb-16">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-white/60">
+            <span className="ghc-metal-text-grad">Metal</span><span className="text-white/30">›</span><span className="text-white/90">{fam.crumb}</span>
             <span className="ml-auto hidden gap-6 text-[11px] normal-case tracking-normal md:flex">
-              <a href="#plans" className="hover:text-[#00b7ff]">Our prices</a>
-              <a href="#services" className="hover:text-[#00b7ff]">Services and options</a>
-              <a href="#locations" className="hover:text-[#00b7ff]">Our locations</a>
-              <a href="#usecases" className="hover:text-[#00b7ff]">Use cases</a>
+              <a href="#plans" className="hover:text-[#ffb347] transition-colors">Our prices</a>
+              <a href="#services" className="hover:text-[#ffb347] transition-colors">Services and options</a>
+              <a href="#locations" className="hover:text-[#ffb347] transition-colors">Our locations</a>
+              <a href="#usecases" className="hover:text-[#ffb347] transition-colors">Use cases</a>
             </span>
           </div>
-          <div className="mt-8 grid items-center gap-10 md:grid-cols-[1.2fr_1fr]">
-            <div>
-              <h1 className="text-4xl font-black leading-tight md:text-5xl">{fam.title}</h1>
-              <p className="mt-3 text-lg text-white/80">{fam.subtitle}</p>
-              <ul className="mt-6 space-y-2.5 text-sm">
-                {fam.bullets.map((b) => (
-                  <li key={b} className="flex items-center gap-2.5">
-                    <Check className="h-4 w-4 shrink-0 text-[#00ff88]" /> {b}
+          <div className="mt-10 grid items-center gap-10 md:grid-cols-[1.25fr_1fr]">
+            <div className="ghc-metal-fade">
+              <span className="ghc-metal-chip inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#ffb347]">
+                <Flame className="h-3 w-3" /> Molten-grade infrastructure
+              </span>
+              <h1 className="mt-4 text-4xl font-black leading-tight md:text-5xl">{fam.title}</h1>
+              <p className="mt-3 max-w-xl text-lg text-white/70">{fam.subtitle}</p>
+              <ul className="mt-6 space-y-2.5 text-sm text-white/85">
+                {fam.bullets.map((b, i) => (
+                  <li key={b} className="ghc-metal-fade flex items-center gap-2.5" style={{ ["--d" as any]: `${120 + i * 90}ms` }}>
+                    <Check className="h-4 w-4 shrink-0 text-[#ffb347]" /> {b}
                   </li>
                 ))}
               </ul>
+              <a href="#plans" className="ghc-metal-btn mt-8 inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-bold">
+                <Zap className="h-4 w-4" /> Deploy in seconds
+              </a>
             </div>
             <div className="hidden justify-center md:flex">
-              <div className="flex h-44 w-44 items-center justify-center rounded-3xl bg-gradient-to-br from-[#00b7ff]/30 to-[#8b5cf6]/30 shadow-2xl ring-1 ring-white/20 backdrop-blur">
-                <Server className="h-24 w-24 text-[#00b7ff] drop-shadow-[0_0_25px_rgba(0,183,255,.6)]" />
+              {/* glowing server stack */}
+              <div className="ghc-metal-scan space-y-2 rounded-2xl p-4">
+                {[0, 1, 2, 3, 4].map((s) => (
+                  <div key={s} className="ghc-metal-card ghc-metal-fade flex h-11 w-80 items-center gap-2.5 rounded-md px-3" style={{ ["--d" as any]: `${200 + s * 110}ms` }}>
+                    <span className="ghc-metal-led h-2 w-2 rounded-full bg-emerald-400 text-emerald-400" />
+                    <span className="ghc-metal-led h-2 w-2 rounded-full bg-[#ff8a2a] text-[#ff8a2a]" style={{ animationDelay: `${s * 220}ms` }} />
+                    <div className="ml-2 flex gap-1">
+                      {[0, 1, 2, 3].map((b) => <span key={b} className="h-5 w-3 rounded-sm border border-white/10 bg-white/5" />)}
+                    </div>
+                    <span className="flex-1" />
+                    <span className="h-1.5 w-10 rounded bg-[#ff8a2a]/25" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
+        <hr className="ghc-metal-hr relative" />
       </section>
 
       {/* ─── Plan cards ─── */}
-      <section id="plans" className="mx-auto max-w-7xl px-6 py-14">
-        <h2 className="text-center text-2xl font-black">{fam.exploreTitle || fam.rangeTitle}</h2>
-        <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-slate-500">
+      <section id="plans" className="relative mx-auto max-w-7xl px-6 py-16">
+        <div className="ghc-metal-orb ghc-metal-orb-b -right-40 top-20 h-80 w-80 opacity-25" />
+        <h2 className="relative text-center text-2xl font-black md:text-3xl">
+          <span className="ghc-metal-text-grad">{fam.exploreTitle || fam.rangeTitle}</span>
+        </h2>
+        <p className="relative mx-auto mt-2 max-w-2xl text-center text-sm text-white/55">
           {fam.exploreSub || "Choose the configuration that fits your needs — web hosting, gaming, VPNs, development and more."}
         </p>
         {sorted.length === 0 ? (
-          <p className="mt-10 text-center text-sm text-slate-500">Plans are loading — please check back shortly.</p>
+          <p className="mt-10 text-center text-sm text-white/50">Plans are loading — please check back shortly.</p>
         ) : (
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {sorted.map((p) => {
+          <div className="relative mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sorted.map((p, i) => {
               const d = (p.durations || []).find((x: any) => x.durationLabel === "1_month") || p.durations?.[0];
               const specs: string[] = [
                 p.cpuCores ? `${p.cpuCores} vCores` : "",
@@ -240,21 +266,21 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
                 "Anti-DDoS protection",
               ].filter(Boolean);
               return (
-                <div key={p.planCode} className="flex flex-col rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-[#00b7ff] hover:shadow-xl">
-                  <div className="p-5">
-                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-emerald-700">New</span>
-                    <h3 className="mt-2 text-lg font-bold text-[#0f172a]">{p.displayName || p.invoiceName || p.planCode}</h3>
-                    <p className="mt-1 text-xs text-slate-500">From</p>
-                    <p className="text-2xl font-black text-[#0f172a]">{money(d?.monthlyPrice ?? d?.finalPrice, d?.currency)}</p>
-                    <p className="text-[11px] text-slate-400">ex. taxes/month</p>
-                    <button onClick={() => configure(p.planCode)} className="mt-4 inline-flex items-center gap-2 rounded bg-[#ff3d00] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#e63700]">
+                <div key={p.planCode} className="ghc-metal-card ghc-metal-fade flex flex-col rounded-xl overflow-hidden" style={{ ["--d" as any]: `${i * 80}ms` }}>
+                  <div className="ghc-metal-scan p-5 pb-4">
+                    <span className="rounded bg-[#ff7a18]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.15em] text-[#ffb347]">Metal</span>
+                    <h3 className="mt-2.5 text-lg font-bold text-white">{p.displayName || p.invoiceName || p.planCode}</h3>
+                    <p className="mt-2 text-[11px] uppercase tracking-wide text-white/40">From</p>
+                    <p className="ghc-metal-text-grad text-3xl font-black">{money(d?.monthlyPrice ?? d?.finalPrice, d?.currency)}</p>
+                    <p className="text-[11px] text-white/35">ex. taxes/month</p>
+                    <button onClick={() => configure(p.planCode)} className="ghc-metal-btn mt-4 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold">
                       <ShoppingCart className="h-4 w-4" /> Configure
                     </button>
                   </div>
-                  <ul className="mt-auto space-y-2 border-t border-slate-100 p-5 pt-4">
+                  <ul className="mt-auto space-y-2 border-t border-white/10 p-5 pt-4">
                     {specs.map((s) => (
-                      <li key={s} className="flex items-center gap-2 text-xs text-slate-600">
-                        <Check className="h-3.5 w-3.5 shrink-0 text-[#00b7ff]" /> {s}
+                      <li key={s} className="flex items-center gap-2 text-xs text-white/70">
+                        <Check className="h-3.5 w-3.5 shrink-0 text-[#ff8a2a]" /> {s}
                       </li>
                     ))}
                   </ul>
@@ -264,24 +290,24 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
           </div>
         )}
 
-        {/* Local Zone variants — same hardware, closer to specific cities */}
+        {/* Local Zone variants */}
         {lzPlans.length > 0 && (
-          <div className="mt-12">
+          <div className="mt-14">
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-black">Also available in Local Zones</h3>
-              <span className="rounded-full bg-[#00b7ff]/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#0050d7]">Lower latency</span>
+              <h3 className="text-lg font-black text-white">Also available in Local Zones</h3>
+              <span className="rounded-full bg-[#ff7a18]/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#ffb347]">Lower latency</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">Same Metal VPS hardware deployed in city-edge zones — pick during configuration for the closest location to your users.</p>
+            <p className="mt-1 text-xs text-white/50">Same Metal VPS hardware deployed in city-edge zones — pick during configuration for the closest location to your users.</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {lzPlans.map((p) => {
                 const d = (p.durations || []).find((x: any) => x.durationLabel === "1_month") || p.durations?.[0];
                 return (
-                  <div key={p.planCode} className="flex flex-col rounded-lg border border-dashed border-[#00b7ff]/50 bg-[#f0f9ff] p-5">
-                    <span className="w-fit rounded bg-[#00b7ff]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#0050d7]">Local Zone</span>
-                    <h3 className="mt-2 text-base font-bold text-[#0f172a]">{p.displayName || p.invoiceName || p.planCode}</h3>
-                    <p className="mt-1 text-xl font-black text-[#0f172a]">{money(d?.monthlyPrice ?? d?.finalPrice, d?.currency)}<span className="text-[10px] font-normal text-slate-400"> ex. taxes/month</span></p>
-                    <p className="mt-1 text-[11px] text-slate-500">{p.cpuCores} vCores · {p.ramGb} GB RAM · {p.diskGb} GB {p.diskType || "NVMe"}</p>
-                    <button onClick={() => configure(p.planCode)} className="mt-4 inline-flex items-center gap-2 rounded bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">
+                  <div key={p.planCode} className="ghc-metal-card flex flex-col rounded-xl border-dashed p-5" style={{ borderStyle: "dashed", borderColor: "rgba(255,154,46,.45)" }}>
+                    <span className="w-fit rounded bg-[#ff7a18]/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#ffb347]">Local Zone</span>
+                    <h3 className="mt-2 text-base font-bold text-white">{p.displayName || p.invoiceName || p.planCode}</h3>
+                    <p className="ghc-metal-text-grad mt-1 text-xl font-black">{money(d?.monthlyPrice ?? d?.finalPrice, d?.currency)}<span className="text-[10px] font-normal text-white/40"> ex. taxes/month</span></p>
+                    <p className="mt-1 text-[11px] text-white/50">{p.cpuCores} vCores · {p.ramGb} GB RAM · {p.diskGb} GB {p.diskType || "NVMe"}</p>
+                    <button onClick={() => configure(p.planCode)} className="ghc-metal-btn mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold">
                       <ShoppingCart className="h-3.5 w-3.5" /> Configure
                     </button>
                   </div>
@@ -292,15 +318,15 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
         )}
       </section>
 
-      {/* ─── Family-specific content (n8n etc.) ─── */}
+      {/* ─── Family-specific content ─── */}
       {fam.benefits && (
-        <section className="mx-auto max-w-4xl px-6 py-14">
-          <h2 className="text-2xl font-black">Key Benefits of Hosting {fam.crumb.replace(" VPS", "")} on a VPS</h2>
+        <section className="relative mx-auto max-w-4xl px-6 py-14">
+          <h2 className="text-2xl font-black"><span className="ghc-metal-text-grad">Key Benefits of Hosting {fam.crumb.replace(" VPS", "")} on a VPS</span></h2>
           <div className="mt-8 space-y-7">
             {fam.benefits.map((b) => (
-              <div key={b.t}>
-                <h3 className="text-sm font-black uppercase tracking-wide">{b.t}</h3>
-                <p className="mt-1.5 text-sm leading-6 text-slate-600">{b.d}</p>
+              <div key={b.t} className="ghc-metal-card rounded-xl p-6">
+                <h3 className="text-sm font-black uppercase tracking-wide text-[#ffb347]">{b.t}</h3>
+                <p className="mt-1.5 text-sm leading-6 text-white/65">{b.d}</p>
               </div>
             ))}
           </div>
@@ -308,12 +334,12 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
       )}
       {fam.whyChoose && (
         <section className="mx-auto max-w-7xl px-6 pb-14">
-          <h2 className="text-center text-2xl font-black">Why Choose GHC for Your {fam.crumb.replace(" VPS", "")} VPS?</h2>
+          <h2 className="text-center text-2xl font-black"><span className="ghc-metal-text-grad">Why Choose GHC for Your {fam.crumb.replace(" VPS", "")} VPS?</span></h2>
           <div className="mt-8 grid gap-5 md:grid-cols-3">
             {fam.whyChoose.map((c) => (
-              <div key={c.t} className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-black">{c.t}</h3>
-                <p className="mt-2 text-xs leading-6 text-slate-600">{c.d}</p>
+              <div key={c.t} className="ghc-metal-card rounded-xl p-6">
+                <h3 className="text-sm font-black text-white">{c.t}</h3>
+                <p className="mt-2 text-xs leading-6 text-white/60">{c.d}</p>
               </div>
             ))}
           </div>
@@ -321,42 +347,43 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
       )}
       {fam.howTo && (
         <section className="mx-auto max-w-4xl px-6 pb-14">
-          <div className="flex items-start gap-5 rounded-lg border border-slate-200 bg-slate-50 p-7">
-            <RefreshCw className="h-10 w-10 shrink-0 text-[#00b7ff]" />
+          <div className="ghc-metal-card flex items-start gap-5 rounded-xl p-7">
+            <RefreshCw className="h-10 w-10 shrink-0 text-[#ff8a2a]" />
             <div>
-              <h2 className="text-lg font-black">{fam.howTo.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{fam.howTo.body}</p>
+              <h2 className="text-lg font-black text-white">{fam.howTo.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-white/65">{fam.howTo.body}</p>
             </div>
           </div>
         </section>
       )}
 
       {/* ─── Essentials ─── */}
-      <section className="border-t border-slate-100 bg-[#f8faff]">
-        <div className="mx-auto max-w-7xl px-6 py-14">
+      <section className="relative border-t border-white/5 bg-[#0d0c12]">
+        <div className="ghc-metal-orb ghc-metal-orb-c left-10 top-10 h-64 w-64 opacity-30" />
+        <div className="relative mx-auto max-w-7xl px-6 py-16">
           <div className="grid items-center gap-10 md:grid-cols-2">
             <div>
-              <h2 className="text-2xl font-black">New Metal range: the essentials included, with added peace of mind</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
+              <h2 className="text-2xl font-black"><span className="ghc-metal-text-grad">New Metal range: the essentials included, with added peace of mind</span></h2>
+              <p className="mt-3 text-sm leading-6 text-white/60">
                 Our Metal range is designed to focus on the essentials: configurations calibrated for your actual usage, automatic daily backups included to protect your data, and NVMe-level performance. You get high security without the premium price tag.
               </p>
             </div>
             <div className="hidden justify-center md:flex">
-              <div className="flex h-36 w-36 items-center justify-center rounded-3xl bg-gradient-to-br from-[#00b7ff]/20 to-[#8b5cf6]/20 ring-1 ring-slate-200">
-                <Shield className="h-20 w-20 text-[#00b7ff]" />
+              <div className="ghc-metal-card ghc-metal-card-glow flex h-36 w-36 items-center justify-center rounded-3xl">
+                <Shield className="h-20 w-20 text-[#ff8a2a] drop-shadow-[0_0_25px_rgba(255,122,24,.55)]" />
               </div>
             </div>
           </div>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { icon: Gauge, t: "Performance at the right price" },
               { icon: Lock, t: "Isolated environment" },
               { icon: Settings2, t: "Scalable configuration" },
               { icon: RefreshCw, t: "Advanced management" },
-            ].map((f) => (
-              <div key={f.t} className="flex flex-col items-center text-center">
-                <f.icon className="h-8 w-8 text-[#00b7ff]" />
-                <p className="mt-2 text-sm font-bold">{f.t}</p>
+            ].map((f, i) => (
+              <div key={f.t} className="ghc-metal-card ghc-metal-fade flex flex-col items-center rounded-xl p-6 text-center" style={{ ["--d" as any]: `${i * 90}ms` }}>
+                <f.icon className="h-8 w-8 text-[#ff8a2a] drop-shadow-[0_0_14px_rgba(255,122,24,.5)]" />
+                <p className="mt-3 text-sm font-bold text-white/90">{f.t}</p>
               </div>
             ))}
           </div>
@@ -364,20 +391,21 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
       </section>
 
       {/* ─── Services & options tabs ─── */}
-      <section id="services" className="bg-[#0b1a45] py-14 text-white">
-        <div className="mx-auto max-w-7xl px-6">
-          <h2 className="text-center text-2xl font-black">Our services and options included with your Metal VPS</h2>
-          <div className="mt-8 flex flex-wrap justify-center gap-1 border-b border-white/15">
+      <section id="services" className="relative overflow-hidden border-t border-white/5 bg-gradient-to-b from-[#0a0a10] to-[#120a06] py-16">
+        <div className="ghc-metal-orb ghc-metal-orb-a right-0 bottom-0 h-80 w-80 opacity-25" />
+        <div className="relative mx-auto max-w-7xl px-6">
+          <h2 className="text-center text-2xl font-black"><span className="ghc-metal-text-grad">Our services and options included with your Metal VPS</span></h2>
+          <div className="mt-8 flex flex-wrap justify-center gap-1 border-b border-white/10">
             {(Object.keys(SERVICE_TABS) as (keyof typeof SERVICE_TABS)[]).map((t) => (
-              <button key={t} onClick={() => setSvcTab(t)} className={`px-5 py-2.5 text-xs font-bold uppercase tracking-wide transition ${svcTab === t ? "border-b-2 border-[#00b7ff] text-white" : "text-white/60 hover:text-white"}`}>{t}</button>
+              <button key={t} onClick={() => setSvcTab(t)} className={`ghc-metal-tab px-5 py-2.5 text-xs font-bold uppercase tracking-wide ${svcTab === t ? "ghc-metal-tab-active" : "text-white/50 hover:text-white"}`}>{t}</button>
             ))}
           </div>
           <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {SERVICE_TABS[svcTab].map((c) => (
-              <div key={c.title} className="rounded-lg bg-[#12275e] p-5 ring-1 ring-white/10">
-                <p className="text-sm font-bold">{c.title}</p>
-                <p className="mt-2 text-xs leading-5 text-white/70">{c.desc}</p>
-                <span className={`mt-3 inline-block rounded px-2 py-0.5 text-[10px] font-black uppercase ${c.tag === "Included" ? "bg-[#00ff88]/20 text-[#00ff88]" : "bg-white/10 text-white/80"}`}>{c.tag}</span>
+              <div key={c.title} className="ghc-metal-card rounded-xl p-5">
+                <p className="text-sm font-bold text-white">{c.title}</p>
+                <p className="mt-2 text-xs leading-5 text-white/60">{c.desc}</p>
+                <span className={`mt-3 inline-block rounded px-2 py-0.5 text-[10px] font-black uppercase ${c.tag === "Included" ? "bg-[#ff7a18]/15 text-[#ffb347]" : "bg-white/10 text-white/70"}`}>{c.tag}</span>
               </div>
             ))}
           </div>
@@ -385,71 +413,73 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
       </section>
 
       {/* ─── Locations ─── */}
-      <section id="locations" className="mx-auto max-w-7xl px-6 py-14">
-        <h2 className="text-2xl font-black">Your data, hosted wherever you need it</h2>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600">Deploy your Metal VPS in one of our worldwide datacenters — close to your users for the lowest latency.</p>
+      <section id="locations" className="relative mx-auto max-w-7xl px-6 py-16">
+        <h2 className="text-2xl font-black"><span className="ghc-metal-text-grad">Your data, hosted wherever you need it</span></h2>
+        <p className="mt-2 max-w-2xl text-sm text-white/55">Deploy your Metal VPS in one of our worldwide datacenters — close to your users for the lowest latency.</p>
         <div className="mt-6 flex flex-wrap gap-2">
           {(regions.length ? regions : Object.keys(REGION_NAMES)).map((r) => (
-            <span key={r} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-[#0f172a]">
-              <Globe className="h-3 w-3 text-[#00b7ff]" /> {REGION_NAMES[r] || r.toUpperCase()}
+            <span key={r} className="ghc-metal-chip inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-white/85">
+              <Globe className="h-3 w-3 text-[#ff8a2a]" /> {REGION_NAMES[r] || r.toUpperCase()}
             </span>
           ))}
         </div>
       </section>
 
       {/* ─── Compatible options ─── */}
-      <section className="border-t border-slate-100 bg-[#f0f6ff]">
-        <div className="mx-auto max-w-7xl px-6 py-14">
-          <h2 className="text-center text-2xl font-black">Options compatible with our Metal VPS solutions</h2>
-          <div className="mt-8 grid gap-5 md:grid-cols-3">
+      <section className="border-t border-white/5 bg-[#0d0c12]">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <h2 className="text-center text-2xl font-black"><span className="ghc-metal-text-grad">Options compatible with our Metal VPS solutions</span></h2>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
             {[
               { t: "Standard automatic backup", d: "Effortlessly protect your data every day.", p: "Included", cta: null },
               { t: "Premium automatic backup", d: "Your custom backups, with rotating 7-day restores.", p: "Optional add-on", cta: "Select at checkout" },
               { t: "Snapshots", d: "Easily back up and restore your data at any time.", p: "Optional add-on", cta: "Select at checkout" },
-            ].map((o) => (
-              <div key={o.t} className="rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{o.t}</p>
-                <p className="mt-1 text-xs text-slate-500">{o.d}</p>
-                <p className="mt-4 text-xl font-black text-[#0f172a]">{o.p}</p>
-                <p className="mt-3 text-xs font-bold text-[#00b7ff]">{o.cta || "Free with every Metal VPS"}</p>
+            ].map((o, i) => (
+              <div key={o.t} className="ghc-metal-card ghc-metal-fade rounded-xl p-6 text-center" style={{ ["--d" as any]: `${i * 90}ms` }}>
+                <p className="text-xs font-bold uppercase tracking-wide text-white/50">{o.t}</p>
+                <p className="mt-1 text-xs text-white/45">{o.d}</p>
+                <p className="ghc-metal-text-grad mt-4 text-xl font-black">{o.p}</p>
+                <p className="mt-3 text-xs font-bold text-[#ffb347]">{o.cta || "Free with every Metal VPS"}</p>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-xs text-slate-500">
+          <p className="mt-6 text-center text-xs text-white/45">
             You can also customise your environment with additional IPs, a Load Balancer, and external storage.
           </p>
         </div>
       </section>
 
       {/* ─── Use cases ─── */}
-      <section id="usecases" className="mx-auto max-w-7xl px-6 py-14">
-        <h2 className="text-2xl font-black">Use cases</h2>
+      <section id="usecases" className="relative mx-auto max-w-7xl px-6 py-16">
+        <h2 className="text-2xl font-black"><span className="ghc-metal-text-grad">Use cases</span></h2>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {USE_CASES.map((u) => (
-            <div key={u.title} className="rounded-lg border border-slate-200 bg-white p-5 transition hover:border-[#00b7ff] hover:shadow-md">
-              <p className="text-sm font-bold">{u.title}</p>
-              <p className="mt-2 text-xs leading-5 text-slate-600">{u.desc}</p>
+          {USE_CASES.map((u, i) => (
+            <div key={u.title} className="ghc-metal-card ghc-metal-fade rounded-xl p-5" style={{ ["--d" as any]: `${i * 60}ms` }}>
+              <u.icon className="h-5 w-5 text-[#ff8a2a]" />
+              <p className="mt-3 text-sm font-bold text-white">{u.title}</p>
+              <p className="mt-2 text-xs leading-5 text-white/55">{u.desc}</p>
             </div>
           ))}
         </div>
-        <div className="mt-10 rounded-lg bg-gradient-to-r from-[#0b1a45] to-[#12308f] px-8 py-10 text-center text-white">
-          <h3 className="text-2xl font-black">Take your business to the next level!</h3>
-          <a href="#plans" className="mt-5 inline-block rounded bg-white px-6 py-2.5 text-sm font-bold text-[#0f172a] hover:bg-slate-100">Choose a Metal VPS</a>
+        <div className="ghc-metal-scan relative mt-12 overflow-hidden rounded-2xl bg-gradient-to-r from-[#1c0d04] via-[#2a1206] to-[#3d1608] px-8 py-12 text-center ring-1 ring-[#ff7a18]/30">
+          <div className="ghc-metal-orb ghc-metal-orb-a -left-20 -top-20 h-64 w-64 opacity-40" />
+          <h3 className="relative text-2xl font-black"><span className="ghc-metal-text-grad">Take your business to the next level!</span></h3>
+          <a href="#plans" className="ghc-metal-btn relative mt-6 inline-block rounded-lg px-7 py-3 text-sm font-bold">Choose a Metal VPS</a>
         </div>
       </section>
 
       {/* ─── FAQ ─── */}
-      <section className="border-t border-slate-100 bg-white">
-        <div className="mx-auto max-w-4xl px-6 py-14">
-          <h2 className="text-2xl font-black">{fam.faqs ? `Frequently Asked Questions about ${fam.crumb} Hosting` : "Your questions answered"}</h2>
-          <div className="mt-6 divide-y divide-slate-200 border-y border-slate-200">
+      <section className="border-t border-white/5">
+        <div className="mx-auto max-w-4xl px-6 py-16">
+          <h2 className="text-2xl font-black"><span className="ghc-metal-text-grad">{fam.faqs ? `Frequently Asked Questions about ${fam.crumb} Hosting` : "Your questions answered"}</span></h2>
+          <div className="mt-6 divide-y divide-white/10 border-y border-white/10">
             {(fam.faqs || FAQS).map((f, i) => (
               <div key={f.q}>
-                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-bold text-[#0050d7] hover:text-[#00b7ff]">
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-bold text-[#ffb347] hover:text-[#ffc966] transition-colors">
                   {f.q}
                   <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} />
                 </button>
-                {openFaq === i && <p className="pb-4 text-sm leading-6 text-slate-600">{f.a}</p>}
+                {openFaq === i && <p className="pb-4 text-sm leading-6 text-white/60">{f.a}</p>}
               </div>
             ))}
           </div>
