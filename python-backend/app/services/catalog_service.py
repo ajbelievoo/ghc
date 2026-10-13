@@ -420,7 +420,7 @@ def default_dedicated_display_name(invoice_name: str, plan_code: str) -> str:
     for t in tokens:
         if not t:
             continue
-        if t.isupper() and t in ("STOR", "SAP", "HCI", "HDS", "HG", "HGR", "RI", "GP"):
+        if t.isupper() and t in ("STOR", "SAP", "HCI", "HDS", "HG", "HGR", "RI", "GP", "AI"):
             parts.append("HG" if t == "HGR" else t)  # real acronyms; HG is the brand name for the HGR range
         elif t.isdigit():
             parts.append(t)
