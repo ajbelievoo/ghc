@@ -352,11 +352,53 @@ def _ded_spec_display(p: PlanCatalog) -> dict:
     bw = None
     if p.bandwidth_mbps:
         bw = f"{p.bandwidth_mbps / 1000:g} Gbps" if p.bandwidth_mbps >= 1000 else f"{p.bandwidth_mbps} Mbps"
+    fams = {f.get("name"): f for f in ((p.catalog_metadata or {}).get("addonFamilies") or []) if isinstance(f, dict)}
+    ram_opts = [int(m.group(1)) for a in (fams.get("memory") or {}).get("addons", []) for m in [_re.search(r"ram-(\d+)g", a.lower())] if m]
+    ram_opts.append(p.ram_gb or 0)
+    ram_opts = [x for x in ram_opts if x]
+    stor_opts = []
+    for a in (fams.get("storage") or {}).get("addons", []):
+        tot = 0
+        cnt = 0
+        for m in _re.finditer(r"(\d+)x(\d{3,5})(nvme|ssd|sata|sas|hdd)", a.lower()):
+            tot += int(m.group(1)) * int(m.group(2))
+            cnt += int(m.group(1))
+        if tot:
+            stor_opts.append((tot, cnt, _storage_label_to_human(a), a.lower()))
+    bw_opts = []
+    for a in (fams.get("bandwidth") or {}).get("addons", []):
+        m = _re.search(r"bandwidth-(\d+)", a.lower()) or _re.search(r"traffic-(?:\d+tb|unlimited)-(\d+)", a.lower())
+        if m:
+            bw_opts.append(int(m.group(1)))
+    if p.bandwidth_mbps:
+        bw_opts.append(p.bandwidth_mbps)
+    priv = [int(m.group(1)) for a in (fams.get("vrack") or {}).get("addons", []) for m in [_re.search(r"vrack-bandwidth-(\d+)", a.lower())] if m]
+    stor_opts.sort(key=lambda x: x[0])
+    stor_types = sorted({t for o in stor_opts for t in ("NVMe" if "nvme" in o[3] else None, "SAS" if "sas" in o[3] else None, "SSD" if "ssd" in o[3] and "nvme" not in o[3] else None, "SATA" if "sata" in o[3] else None, "HDD" if "hdd" in o[3] else None) if t})
     return {
         "cpu": " · ".join(cpu_bits) or p.description,
         "ram": f"{p.ram_gb} GB" if p.ram_gb else None,
         "storage": storage,
         "bandwidth": bw,
+        "cpuBrand": (meta.get("cpu_brand") or "").upper() or None,
+        "cpuModel": meta.get("cpu_model"),
+        "cores": p.cpu_cores,
+        "threads": meta.get("cpu_threads"),
+        "freq": meta.get("cpu_freq"),
+        "boost": meta.get("cpu_boost"),
+        "sockets": meta.get("cpu_number") or 1,
+        "ramMin": min(ram_opts) if ram_opts else None,
+        "ramMax": max(ram_opts) if ram_opts else None,
+        "storageMin": stor_opts[0][2] if stor_opts else storage,
+        "storageMax": stor_opts[-1][2] if stor_opts else None,
+        "storageMinGb": stor_opts[0][0] if stor_opts else p.disk_gb,
+        "storageMaxGb": stor_opts[-1][0] if stor_opts else p.disk_gb,
+        "diskMin": min((o[1] for o in stor_opts), default=None),
+        "diskMax": max((o[1] for o in stor_opts), default=None),
+        "storageTypes": stor_types,
+        "pubBwMin": min(bw_opts) if bw_opts else None,
+        "pubBwMax": max(bw_opts) if bw_opts else None,
+        "privBw": max(priv) if priv else None,
     }
 
 

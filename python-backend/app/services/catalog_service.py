@@ -133,6 +133,7 @@ def _dedicated_spec_extras(product: Dict[str, Any], plan: Dict[str, Any]) -> Dic
         out["cpu_brand"] = cpu.get("brand")
         out["cpu_model"] = cpu.get("model")
         out["cpu_threads"] = _coerce_int(cpu.get("threads"))
+        out["cpu_number"] = _coerce_int(cpu.get("number"))
         out["cpu_freq"] = cpu.get("frequency")
         out["cpu_boost"] = cpu.get("boost")
     ram_code = _addon_family_default(plan, "memory")
