@@ -41,3 +41,10 @@ get explicit user approval first. See python-backend/AGENTS.md for details.
 - `/dedicated-servers/use-cases/` (`DedicatedUseCasesPage.tsx`) — OVH-style hub: carousel of range+use-case cards with real min prices, feature-card grid, all linking to `/dedicated-servers/prices?use_cases=<key>`.
 - `DedicatedRangeList.tsx` reads `?use_cases=` (+`?usecase=`) query param to pre-select use-case chips.
 - ⚠️ Next 16 export quirk: a parent `page.tsx` beside child dirs (use-cases/) emits `.next/server/app/.../index.html` but does NOT copy it to `dist2/`. After build, manually: `cp .next/server/app/dedicated-servers/use-cases/index.html dist2/dedicated-servers/use-cases/index.html` before rsync to dist/.
+
+## Two storefront channels — Essential vs Metal (added 2026-10-13)
+
+- **Essential** = the standard storefront (`/vps`, `/dedicated-servers` etc., `GET /api/server/plans`). Display names come from `admin_configs.essential_vps_names` / `essential_ded_names` (admin-overridable); auto-fallbacks are `Essential VPS-N` (`default_essential_vps_name`) and `Essential <Range> <n> (<year>)` (`default_dedicated_display_name(prefix="Essential")`). Its margin IS the category margin in `margin_settings` — currently VPS 10%, DEDICATED 12% (kept low on purpose).
+- **Metal** = the premium menu (`/metal/*`, `/api/metal/*/plans`, `brand=metal` orders). `metal_vps_margin`/`metal_ded_margin` = 45%; names `metal_vps_names`/`metal_ded_names` → `Metal VPS-N`, `Metal <Range> <n> (<year>)`.
+- The two channels must NEVER show matching names — Metal pages keep the dark `ghc-metal-*` theme, Essential pages stay light/OVH-blue.
+- Admin: `/admin` → Margins tab → blue "ESSENTIAL" block (VPS/dedicated margins + per-plan name tables) and orange "METAL" block. Admin APIs: `/api/admin/essential-vps`, `/api/admin/essential-dedicated`, `/api/admin/metal-vps`, `/api/admin/metal-dedicated`.
