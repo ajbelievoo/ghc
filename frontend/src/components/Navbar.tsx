@@ -220,10 +220,10 @@ const megaMenu: MegaEntry[] = [
             { label: "Reseller", href: "/dedicated-servers", desc: "Our infrastructure, your added value" },
           ]},
           { title: "Uses", items: [
-            { label: "AZ and resilience", href: "/dedicated-servers", desc: "Business continuity with high availability" },
+            { label: "AZ and resilience", href: "/dedicated-servers/use-cases/az-resilience", desc: "Business continuity with high availability" },
             { label: "Grid computing", href: "/dedicated-servers/scale", desc: "Compute-intensive models for critical issues" },
             { label: "Virtualisation and containerisation", href: "/solutions/proxmox", desc: "Cloud-native flexibility on physical servers" },
-            { label: "Website and business application", href: "/metal/vps", desc: "Scalability and security for your web applications" },
+            { label: "Website and business application", href: "/dedicated-servers/use-cases/wordpress", desc: "Scalability and security for your web applications" },
             { label: "All uses", href: "/dedicated-servers" },
           ]},
         ],
