@@ -249,8 +249,8 @@ const megaMenu: MegaEntry[] = [
           ]},
           { title: "Who is it for?", items: [
             { label: "Agency / Multisites", href: "/metal/vps#usecases" },
-            { label: "Developers", href: "/metal/vps#usecases" },
-            { label: "Resellers", href: "/metal/vps#usecases" },
+            { label: "Developers", href: "/metal/vps/developers" },
+            { label: "Resellers", href: "/metal/vps/reseller" },
             { label: "All uses", href: "/metal/vps#usecases" },
           ]},
           { title: "Partners", items: [
