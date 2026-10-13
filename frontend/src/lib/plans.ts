@@ -25,3 +25,15 @@ export async function fetchMetalVpsPlans(): Promise<any[]> {
     return [];
   }
 }
+
+export async function fetchMetalDedicatedPlans(): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE}/metal/dedicated/plans`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return sanitizePlans(Array.isArray(data) ? data : []);
+  } catch (e: any) {
+    console.warn("[fetchMetalDedicatedPlans] failed:", e?.message || e);
+    return [];
+  }
+}

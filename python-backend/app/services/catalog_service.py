@@ -385,7 +385,28 @@ def set_metal_vps_names(db: Session, names: Dict[str, str]) -> None:
 
 # ---------- Metal dedicated channel (own display names over the bare-metal catalog) ----------
 
+METAL_DED_MARGIN_KEY = "metal_ded_margin"
 METAL_DED_NAMES_KEY = "metal_ded_names"
+
+
+def get_metal_ded_margin(db: Session) -> Decimal:
+    row = db.query(AdminConfig).filter(AdminConfig.key == METAL_DED_MARGIN_KEY).first()
+    if row and row.value:
+        try:
+            return Decimal(str(float(row.value)))
+        except (ValueError, TypeError):
+            pass
+    return METAL_DEFAULT_MARGIN
+
+
+def set_metal_ded_margin(db: Session, percent: float) -> None:
+    row = db.query(AdminConfig).filter(AdminConfig.key == METAL_DED_MARGIN_KEY).first()
+    if not row:
+        row = AdminConfig(key=METAL_DED_MARGIN_KEY, value=str(percent))
+        db.add(row)
+    else:
+        row.value = str(percent)
+    db.commit()
 
 
 def get_metal_ded_names(db: Session) -> Dict[str, str]:

@@ -173,7 +173,7 @@ export const api = {
     saveMetalVps: (body: { marginPercent?: number; names?: Record<string, string> }) =>
       request("/admin/metal-vps", { method: "POST", body: JSON.stringify(body) }),
     getMetalDedicated: () => request("/admin/metal-dedicated"),
-    saveMetalDedicated: (body: { names?: Record<string, string> }) =>
+    saveMetalDedicated: (body: { marginPercent?: number; names?: Record<string, string> }) =>
       request("/admin/metal-dedicated", { method: "POST", body: JSON.stringify(body) }),
     // Catalog
     getCatalog: (params?: { category?: string; search?: string }) =>
@@ -235,6 +235,8 @@ export const api = {
     },
     metalVpsPlans: () =>
       request(`/metal/vps/plans?currency=${selectedCurrency()}`).then(sanitizePlans),
+    metalDedicatedPlans: () =>
+      request(`/metal/dedicated/plans?currency=${selectedCurrency()}`).then(sanitizePlans),
     planConfiguration: (body: { planCode: string; category?: string; durationLabel?: string }) =>
       request(`/server/plans/configuration?planCode=${encodeURIComponent(body.planCode)}${body.category ? `&category=${encodeURIComponent(body.category)}` : ""}${body.durationLabel ? `&durationLabel=${encodeURIComponent(body.durationLabel)}` : ""}`),
     gateways: () => request("/server/gateways"),

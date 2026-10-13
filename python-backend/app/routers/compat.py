@@ -314,15 +314,7 @@ def server_plans(category: Optional[str] = None, family: Optional[str] = None, c
     plans = get_active_plans(db, cat)
     out = [_plan_to_frontend(p, currency, db) for p in plans]
     if cat == ServiceCategory.DEDICATED:
-        from app.services.catalog_service import get_metal_ded_names, default_dedicated_display_name
-        names = get_metal_ded_names(db)
-        names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
         for p, d in zip(plans, out):
-            d["displayName"] = (
-                names.get(p.plan_code)
-                or names_norm.get(_normalize_public_plan_code(p.plan_code))
-                or default_dedicated_display_name(p.invoice_name or "", p.plan_code)
-            )
             d["spec"] = _ded_spec_display(p)
     return out
 
@@ -439,6 +431,33 @@ def metal_vps_plans(currency: Optional[str] = None, db: Session = Depends(get_db
     return out
 
 
+@router.get("/metal/dedicated/plans")
+def metal_dedicated_plans(currency: Optional[str] = None, db: Session = Depends(get_db)):
+    """Dedicated plans sold under the Metal menu — same upstream bare-metal
+    catalog, priced with the Metal dedicated margin + Metal display names."""
+    from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, default_dedicated_display_name
+    margin_pct = float(get_metal_ded_margin(db))
+    names = get_metal_ded_names(db)
+    names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
+    plans = get_active_plans(db, ServiceCategory.DEDICATED)
+    out = []
+    for p in plans:
+        d = _plan_to_frontend(p, currency, db)
+        for dur in d.get("durations") or []:
+            raw = dur.get("rawPrice") or 0
+            dur["finalPrice"] = round(raw * (1 + margin_pct / 100.0), 2)
+            dur["monthlyPrice"] = round(_monthly_price(dur["finalPrice"], dur.get("interval") or 1, dur.get("intervalUnit") or "month"), 2)
+        d["displayName"] = (
+            names.get(p.plan_code)
+            or names_norm.get(_normalize_public_plan_code(p.plan_code))
+            or default_dedicated_display_name(p.invoice_name or "", p.plan_code)
+        )
+        d["spec"] = _ded_spec_display(p)
+        d["brand"] = "metal"
+        out.append(d)
+    return out
+
+
 @router.get("/admin/metal-vps")
 def admin_get_metal_vps(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.services.catalog_service import get_metal_vps_margin, get_metal_vps_names
@@ -478,11 +497,12 @@ def admin_save_metal_vps(body: dict, db: Session = Depends(get_db), admin: User 
 
 @router.get("/admin/metal-dedicated")
 def admin_get_metal_dedicated(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    from app.services.catalog_service import get_metal_ded_names, default_dedicated_display_name
+    from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, default_dedicated_display_name
     names = get_metal_ded_names(db)
     names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
     plans = get_active_plans(db, ServiceCategory.DEDICATED)
     return {
+        "marginPercent": float(get_metal_ded_margin(db)),
         "names": names,
         "plans": [
             {
@@ -498,7 +518,12 @@ def admin_get_metal_dedicated(db: Session = Depends(get_db), admin: User = Depen
 
 @router.post("/admin/metal-dedicated")
 def admin_save_metal_dedicated(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    from app.services.catalog_service import set_metal_ded_names
+    from app.services.catalog_service import set_metal_ded_margin, set_metal_ded_names
+    if "marginPercent" in body and body["marginPercent"] is not None:
+        percent = float(body["marginPercent"])
+        if percent < 0 or percent > 500:
+            raise HTTPException(status_code=400, detail="marginPercent must be between 0 and 500")
+        set_metal_ded_margin(db, percent)
     if "names" in body and body["names"] is not None:
         if not isinstance(body["names"], dict):
             raise HTTPException(status_code=400, detail="names must be an object {planCode: name}")

@@ -139,7 +139,7 @@ const megaMenu: MegaEntry[] = [
     ],
   },
   {
-    label: "VPS & Dedicated Servers",
+    label: "Essential",
     href: "/dedicated-servers",
     cols: 4,
     columns: [

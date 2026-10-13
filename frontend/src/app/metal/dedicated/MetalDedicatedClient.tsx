@@ -73,7 +73,7 @@ export default function MetalDedicatedClient({ initialPlans }: { initialPlans: a
 
   useEffect(() => {
     let alive = true;
-    api.server.plans("DEDICATED")
+    api.server.metalDedicatedPlans()
       .then((p: any[]) => { if (alive && Array.isArray(p) && p.length) setPlans(p); })
       .catch(() => {});
     return () => { alive = false; };
@@ -165,8 +165,15 @@ export default function MetalDedicatedClient({ initialPlans }: { initialPlans: a
       <section id="ranges" className="relative mx-auto max-w-7xl px-6 py-16">
         <h2 className="text-center text-2xl font-black md:text-3xl"><span className="ghc-metal-text-grad">Choose your forge</span></h2>
         <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-white/55">
-          Every Metal dedicated range, sorted by price — real OVH-backed bare metal, priced with the Metal channel margin.
+          Every Metal dedicated range, sorted by price — premium bare metal with Metal-only perks on every server.
         </p>
+        <div className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
+          {["Priority deployment", "Daily backup included", "Anti-DDoS protection", "Unmetered bandwidth", "Metal care support"].map((perk) => (
+            <span key={perk} className="ghc-metal-chip inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#ffb347]">
+              <Check className="h-3 w-3" /> {perk}
+            </span>
+          ))}
+        </div>
 
         {/* Range quick nav */}
         <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -203,13 +210,13 @@ export default function MetalDedicatedClient({ initialPlans }: { initialPlans: a
                       return (
                         <div key={p.planCode} className="ghc-metal-row flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-black uppercase text-white">{(p.invoiceName || p.planCode).split("|")[0].trim()}</p>
-                            <p className="truncate text-[11px] text-white/40">{p.description || p.planCode}</p>
+                            <p className="truncate text-sm font-black uppercase text-white">{p.displayName || (p.invoiceName || p.planCode).split("|")[0].trim()}</p>
+                            <p className="truncate text-[11px] text-white/40">{p.spec?.cpu || p.description || p.planCode}</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-5 text-[11px] text-white/60">
-                            {!!p.cpuCores && <span className="inline-flex items-center gap-1"><Cpu className="h-3 w-3 text-[#ff8a2a]" />{p.cpuCores}c</span>}
-                            {!!p.ramGb && <span>{p.ramGb} GB</span>}
-                            {!!p.diskGb && <span className="inline-flex items-center gap-1"><HardDrive className="h-3 w-3 text-[#ff8a2a]" />{p.diskGb >= 1000 ? `${(p.diskGb / 1000).toFixed(0)} TB` : `${p.diskGb} GB`}</span>}
+                            {!!p.spec?.ram && <span>{p.spec.ramMin && p.spec.ramMax && p.spec.ramMin !== p.spec.ramMax ? `${p.spec.ramMin}–${p.spec.ramMax} GB` : p.spec.ram}</span>}
+                            {!!p.spec?.storage && <span className="inline-flex items-center gap-1"><HardDrive className="h-3 w-3 text-[#ff8a2a]" />{p.spec.storage}</span>}
+                            {!!p.spec?.bandwidth && <span className="inline-flex items-center gap-1"><Network className="h-3 w-3 text-[#ff8a2a]" />{p.spec.bandwidth}</span>}
                             <p className="ghc-metal-text-grad text-base font-black">{money(d.monthlyPrice ?? d.finalPrice, cur)}<span className="text-[10px] font-normal text-white/40">/mo</span></p>
                             <button
                               onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}&brand=metal`)}

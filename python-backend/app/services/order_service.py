@@ -147,14 +147,26 @@ def create_customer_order(
     if not duration:
         raise ValueError(f"Duration {duration_label} not available for plan {plan_code}")
 
-    # Metal channel (Metal menu → VPS): same upstream plans, priced with the
-    # Metal margin instead of the standard VPS margin/overrides.
-    is_metal = str((config or {}).get("_brand") or "").lower() == "metal" and plan.category == ServiceCategory.VPS
+    # Metal channel (Metal menu → VPS/Dedicated): same upstream plans, priced
+    # with the Metal margin instead of the standard margin/overrides.
+    is_metal = str((config or {}).get("_brand") or "").lower() == "metal" and plan.category in (ServiceCategory.VPS, ServiceCategory.DEDICATED)
     if is_metal:
-        final_price = float(apply_margin(Decimal(str(duration.raw_price)), get_metal_vps_margin(db)))
-        metal_names = get_metal_vps_names(db)
-        metal_names_norm = {_normalize_public_plan_code(k): v for k, v in metal_names.items()}
-        metal_name = metal_names.get(resolved_code) or metal_names_norm.get(_normalize_public_plan_code(resolved_code))
+        if plan.category == ServiceCategory.DEDICATED:
+            from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, default_dedicated_display_name
+            margin = get_metal_ded_margin(db)
+            ded_names = get_metal_ded_names(db)
+            ded_names_norm = {_normalize_public_plan_code(k): v for k, v in ded_names.items()}
+            metal_name = (
+                ded_names.get(resolved_code)
+                or ded_names_norm.get(_normalize_public_plan_code(resolved_code))
+                or default_dedicated_display_name(plan.invoice_name or "", resolved_code)
+            )
+        else:
+            margin = get_metal_vps_margin(db)
+            metal_names = get_metal_vps_names(db)
+            metal_names_norm = {_normalize_public_plan_code(k): v for k, v in metal_names.items()}
+            metal_name = metal_names.get(resolved_code) or metal_names_norm.get(_normalize_public_plan_code(resolved_code))
+        final_price = float(apply_margin(Decimal(str(duration.raw_price)), margin))
         if metal_name:
             config = {**(config or {}), "display_name": metal_name}
     elif plan.override_price is not None:

@@ -352,6 +352,11 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
                     <p className="mt-2 text-[11px] uppercase tracking-wide text-white/40">From</p>
                     <p className="ghc-metal-text-grad text-3xl font-black">{money(d?.monthlyPrice ?? d?.finalPrice, d?.currency)}</p>
                     <p className="text-[11px] text-white/35">ex. taxes/month</p>
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {["Priority deploy", "Daily backup", "Metal care"].map((perk) => (
+                        <span key={perk} className="rounded bg-[#ff7a18]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#ffb347]">{perk}</span>
+                      ))}
+                    </div>
                     <button onClick={() => configure(p.planCode)} className="ghc-metal-btn mt-4 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-bold">
                       <ShoppingCart className="h-4 w-4" /> Configure
                     </button>
@@ -386,7 +391,12 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
                     <h3 className="mt-2 text-base font-bold text-white">{p.displayName || p.invoiceName || p.planCode}</h3>
                     <p className="ghc-metal-text-grad mt-1 text-xl font-black">{money(d?.monthlyPrice ?? d?.finalPrice, d?.currency)}<span className="text-[10px] font-normal text-white/40"> ex. taxes/month</span></p>
                     <p className="mt-1 text-[11px] text-white/50">{p.cpuCores} vCores · {p.ramGb} GB RAM · {p.diskGb} GB {p.diskType || "NVMe"}</p>
-                    <button onClick={() => configure(p.planCode)} className="ghc-metal-btn mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold">
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {["Priority deploy", "Daily backup", "Metal care"].map((perk) => (
+                        <span key={perk} className="rounded bg-[#ff7a18]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#ffb347]">{perk}</span>
+                      ))}
+                    </div>
+                    <button onClick={() => configure(p.planCode)} className="ghc-metal-btn mt-3 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold">
                       <ShoppingCart className="h-3.5 w-3.5" /> Configure
                     </button>
                   </div>

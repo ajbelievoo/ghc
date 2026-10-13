@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import MetalDedicatedClient from "./MetalDedicatedClient";
-import { fetchPlans } from "@/lib/plans";
+import { fetchMetalDedicatedPlans } from "@/lib/plans";
 
 export const metadata = {
   title: "Metal Dedicated Servers — bare metal power | GHC - Go Host Cloud",
@@ -8,7 +8,7 @@ export const metadata = {
 };
 
 export default async function MetalDedicatedPage() {
-  const plans = await fetchPlans("DEDICATED");
+  const plans = await fetchMetalDedicatedPlans();
   return (
     <Suspense>
       <MetalDedicatedClient initialPlans={plans} />

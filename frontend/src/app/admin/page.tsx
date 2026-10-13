@@ -63,6 +63,7 @@ export default function AdminPage() {
   const [metalNames, setMetalNames] = useState<Record<string, string>>({});
   const [dedPlans, setDedPlans] = useState<any[]>([]);
   const [dedNames, setDedNames] = useState<Record<string, string>>({});
+  const [dedMargin, setDedMargin] = useState<number>(20);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
   const [catalogPlans, setCatalogPlans] = useState<PlanEntry[]>([]);
@@ -139,7 +140,7 @@ export default function AdminPage() {
       if (t === "margins") {
         const m = await api.admin.getMargins(); const map: Record<string, number> = {}; m.forEach((x: any) => map[x.category] = x.percent); setMargins(map);
         try { const mv = await api.admin.getMetalVps(); setMetalMargin(mv.marginPercent ?? 20); setMetalPlans(mv.plans || []); setMetalNames(mv.names || {}); } catch {}
-        try { const md = await api.admin.getMetalDedicated(); setDedPlans(md.plans || []); setDedNames(md.names || {}); } catch {}
+        try { const md = await api.admin.getMetalDedicated(); setDedPlans(md.plans || []); setDedNames(md.names || {}); setDedMargin(md.marginPercent ?? 20); } catch {}
       }
       if (t === "coupons") { const c = await api.admin.getCoupons(); setCoupons(c || []); }
       if (t === "catalog") { setCatalogLoading(true); const params: any = { search: catalogSearch || undefined }; if (catalogCategory !== "ALL") params.category = catalogCategory; const p = await api.admin.getCatalog(params); setCatalogPlans(p || []); setCatalogLoading(false); }
@@ -207,6 +208,7 @@ export default function AdminPage() {
   const saveMetalMargin = async () => { try { await api.admin.saveMetalVps({ marginPercent: metalMargin }); showToast("Metal margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveMetalNames = async () => { try { await api.admin.saveMetalVps({ names: metalNames }); showToast("Metal plan names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveDedNames = async () => { try { await api.admin.saveMetalDedicated({ names: dedNames }); showToast("Dedicated names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveDedMargin = async () => { try { await api.admin.saveMetalDedicated({ marginPercent: dedMargin }); showToast("Metal dedicated margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handlePlanOverride = async (planCode: string, overridePrice: string, overrideMargin: string) => { try { await api.admin.updatePlanOverride(planCode, { overridePrice: overridePrice === "" ? null : parseFloat(overridePrice), overrideMargin: overrideMargin === "" ? null : parseFloat(overrideMargin) }); showToast("Override saved for " + planCode, "success"); loadTabData("catalog"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleFulfillPayment = async (sessionId: string) => { try { await api.payments.fulfillSession(sessionId); showToast("Payment fulfilled and service activated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleRetryProvision = async (orderId: string) => { try { await api.admin.retryProvision(orderId); showToast("Provisioning retry initiated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
@@ -683,9 +685,18 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              <div className="mt-6 rounded-xl border border-[#ff3d00]/30 bg-[#ff3d00]/5 p-4">
+                <p className="text-sm font-bold text-[#0f172a]">Metal dedicated margin %</p>
+                <p className="text-xs text-slate-500 mt-0.5">Separate profit % for dedicated servers sold via /metal/dedicated. Applied instantly at order time.</p>
+                <div className="flex items-center gap-3 max-w-sm mt-3">
+                  <input type="number" value={dedMargin} onChange={(e) => setDedMargin(parseFloat(e.target.value) || 0)} className="flex-1 rounded-lg bg-white border border-slate-200 px-4 py-2.5 text-sm text-[#0f172a] focus:border-[#ff3d00]/50 outline-none" />
+                  <button onClick={saveDedMargin} className="rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 px-4 py-2.5 text-sm text-[#ff3d00] hover:bg-[#ff3d00]/20 transition-all font-bold">Save</button>
+                </div>
+              </div>
+
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-bold text-[#0f172a]">Metal dedicated names <span className="font-normal text-slate-500">(customer-facing names on /dedicated-servers — blank = auto Metal name)</span></p>
+                  <p className="text-sm font-bold text-[#0f172a]">Metal dedicated names <span className="font-normal text-slate-500">(customer-facing names on /metal/dedicated — blank = auto Metal name)</span></p>
                   <button onClick={saveDedNames} className="rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 px-4 py-2 text-xs font-bold text-[#ff3d00] hover:bg-[#ff3d00]/20 transition-all">Save names</button>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
