@@ -366,7 +366,7 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
         </div>
         {advRows.length > visible && (
           <div className="mt-5 text-center">
-            <button onClick={() => setVisible(advRows.length)} className="inline-block rounded-lg bg-[#0b1020] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#101d42]">Show more servers ({advRows.length - visible})</button>
+            <a href="/dedicated-servers/prices?range=advance" className="inline-block rounded-lg bg-[#0050d7] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#0043b3]">Show more servers →</a>
           </div>
         )}
       </section>
