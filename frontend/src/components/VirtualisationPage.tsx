@@ -28,12 +28,20 @@ export default function VirtualisationPage({ plans }: { plans: any[] }) {
       String(p.features?.["baremetal-server-usecases"] || "").includes("virtualisation-containerisation-orchestration")
     );
     const list = (tagged.length ? tagged : plans).filter((p) => p.isActive !== false);
-    return list
-      .map((p) => {
-        const d = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
-        return { p, d };
-      })
-      .sort((a, b) => (a.d?.monthlyPrice || 0) - (b.d?.monthlyPrice || 0));
+    const groups = new Map<string, { p: any; d: any; locations: number; isRegional: boolean }>();
+    for (const p of list) {
+      const d = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
+      if (!d) continue;
+      const key = String(p.planCode || "").split("-").slice(0, 2).join("-");
+      const isRegional = /-(syd|mum|sgp|waw|gra|rbx|sbg|bhs|lon|eri|lim|par)$/i.test(String(p.planCode));
+      const prev = groups.get(key);
+      if (!prev || (prev.isRegional && !isRegional) || (prev.isRegional === isRegional && d.monthlyPrice < prev.d.monthlyPrice)) {
+        groups.set(key, { p, d, locations: (prev?.locations || 0) + 1, isRegional });
+      } else {
+        prev.locations += 1;
+      }
+    }
+    return Array.from(groups.values()).sort((a, b) => a.d.monthlyPrice - b.d.monthlyPrice);
   }, [plans]);
 
   return (
@@ -159,35 +167,55 @@ export default function VirtualisationPage({ plans }: { plans: any[] }) {
       </section>
 
       {/* Server table */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-14">
-        <h2 className="text-xl font-black text-[#0f172a]">Servers for virtualisation and orchestration</h2>
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          <div className="divide-y divide-slate-100">
-            {virtPlans.slice(0, visible).map(({ p, d }) => {
-              const cur = d?.currency || p.currency || "USD";
-              return (
-                <div key={p.planCode} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 hover:bg-sky-50/50 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-black text-[#0f172a] uppercase truncate">{(p.invoiceName || p.planCode).split("|")[0].trim()}</p>
-                      {!!p.features?.["last-generation"] && <span className="rounded-full bg-violet-100 text-violet-700 px-2 py-0.5 text-[9px] font-black uppercase shrink-0">New gen</span>}
-                    </div>
-                    <p className="text-[11px] text-slate-400 truncate">{p.description}</p>
-                  </div>
-                  <div className="flex items-center gap-5 shrink-0 text-[11px] text-slate-500">
-                    {!!p.cpuCores && <span>{p.cpuCores}c</span>}
-                    {!!p.ramGb && <span>{p.ramGb} GB</span>}
-                    {d && <p className="text-sm font-black text-[#0f172a]">{sym(cur)}{d.monthlyPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}<span className="text-[10px] font-normal text-slate-400">/mo</span></p>}
-                    <button onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}`)} className="rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Configure</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
+        <h2 className="text-xl font-black text-[#0f172a]">Deploy on our dedicated servers</h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-2xl">Servers tagged for virtualisation, containerisation and orchestration — grouped by model, real OVH-backed specs.</p>
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-white overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[860px] text-xs">
+            <thead>
+              <tr className="bg-slate-50 text-left">
+                <th className="px-5 py-3 font-black text-slate-500">Name</th>
+                <th className="px-4 py-3 font-black text-slate-500">Processor</th>
+                <th className="px-4 py-3 font-black text-slate-500">Memory</th>
+                <th className="px-4 py-3 font-black text-slate-500">Storage</th>
+                <th className="px-4 py-3 font-black text-slate-500">Bandwidth</th>
+                <th className="px-4 py-3 font-black text-slate-500 text-right">Price</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {virtPlans.slice(0, visible).map(({ p, d, locations }: any) => {
+                const cur = d?.currency || p.currency || "USD";
+                const spec = p.spec || {};
+                const name = p.displayName || (p.invoiceName || p.planCode).split("|")[0].trim();
+                return (
+                  <tr key={p.planCode} className="hover:bg-sky-50/50 transition-colors">
+                    <td className="px-5 py-3.5 align-top">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-black text-[#0f172a]">{name}</span>
+                      </div>
+                      {locations > 1 && <p className="mt-0.5 text-[10px] text-slate-400">{locations} locations</p>}
+                    </td>
+                    <td className="px-4 py-3.5 align-top text-slate-500">{spec.cpu || p.description || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-500 whitespace-nowrap">{spec.ram || (p.ramGb ? `${p.ramGb} GB` : "—")}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-500 whitespace-nowrap">{spec.storage || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-500 whitespace-nowrap">{spec.bandwidth || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap">
+                      <span className="text-sm font-black text-[#0f172a]">{sym(cur)}{d.monthlyPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                      <span className="text-[10px] font-normal text-slate-400">/mo</span>
+                    </td>
+                    <td className="px-5 py-3.5 align-top text-right">
+                      <button onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}`)} className="rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Configure</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
         {virtPlans.length > visible && (
           <div className="mt-5 text-center">
-            <button onClick={() => setVisible((v) => v + 10)} className="text-xs font-bold text-[#0284c7] hover:underline">Show more servers →</button>
+            <a href="/dedicated-servers/prices?use_cases=virtualisation-containerisation-orchestration" className="inline-block rounded-lg bg-[#0050d7] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#0043b3]">Show more servers ({virtPlans.length - visible}) →</a>
           </div>
         )}
       </section>

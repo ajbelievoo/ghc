@@ -151,7 +151,8 @@ export default function DedicatedRangeList({ plans }: { plans: any[] }) {
   const [sockets, setSockets] = useState<number[]>([]);
   const [storageTypes, setStorageTypes] = useState<string[]>([]);
   const [gpuOnly, setGpuOnly] = useState(false);
-  const [useCases, setUseCases] = useState<string[]>([]);
+  const initialUseCases = (params.get("use_cases") || params.get("usecase") || "").split(",").map((u) => u.trim()).filter((u) => u && u in USE_CASES);
+  const [useCases, setUseCases] = useState<string[]>(initialUseCases);
   const [price, setPrice] = useState<[number, number]>(priceBounds);
   const [minPub, setMinPub] = useState(0);
   const [sort, setSort] = useState<"asc" | "desc">("asc");

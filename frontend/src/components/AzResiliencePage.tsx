@@ -216,7 +216,7 @@ export default function AzResiliencePage({ plans }: { plans: any[] }) {
         </div>
         {rows.length > visible && (
           <div className="mt-5 text-center">
-            <button onClick={() => setVisible((v) => v + 10)} className="text-xs font-bold text-[#0284c7] hover:underline">Show more servers ({rows.length - visible}) →</button>
+            <a href="/dedicated-servers/prices?use_cases=multi-az" className="inline-block rounded-lg bg-[#0050d7] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#0043b3]">Show more servers ({rows.length - visible}) →</a>
           </div>
         )}
       </section>
