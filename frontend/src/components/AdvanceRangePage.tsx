@@ -40,23 +40,66 @@ const RANGE_META: Record<string, { href: string; desc: string }> = {
   "High Grade": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
 };
 
-const MATRIX: { label: string; vals: Record<string, string> }[] = [
-  { label: "CPU cores", vals: { Game: "Up to 24 cores", Advance: "From 6 – 16 cores", Scale: "From 16 – 384 cores", "High Grade": "From 16 – 192 cores" } },
-  { label: "RAM", vals: { Game: "DDR5 ECC up to 128 GB", Advance: "DDR4/DDR5 ECC up to 256 GB", Scale: "DDR5 ECC up to 2 TB", "High Grade": "DDR5 ECC up to 1.5 TB" } },
-  { label: "Storage", vals: { Game: "NVMe Gen4", Advance: "NVMe Gen4 / SATA", Scale: "NVMe Gen4/Gen5, up to 26 disks", "High Grade": "NVMe, SAS, up to 36 disks" } },
-  { label: "Public bandwidth", vals: { Game: "1 Gbps", Advance: "500 Mbps – 1 Gbps", Scale: "1 – 25 Gbps", "High Grade": "1 – 25 Gbps" } },
-  { label: "Private bandwidth", vals: { Game: "—", Advance: "25 Gbps", Scale: "50 Gbps", "High Grade": "50 Gbps" } },
-  { label: "Anti-DDoS", vals: { Game: "✓", Advance: "✓", Scale: "✓", "High Grade": "✓" } },
-  { label: "vRack private network", vals: { Game: "—", Advance: "✓", Scale: "✓", "High Grade": "✓" } },
-  { label: "SLA", vals: { Game: "99.90%", Advance: "99.95%", Scale: "99.99%", "High Grade": "99.99%" } },
-  { label: "Cooling", vals: { Game: "Air", Advance: "Industrial water-cooling", Scale: "Industrial water-cooling", "High Grade": "Industrial water-cooling" } },
+type Row = { label: string; vals: string[]; summary?: boolean };
+const R4 = (a: string, b: string, c: string, d: string) => [a, b, c, d];
+const DETAIL: { title: string; rows: Row[] }[] = [
+  { title: "CPU", rows: [
+    { label: "CPU single socket", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "CPU dual socket", vals: R4("–", "–", "✓", "✓") },
+    { label: "GPU", vals: R4("–", "–", "✓", "✓") },
+    { label: "Cores span", vals: R4("from 8 – 16 cores", "from 6 – 24 cores", "from 16 – 384 cores", "from 16 – 192 cores"), summary: true },
+  ] },
+  { title: "RAM", rows: [
+    { label: "RAM type", vals: R4("DDR5 On-Die ECC", "DDR5 On-Die ECC / DDR5 ECC", "DDR5 ECC", "DDR4 ECC / DDR5 ECC") },
+    { label: "RAM quantity", vals: R4("from 64 GB – 256 GB", "from 32 GB – 1 TB", "from 128 GB – 3 TB", "from 128 GB – 3 TB"), summary: true },
+  ] },
+  { title: "Storage", rows: [
+    { label: "Storage interface", vals: R4("PCIe Gen 4.0", "PCIe Gen 4.0 / Gen 5.0", "PCIe Gen 4.0 / Gen 5.0", "PCIe Gen 4.0 / Gen 5.0") },
+    { label: "Storage disks quantity", vals: R4("2 disks", "from 2 – 8 disks", "from 2 – 6 disks", "from 2 – 36 disks"), summary: true },
+    { label: "Storage type", vals: R4("NVMe", "HDD SAS, NVMe", "NVMe", "HDD SAS, NVMe, SSD") },
+  ] },
+  { title: "Network", rows: [
+    { label: "Public bandwidth", vals: R4("1 Gbps", "from 1 – 5 Gbps", "from 1 – 25 Gbps", "from 1 – 25 Gbps"), summary: true },
+    { label: "Private bandwidth", vals: R4("–", "25 Gbps", "50 Gbps", "from 50 – 100 Gbps"), summary: true },
+    { label: "DDoS protection", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "Anti-DDoS Game", vals: R4("✓", "–", "–", "–") },
+    { label: "IPMI", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "Load balancer", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "Link aggregation", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "vRack private network", vals: R4("✓", "✓", "✓", "✓") },
+  ] },
+  { title: "Features", rows: [
+    { label: "FTP backup", vals: R4("✓", "✓", "✓", "✓") },
+    { label: "Dual power supply", vals: R4("–", "–", "✓", "✓") },
+    { label: "Hot swap disks", vals: R4("–", "–", "✓", "✓") },
+    { label: "Capacity upgrade (RAM, storage)", vals: R4("–", "✓", "✓", "✓") },
+  ] },
+  { title: "Observability", rows: [
+    { label: "OS installation logs", vals: R4("Coming soon", "Coming soon", "Coming soon", "Coming soon") },
+    { label: "PXE boot logs", vals: R4("Coming soon", "Coming soon", "Coming soon", "Coming soon") },
+    { label: "Netboot logs", vals: R4("Coming soon", "Coming soon", "Coming soon", "Coming soon") },
+    { label: "BMC logs & metrics", vals: R4("Coming soon", "Coming soon", "Coming soon", "Coming soon") },
+  ] },
+  { title: "SLA", rows: [
+    { label: "Rate", vals: R4("99.95%", "99.95%", "99.99%", "99.99%") },
+  ] },
+  { title: "Infrastructure", rows: [
+    { label: "Cooling system", vals: R4("Industrial watercooling", "Industrial watercooling", "Industrial watercooling", "Industrial watercooling") },
+  ] },
 ];
+const CARD_BG: Record<string, string> = {
+  Game: "bg-[#14161d] text-white",
+  Advance: "bg-slate-100 text-[#0f172a]",
+  Scale: "bg-[#4b4d52] text-white",
+  "High Grade": "bg-[#14161d] text-white",
+};
 
 export default function AdvanceRangePage({ plans }: { plans: any[] }) {
   const router = useRouter();
   const { currency } = useCurrency();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
   const [visible, setVisible] = useState(6);
+  const [showMatrix, setShowMatrix] = useState(false);
   const sym = (c: string) => getCurrencySymbol((c || currency || "USD").toUpperCase());
 
   const { advRows, regionCount, rangeMin } = useMemo(() => {
@@ -216,48 +259,60 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Discover dedicated servers — range cards + matrix */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
+      {/* Discover dedicated servers — one aligned comparison grid, expands in place */}
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl font-black text-center text-[#0f172a]">Discover GHC dedicated servers</h2>
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.entries(RANGE_META).map(([r, meta], i) => {
-            const mn = rangeMin[r];
-            const active = r === "Advance";
-            return (
-              <a key={r} href={meta.href} className={`rounded-2xl border-2 p-5 transition-all ${active ? "border-[#0284c7] bg-sky-50/50 shadow-md" : "border-slate-200 bg-white hover:border-slate-300"}`}>
-                <p className="text-sm font-black text-[#0f172a]">{r}</p>
-                <p className="mt-1 text-[11px] text-slate-500 leading-4 h-9">{meta.desc}</p>
-                {mn && <p className="mt-3 text-xs text-slate-500">Starting from <span className="text-base font-black text-[#0f172a]">{sym(mn.cur)}{mn.price.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span><span className="text-[10px] text-slate-400">/mo</span></p>}
-                <span className={`mt-3 inline-block w-full text-center rounded-lg py-2 text-xs font-bold ${active ? "bg-[#ff3d00] text-white" : "bg-[#0b1020] text-white"}`}>Discover →</span>
-              </a>
-            );
-          })}
+        <div className="mt-8 overflow-x-auto">
+          <div className="min-w-[760px] grid grid-cols-[170px_repeat(4,minmax(0,1fr))] gap-x-3">
+            <div />
+            {Object.entries(RANGE_META).map(([r, meta]) => {
+              const mn = rangeMin[r];
+              const active = r === "Advance";
+              return (
+                <div key={r} className={`rounded-t-xl p-4 flex flex-col ${CARD_BG[r]} ${active ? "border-2 border-b-0 border-[#0284c7]" : ""}`}>
+                  <p className="text-lg font-black">{r}</p>
+                  <p className={`mt-1 text-[11px] leading-4 min-h-[44px] ${r === "Advance" ? "text-slate-600" : "text-white/80"}`}>{meta.desc}</p>
+                  {mn && (
+                    <p className={`mt-3 text-[10px] ${r === "Advance" ? "text-slate-500" : "text-white/70"}`}>Starting from
+                      <span className="block text-xl font-black">{sym(mn.cur)}{mn.price.toLocaleString("en-IN", { maximumFractionDigits: 0 })}<span className="text-[10px] font-normal opacity-70"> ex. VAT/month</span></span>
+                    </p>
+                  )}
+                  <a href={meta.href} className="mt-3 block rounded-md bg-[#0050d7] py-2 text-center text-xs font-bold text-white hover:bg-[#0043b3]">Discover →</a>
+                </div>
+              );
+            })}
+
+            {DETAIL.map((sec, si) => {
+              const rows = showMatrix ? sec.rows : sec.rows.filter((x) => x.summary);
+              if (!rows.length) return null;
+              const lastSection = (showMatrix ? si === DETAIL.length - 1 : si === DETAIL.findLastIndex((d) => d.rows.some((x) => x.summary)));
+              return (
+                <div key={sec.title} className="contents">
+                  <p className="col-span-5 mt-4 mb-1 text-[11px] font-black text-[#0f172a] border-b border-slate-200 pb-1">{sec.title}</p>
+                  {rows.map((row, ri) => {
+                    const lastRow = lastSection && ri === rows.length - 1;
+                    return (
+                      <div key={row.label} className="contents">
+                        <div className="py-2 pr-2 text-[11px] text-slate-500 self-center">{row.label}</div>
+                        {Object.keys(RANGE_META).map((r, ci) => {
+                          const v = row.vals[ci];
+                          const active = r === "Advance";
+                          return (
+                            <div key={r} className={`py-2 px-2 text-center text-[11px] self-center ${active ? `bg-sky-50/70 border-x-2 border-[#0284c7] ${lastRow ? "border-b-2 rounded-b-xl pb-3" : ""}` : "bg-slate-50/60"} ${v === "✓" ? "text-emerald-600 font-bold" : v === "–" ? "text-slate-300" : v === "Coming soon" ? "text-slate-400" : "text-[#0f172a] font-semibold"}`}>{v}</div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
-        {/* Comparison matrix */}
-        <div className="mt-8 rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto">
-          <table className="w-full min-w-[640px] text-xs">
-            <thead>
-              <tr className="bg-slate-50">
-                <th className="text-left px-4 py-3 font-black text-slate-500 w-36"></th>
-                {Object.keys(RANGE_META).map((r) => (
-                  <th key={r} className={`px-4 py-3 text-center font-black ${r === "Advance" ? "text-[#0284c7] bg-sky-50" : "text-[#0f172a]"}`}>{r}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {MATRIX.map((row) => (
-                <tr key={row.label} className="hover:bg-slate-50/60">
-                  <td className="px-4 py-2.5 font-bold text-slate-500">{row.label}</td>
-                  {Object.keys(RANGE_META).map((r) => (
-                    <td key={r} className={`px-4 py-2.5 text-center text-slate-600 ${r === "Advance" ? "bg-sky-50/50 font-semibold text-[#0f172a]" : ""}`}>{row.vals[r]}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-5 text-center">
-          <a href="/dedicated-servers" className="inline-block rounded-lg border border-[#0284c7] px-6 py-2.5 text-xs font-bold text-[#0284c7] hover:bg-sky-50">View less →</a>
+        <div className="mt-6 text-center">
+          <button onClick={() => setShowMatrix((v) => !v)} className="inline-flex items-center gap-1 text-xs font-bold text-[#0050d7] hover:underline">
+            {showMatrix ? "View less" : "View more"} <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showMatrix ? "rotate-180" : ""}`} />
+          </button>
         </div>
       </section>
 

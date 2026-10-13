@@ -104,3 +104,10 @@ every site offline permanently.
 - Ping monitor alerts: 3 consecutive DOWN/TIMEOUT → email + `UserNotification`; recovery notice on first UP. Customer alert rules (`service_alert_rules`) evaluated per-check on latency/packet_loss and latest `MetricSample` for cpu/ram/disk; 30-min re-trigger cooldown.
 - Status page: `/api/status/summary` (public, real 30d category uptime + incidents), `/api/status/subscribe`, `/api/status/unsubscribe/{token}`; admin CRUD `/api/admin/status/incidents` emails subscribers (`status_subscribers`) and optionally affected customers (maintenance notifications).
 - OVH dedicated servers expose NO live metrics via API — RTM data is only visible inside the guest OS; the API returns explicit `available:false` with reason instead of fake data.
+
+## Catalog sync & dedicated specs (added 2026-10-13)
+
+- `catalog_sync_loop` in `main.py` runs `sync_all_catalogs` every 6h automatically (first run ~2 min after boot). Manual: `POST /api/admin/sync` or catalog.py router.
+- Dedicated specs come from product `blobs.technical.server.cpu` + plan `addonFamilies[].default` (memory `ram-Ng`, storage `NxSIZEtech`, bandwidth `bandwidth-N` / `traffic-*-N`). Parsed extras land in `plan_catalogs.catalog_metadata._ghc` (cpu_model/threads/freq, ram/storage/bandwidth labels).
+- `metal_ded_names` admin config = per-plan display-name overrides for dedicated (public name shown as `displayName` in `/server/plans`); auto-fallback `default_dedicated_display_name()` → "Metal Advance 2 (2024)" style.
+- Admin API: `GET/POST /api/admin/metal-dedicated` (names only; dedicated margin stays the category margin).

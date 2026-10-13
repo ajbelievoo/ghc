@@ -25,3 +25,9 @@ Upstream services on the OVH account **ajaykumarsinghup24@gmail.com** run the wh
 company stack. Do not trigger reinstall/terminate/suspend/IP/rDNS/netboot/firewall or
 any other mutating OVH call, and do not place test orders that spend account balance —
 get explicit user approval first. See python-backend/AGENTS.md for details.
+
+## Dedicated servers (Metal-branded display names, added 2026-10-13)
+
+- `/api/server/plans?category=DEDICATED` now returns `displayName` + `spec` ({cpu,ram,storage,bandwidth} human strings) per plan. `displayName` = admin override (`admin_configs.metal_ded_names`, keyed by real plan_code) else auto `Metal <Range> <n> (<year>)`.
+- Admin editor: `/admin` → Margins tab → "Metal dedicated names" table (`GET/POST /api/admin/metal-dedicated`).
+- `AdvanceRangePage.tsx` groups regional plan variants (`24adv02-v3-syd` etc.) into ONE row per model+revision (key = first two planCode segments), OVH-style spec table, 6 rows + "Show more servers".
