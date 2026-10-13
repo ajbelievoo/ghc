@@ -320,22 +320,77 @@ const megaMenu: MegaEntry[] = [
   {
     label: "Domain / Hosting",
     href: "/domain",
-    columns: [
-      { title: "Web Hosting", items: [
-        { label: "Eco — For accessible prices", href: "/web-hosting?range=Eco", desc: "Everything you need to launch your websites at a lower cost" },
-        { label: "Business — For professionals", href: "/web-hosting?range=Business", desc: "Performance and flexibility for business websites" },
-        { label: "Agencies", href: "/web-hosting?range=Agency", desc: "Manage all your websites with a single hosting plan" },
-        { label: "Compare our web hosting plans", href: "/web-hosting", desc: "Choose the solution that best suits your needs" },
-        { label: "Managed hosting for WordPress", href: "/web-hosting/wordpress", desc: "Spend less time managing WordPress" },
-        { label: "Video", href: "/web-hosting/video", desc: "Stream videos without slowing down your websites" },
-      ]},
-      { title: "Domains and Emails", items: [
-        { label: "Domain name", href: "/domain", desc: "Assert and secure your identity" },
-        { label: "Email hosting", href: "/email-hosting", desc: "Professional mailboxes on your domain" },
-        { label: "Marketplace", href: "/marketplace", desc: "Apps, licenses and add-ons for your servers" },
-        { label: "Support levels", href: "/products/support-levels", desc: "Standard, Premium and Business support" },
-        { label: "Guides and documentation", href: "/kb", desc: "Knowledge base and tutorials" },
-      ]},
+    subMenus: [
+      {
+        label: "Domain name",
+        href: "/domain",
+        tagline: "Assert and secure your identity",
+        cols: 3,
+        columns: [
+          { title: "Domain name", items: [
+            { label: "Search for a domain name", href: "/domain", desc: "Your online presence begins here" },
+            { label: "Renew your domain name", href: "/dashboard?tab=domains", desc: "Manual or automatic renewal to keep your services active" },
+            { label: "Transfer your domain name to GHC", href: "/domain#transfer", desc: "Already got a domain name? Transfer it to GHC" },
+            { label: "Domain name dispute", href: "/domain-dispute", desc: "Recover or defend a domain name" },
+          ]},
+          { title: "Catalogue", items: [
+            { label: "See the 900+ domain extensions", href: "/domain#tlds", desc: "A vast catalogue to assert your identity" },
+            { label: "Domain privacy (WHOIS)", href: "/products/anycast-dns", desc: "Keep your details private with Anycast DNS included" },
+            { label: "Email hosting", href: "/email-hosting", desc: "Professional mailboxes on your domain" },
+          ]},
+          { title: "Partners", items: [
+            { label: "Become a GHC Partner", href: "/register" },
+            { label: "Marketplace for hosting", href: "/marketplace" },
+            { label: "Compliance & Certifications", href: "/security" },
+            { label: "GHC Community", href: "/kb" },
+          ]},
+        ],
+        footerLinks: [
+          { label: "Domain prices", href: "/domain" },
+          { label: "Guides & Documentation", href: "/kb" },
+        ],
+      },
+      {
+        label: "Web hosting",
+        href: "/web-hosting",
+        tagline: "Comprehensive packs adapted to all your web projects",
+        cols: 3,
+        columns: [
+          { title: "Web hosting", items: [
+            { label: "Eco — For accessible prices", href: "/web-hosting?range=Eco", desc: "Everything you need to launch your website(s) at a lower cost" },
+            { label: "Business — For professionals", href: "/web-hosting?range=Business", desc: "Performance and flexibility for business websites" },
+            { label: "Agencies — For web agencies", href: "/web-hosting?range=Agency", desc: "Efficiently manage various client websites on a single hosting plan" },
+            { label: "Compare our web hosting plans", href: "/web-hosting", desc: "Choose the solution that best suits your needs" },
+            { label: "Managed hosting for WordPress", href: "/web-hosting/wordpress", desc: "Spend less time managing your WordPress sites" },
+          ]},
+          { groups: [
+            { title: "Additional products", items: [
+              { label: "Video", href: "/web-hosting/video", desc: "Stream videos without slowing down your websites" },
+              { label: "Additional databases", href: "/web-hosting", desc: "SQL and NoSQL services, guaranteed resources" },
+              { label: "SSL Certificates", href: "/products/ssl-certificates", desc: "Enhance the security of your website" },
+              { label: "CDN option", href: "/products/cdn", desc: "Improve page loading speed and ensure security against attacks" },
+            ]},
+          ]},
+          { groups: [
+            { title: "Uses", items: [
+              { label: "How do I create a website?", href: "/kb", desc: "Complete guide to launching your website" },
+              { label: "Host your WordPress website", href: "/web-hosting/wordpress", desc: "Choose the best hosting plan for a WordPress blog" },
+              { label: "Create your website in 1 click", href: "/web-hosting", desc: "Turnkey solution to get started" },
+              { label: "Create an online store", href: "/solutions/prestashop", desc: "Quickly and efficiently sell online" },
+            ]},
+            { title: "Partners", items: [
+              { label: "Become a GHC Partner", href: "/register" },
+              { label: "Compliance & Certifications", href: "/security" },
+              { label: "GHC Community", href: "/kb" },
+            ]},
+          ]},
+        ],
+        footerLinks: [
+          { label: "Hosting prices", href: "/web-hosting" },
+          { label: "Email hosting", href: "/email-hosting" },
+          { label: "Guides & Documentation", href: "/kb" },
+        ],
+      },
     ],
   },
 ];

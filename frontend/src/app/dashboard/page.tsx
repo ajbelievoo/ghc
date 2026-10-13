@@ -224,6 +224,11 @@ export default function DashboardPage() {
           setTab("domains");
           setDomainWizard(requestedDomain);
         }
+        const requestedTransfer = params.get("transfer");
+        if (requestedTransfer) {
+          setTransferDomain(requestedTransfer);
+          setTab("domains");
+        }
         fetchData();
         if (requestedCategory) fetchPlansCategory(requestedCategory, requestedPlan, requestedFamily);
         else fetchPlans();

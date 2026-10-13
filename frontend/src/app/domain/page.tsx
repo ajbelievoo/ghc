@@ -173,8 +173,38 @@ function DomainPageContent() {
         </div>
       </section>
 
+      {/* transfer in */}
+      <section id="transfer" className="mx-auto max-w-7xl px-6 pb-10">
+        <div className="rounded-2xl border border-slate-200 bg-[#f6f8fc] p-7 md:p-8 flex flex-col md:flex-row md:items-center gap-6">
+          <div className="flex-1">
+            <h2 className="text-xl font-black text-[#0f172a]">Transfer your domain name to GHC</h2>
+            <p className="mt-1.5 text-sm text-slate-500 leading-6">Already got a domain somewhere else? Move it to GHC — keep your remaining registration time, get free DNSSEC, Anycast DNS and one dashboard for everything.</p>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const d = query.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\s/g, "");
+              if (!d) return;
+              const target = `/dashboard?tab=domains&transfer=${encodeURIComponent(d)}`;
+              const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+              if (token) window.location.href = target;
+              else { localStorage.setItem("pendingCheckout", target); window.location.href = "/login"; }
+            }}
+            className="flex w-full md:w-auto gap-2"
+          >
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="yourdomain.com"
+              className="w-full md:w-64 rounded-lg bg-white border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#0050d7]"
+            />
+            <button type="submit" className="rounded-lg bg-[#0050d7] px-5 py-3 text-sm font-bold text-white hover:bg-[#0040aa] shrink-0">Transfer</button>
+          </form>
+        </div>
+      </section>
+
       {/* extensions by category */}
-      <section className="mx-auto max-w-7xl px-6 pb-14">
+      <section id="tlds" className="mx-auto max-w-7xl px-6 pb-14">
         <h2 className="text-2xl font-black text-[#0f172a]">Pick from over {tldCount} extensions to stand out</h2>
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-2">
