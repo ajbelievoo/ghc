@@ -59,7 +59,14 @@ const USE_CASES = [
   { title: "Hosting trading applications", desc: "Run your Forex trading strategies on a high-performing and stable VPS built to handle market demands." },
 ];
 
-const METAL_FAMILIES: Record<string, { crumb: string; rangeTitle: string; title: string; subtitle: string; bullets: string[] }> = {
+const METAL_FAMILIES: Record<string, {
+  crumb: string; rangeTitle: string; title: string; subtitle: string; bullets: string[];
+  exploreTitle?: string; exploreSub?: string;
+  benefits?: { t: string; d: string }[];
+  whyChoose?: { t: string; d: string }[];
+  howTo?: { title: string; body: string };
+  faqs?: { q: string; a: string }[];
+}> = {
   "": {
     crumb: "VPS",
     rangeTitle: "Metal VPS 2027",
@@ -70,9 +77,34 @@ const METAL_FAMILIES: Record<string, { crumb: string; rangeTitle: string; title:
   "n8n": {
     crumb: "n8n VPS",
     rangeTitle: "Metal n8n VPS",
-    title: "n8n VPS: workflow automation, self-hosted",
-    subtitle: "Automate everything. Maintain control.",
+    title: "Metal n8n VPS: a solution for your workflow automations",
+    subtitle: "Transform your business operations with n8n, the flexible workflow automation tool. Design complex integrations and automate repetitive tasks with ease. Most conveniently, install it on a range of GHC Metal VPS plans.",
     bullets: ["n8n pre-installed and ready to use", "Automate workflows without coding", "Connect 400+ integrations"],
+    exploreTitle: "Explore Metal VPS solutions for n8n",
+    exploreSub: "Don't worry about complex manual server configuration — instead, get started with our range of powerful VPS servers that come with n8n pre-installed. You have plenty of choices, too, with several plans offering the perfect balance of CPU, RAM and storage to meet your automation needs.",
+    benefits: [
+      { t: "Unmatched Customisation", d: "Gain complete root access to your n8n environment. This allows you to install popular n8n versions, add custom community nodes, modify server configurations, and tailor the setup precisely to your unique automation and integration requirements." },
+      { t: "Dedicated Performance", d: "Your n8n instance runs on resources allocated specifically to you (CPU, RAM). This isolation ensures consistent and predictable performance, as well as enhanced reliability for your critical workflows, even under heavy load." },
+      { t: "Enhanced Security", d: "Take full command of your n8n installation. Implement custom safety measures, manage OS updates directly, and configure network rules to ensure optimal security. Working with GHC Metal ensures your workflow remains under your control, aiding compliance with data privacy regulations." },
+    ],
+    whyChoose: [
+      { t: "Optimized Performance and Reliability", d: "Our Metal VPS solutions are built with enterprise-grade hardware, fast NVMe SSDs, and a high-performance global network with low latency. This ensures your n8n instance runs smoothly, and your workflows execute quickly and reliably — with excellent uptime for mission-critical automation." },
+      { t: "Flexible Scalability and Global Presence", d: "Starting with an entry Metal VPS hosting plan is simple — then scale your VPS resources (CPU, RAM, storage) as needed. With our global network of data centres, you can deploy close to your users or integrated services, reducing latency and addressing data sovereignty requirements." },
+      { t: "Exceptional Value with Included Security", d: "Benefit from our commitment to providing robust security and outstanding value. All our VPS offerings include powerful anti-DDoS protection at no additional cost. Coupled with transparent pricing and generous resource allocations, you get a cost-effective and secure foundation for your n8n solution." },
+    ],
+    howTo: {
+      title: "How to Update n8n on a VPS",
+      body: "Keeping your n8n instance updated on your server is vital for maintaining robust security, accessing the latest features, and ensuring the overall stability of your automations. For detailed step-by-step instructions, we recommend consulting the official n8n documentation, which provides comprehensive upgrade guides tailored to your specific installation method (e.g. Docker, npm). Regularly performing updates ensures your workflows remain secure and efficient.",
+    },
+    faqs: [
+      { q: "What is n8n hosting?", a: "n8n hosting means running the n8n workflow-automation platform on your own server. Self-hosting on a Metal VPS gives you full data ownership, unlimited workflow executions and the freedom to install community nodes — unlike metered SaaS plans." },
+      { q: "How to set up n8n on a VPS?", a: "Choose a Metal VPS plan, pick the n8n application image during configuration (or install via Docker/npm), point your domain, and secure it with HTTPS. Your instance is ready in minutes." },
+      { q: "Is n8n VPS hosting secure?", a: "Yes — you control the OS, firewall rules, updates and authentication. Combined with always-on anti-DDoS protection and daily backups, your workflows and data stay under your control." },
+      { q: "Can I build AI apps with n8n on VPS?", a: "Yes. n8n supports AI agents, LLM chains and vector-store integrations. A Metal VPS with sufficient RAM lets you run AI workflows, connect local models via Ollama, or call external AI APIs." },
+      { q: "Is n8n better than Zapier?", a: "For technical teams, self-hosted n8n offers far more flexibility: custom code nodes, self-hosting, no per-task pricing and unlimited executions. Zapier is simpler but metered and closed-source." },
+      { q: "What support is available for n8n VPS hosting?", a: "We provide 24/7 ticket support for the VPS infrastructure (network, hardware, provisioning). For n8n-specific questions, the n8n community and official docs are the best resources." },
+      { q: "Does n8n offer an Enterprise version for organisations with advanced security, compliance, or collaboration needs?", a: "Yes — n8n has an Enterprise edition with SSO/SAML, audit logging and team features. A Metal VPS gives you the dedicated resources and isolation enterprise deployments need." },
+    ],
   },
   "plesk": {
     crumb: "Plesk VPS",
@@ -190,9 +222,9 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
 
       {/* ─── Plan cards ─── */}
       <section id="plans" className="mx-auto max-w-7xl px-6 py-14">
-        <h2 className="text-center text-2xl font-black">{fam.rangeTitle}</h2>
+        <h2 className="text-center text-2xl font-black">{fam.exploreTitle || fam.rangeTitle}</h2>
         <p className="mx-auto mt-2 max-w-2xl text-center text-sm text-slate-500">
-          Choose the configuration that fits your needs — web hosting, gaming, VPNs, development and more.
+          {fam.exploreSub || "Choose the configuration that fits your needs — web hosting, gaming, VPNs, development and more."}
         </p>
         {sorted.length === 0 ? (
           <p className="mt-10 text-center text-sm text-slate-500">Plans are loading — please check back shortly.</p>
@@ -259,6 +291,45 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
           </div>
         )}
       </section>
+
+      {/* ─── Family-specific content (n8n etc.) ─── */}
+      {fam.benefits && (
+        <section className="mx-auto max-w-4xl px-6 py-14">
+          <h2 className="text-2xl font-black">Key Benefits of Hosting {fam.crumb.replace(" VPS", "")} on a VPS</h2>
+          <div className="mt-8 space-y-7">
+            {fam.benefits.map((b) => (
+              <div key={b.t}>
+                <h3 className="text-sm font-black uppercase tracking-wide">{b.t}</h3>
+                <p className="mt-1.5 text-sm leading-6 text-slate-600">{b.d}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {fam.whyChoose && (
+        <section className="mx-auto max-w-7xl px-6 pb-14">
+          <h2 className="text-center text-2xl font-black">Why Choose GHC for Your {fam.crumb.replace(" VPS", "")} VPS?</h2>
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            {fam.whyChoose.map((c) => (
+              <div key={c.t} className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-sm font-black">{c.t}</h3>
+                <p className="mt-2 text-xs leading-6 text-slate-600">{c.d}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {fam.howTo && (
+        <section className="mx-auto max-w-4xl px-6 pb-14">
+          <div className="flex items-start gap-5 rounded-lg border border-slate-200 bg-slate-50 p-7">
+            <RefreshCw className="h-10 w-10 shrink-0 text-[#00b7ff]" />
+            <div>
+              <h2 className="text-lg font-black">{fam.howTo.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{fam.howTo.body}</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ─── Essentials ─── */}
       <section className="border-t border-slate-100 bg-[#f8faff]">
@@ -370,9 +441,9 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
       {/* ─── FAQ ─── */}
       <section className="border-t border-slate-100 bg-white">
         <div className="mx-auto max-w-4xl px-6 py-14">
-          <h2 className="text-2xl font-black">Your questions answered</h2>
+          <h2 className="text-2xl font-black">{fam.faqs ? `Frequently Asked Questions about ${fam.crumb} Hosting` : "Your questions answered"}</h2>
           <div className="mt-6 divide-y divide-slate-200 border-y border-slate-200">
-            {FAQS.map((f, i) => (
+            {(fam.faqs || FAQS).map((f, i) => (
               <div key={f.q}>
                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-bold text-[#0050d7] hover:text-[#00b7ff]">
                   {f.q}
