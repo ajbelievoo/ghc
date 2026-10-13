@@ -334,7 +334,7 @@ const megaMenu: MegaEntry[] = [
             { label: "Domain name dispute", href: "/domain-dispute", desc: "Recover or defend a domain name" },
           ]},
           { title: "Catalogue", items: [
-            { label: "See the 900+ domain extensions", href: "/domain#tlds", desc: "A vast catalogue to assert your identity" },
+            { label: "See the 900+ domain extensions", href: "/domain/tld", desc: "A vast catalogue to assert your identity" },
             { label: "Domain privacy (WHOIS)", href: "/products/anycast-dns", desc: "Keep your details private with Anycast DNS included" },
             { label: "Email hosting", href: "/email-hosting", desc: "Professional mailboxes on your domain" },
           ]},
