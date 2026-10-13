@@ -329,8 +329,8 @@ const megaMenu: MegaEntry[] = [
         columns: [
           { title: "Domain name", items: [
             { label: "Search for a domain name", href: "/domain", desc: "Your online presence begins here" },
-            { label: "Renew your domain name", href: "/dashboard?tab=domains", desc: "Manual or automatic renewal to keep your services active" },
-            { label: "Transfer your domain name to GHC", href: "/domain#transfer", desc: "Already got a domain name? Transfer it to GHC" },
+            { label: "Renew your domain name", href: "/domain-renew", desc: "Manual or automatic renewal to keep your services active" },
+            { label: "Transfer your domain name to GHC", href: "/domain-transfer", desc: "Already got a domain name? Transfer it to GHC" },
             { label: "Domain name dispute", href: "/domain-dispute", desc: "Recover or defend a domain name" },
           ]},
           { title: "Catalogue", items: [
