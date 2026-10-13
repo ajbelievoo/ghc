@@ -151,7 +151,9 @@ def _dedicated_spec_extras(product: Dict[str, Any], plan: Dict[str, Any]) -> Dic
         out["storage_label"] = stor_code
     bw_code = _addon_family_default(plan, "bandwidth")
     if bw_code:
-        m = re.search(r"bandwidth-(\d+)", bw_code.lower())
+        m = re.search(r"bandwidth-(\d+)", bw_code.lower()) or re.search(
+            r"traffic-(?:\d+tb|unlimited)-(\d+)", bw_code.lower()
+        )
         if m:
             out["bandwidth_mbps"] = int(m.group(1))
         out["bandwidth_label"] = bw_code
@@ -410,7 +412,7 @@ def set_metal_ded_names(db: Session, names: Dict[str, str]) -> None:
 
 
 def default_dedicated_display_name(invoice_name: str, plan_code: str) -> str:
-    """Branded fallback name, e.g. 'ADVANCE-2 | AMD EPYC 4344P' → 'Metal Advance 2'."""
+    """Branded fallback name, e.g. 'ADVANCE-2 | AMD EPYC 4344P' (26adv02-…) → 'Metal Advance 2 (2026)'."""
     base = (invoice_name or "").split("|")[0].strip() or plan_code or ""
     tokens = re.split(r"[-_\s]+", base)
     parts = []
@@ -424,6 +426,9 @@ def default_dedicated_display_name(invoice_name: str, plan_code: str) -> str:
         else:
             parts.append(t[0].upper() + t[1:].lower())
     label = " ".join(parts).strip()
+    ym = re.match(r"^(\d{2})", plan_code or "")
+    if ym and 20 <= int(ym.group(1)) <= 29:
+        label = f"{label} ({2000 + int(ym.group(1))})"
     return f"Metal {label}" if label else f"Metal {plan_code}"
 
 

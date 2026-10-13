@@ -172,6 +172,9 @@ export const api = {
     getMetalVps: () => request("/admin/metal-vps"),
     saveMetalVps: (body: { marginPercent?: number; names?: Record<string, string> }) =>
       request("/admin/metal-vps", { method: "POST", body: JSON.stringify(body) }),
+    getMetalDedicated: () => request("/admin/metal-dedicated"),
+    saveMetalDedicated: (body: { names?: Record<string, string> }) =>
+      request("/admin/metal-dedicated", { method: "POST", body: JSON.stringify(body) }),
     // Catalog
     getCatalog: (params?: { category?: string; search?: string }) =>
       request(`/admin/plans?${new URLSearchParams(params as any).toString()}`),

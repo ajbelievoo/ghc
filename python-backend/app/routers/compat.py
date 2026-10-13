@@ -347,7 +347,8 @@ def _ded_spec_display(p: PlanCatalog) -> dict:
     if meta.get("storage_label"):
         storage = _storage_label_to_human(str(meta["storage_label"]))
     if not storage and p.disk_gb:
-        storage = f"{p.disk_gb} GB" + (f" {str(p.disk_type).upper()}" if p.disk_type else "")
+        size_txt = f"{p.disk_gb / 1000:g} TB" if p.disk_gb >= 2000 else f"{p.disk_gb} GB"
+        storage = size_txt + (f" {str(p.disk_type).upper()}" if p.disk_type else "")
     bw = None
     if p.bandwidth_mbps:
         bw = f"{p.bandwidth_mbps / 1000:g} Gbps" if p.bandwidth_mbps >= 1000 else f"{p.bandwidth_mbps} Mbps"
@@ -360,10 +361,13 @@ def _ded_spec_display(p: PlanCatalog) -> dict:
 
 
 def _storage_label_to_human(code: str) -> Optional[str]:
-    """'softraid-2x960nvme-pcie-gen4-x' → '2×960 GB NVMe Gen4'."""
+    """'softraid-2x960nvme-pcie-gen4-x' → '2×960 GB NVMe Gen4'; large sizes in TB."""
+    tech_names = {"nvme": "NVMe", "ssd": "SSD", "sata": "SATA", "sas": "SAS", "hdd": "HDD"}
     parts = []
     for m in _re.finditer(r"(\d+)x(\d{3,5})(nvme|ssd|sata|sas|hdd)", code.lower()):
-        label = f"{m.group(1)}×{m.group(2)} GB {m.group(3).upper()}"
+        size = int(m.group(2))
+        size_txt = f"{size / 1000:g} TB" if size >= 2000 else f"{size} GB"
+        label = f"{m.group(1)}×{size_txt} {tech_names.get(m.group(3), m.group(3).upper())}"
         g = _re.search(r"gen(\d)", code.lower())
         parts.append(label + (f" Gen{g.group(1)}" if g and m.group(3) == "nvme" else ""))
     return " + ".join(parts) if parts else None

@@ -56,12 +56,12 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
   const router = useRouter();
   const { currency } = useCurrency();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
-  const [visible, setVisible] = useState(8);
+  const [visible, setVisible] = useState(6);
   const sym = (c: string) => getCurrencySymbol((c || currency || "USD").toUpperCase());
 
   const { advRows, regionCount, rangeMin } = useMemo(() => {
     const regs = new Set<string>();
-    const advRows: { p: any; d: any }[] = [];
+    const groups = new Map<string, { p: any; d: any; locations: number }>();
     const rangeMin: Record<string, { price: number; cur: string }> = {};
     for (const p of plans) {
       if (p.isActive === false) continue;
@@ -71,12 +71,19 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
         const cur = d.currency || p.currency || "USD";
         if (!rangeMin[r] || d.monthlyPrice < rangeMin[r].price) rangeMin[r] = { price: d.monthlyPrice, cur };
       }
-      if (r === "Advance" && d) {
-        advRows.push({ p, d });
-        (p.regions || []).forEach((x: string) => regs.add(x));
+      if (r !== "Advance" || !d) continue;
+      (p.regions || []).forEach((x: string) => regs.add(x));
+      // One row per server model+revision — regional variants (…-syd/-mum) group together.
+      const key = String(p.planCode || "").split("-").slice(0, 2).join("-");
+      const isRegional = /-(syd|mum|sgp|waw|gra|rbx|sbg|bhs|lon|eri|lim|par)$/i.test(String(p.planCode));
+      const prev = groups.get(key) as any;
+      if (!prev || (prev.isRegional && !isRegional) || (prev.isRegional === isRegional && d.monthlyPrice < prev.d.monthlyPrice)) {
+        groups.set(key, { p, d, locations: (prev?.locations || 0) + 1, isRegional } as any);
+      } else {
+        prev.locations += 1;
       }
     }
-    advRows.sort((a, b) => a.d.monthlyPrice - b.d.monthlyPrice);
+    const advRows = Array.from(groups.values()).sort((a, b) => a.d.monthlyPrice - b.d.monthlyPrice);
     return { advRows, regionCount: regs.size || 10, rangeMin };
   }, [plans]);
 
@@ -255,34 +262,56 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
       </section>
 
       {/* Advance plan table */}
-      <section id="adv-plans" className="mx-auto max-w-6xl px-4 sm:px-6 pb-14">
+      <section id="adv-plans" className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl font-black text-[#0f172a]">Explore our selection of Advance servers</h2>
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          <div className="divide-y divide-slate-100">
-            {advRows.slice(0, visible).map(({ p, d }) => {
-              const cur = d?.currency || p.currency || "USD";
-              const isNew = !!p.features?.["last-generation"];
-              return (
-                <div key={p.planCode} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-3.5 hover:bg-sky-50/50 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-black text-[#0f172a] uppercase truncate">{(p.invoiceName || p.planCode).split("|")[0].trim()}</p>
-                      {isNew && <span className="rounded-full bg-violet-100 text-violet-700 px-2 py-0.5 text-[9px] font-black uppercase shrink-0">New</span>}
-                    </div>
-                    <p className="text-[11px] text-slate-400 truncate">{p.description}</p>
-                  </div>
-                  <div className="flex items-center gap-5 shrink-0">
-                    <p className="text-sm font-black text-[#0f172a]">{sym(cur)}{d.monthlyPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}<span className="text-[10px] font-normal text-slate-400">/mo</span></p>
-                    <button onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}`)} className="rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Order</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-white overflow-hidden overflow-x-auto">
+          <table className="w-full min-w-[860px] text-xs">
+            <thead>
+              <tr className="bg-slate-50 text-left">
+                <th className="px-5 py-3 font-black text-slate-500">Name</th>
+                <th className="px-4 py-3 font-black text-slate-500">Processor</th>
+                <th className="px-4 py-3 font-black text-slate-500">Memory</th>
+                <th className="px-4 py-3 font-black text-slate-500">Storage</th>
+                <th className="px-4 py-3 font-black text-slate-500">Bandwidth</th>
+                <th className="px-4 py-3 font-black text-slate-500 text-right">Price</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {advRows.slice(0, visible).map(({ p, d, locations }: any) => {
+                const cur = d?.currency || p.currency || "USD";
+                const isNew = String(p.features?.["release-year"] || "") === "2026" || String(p.features?.["last-generation"]) === "true";
+                const spec = p.spec || {};
+                const name = p.displayName || (p.invoiceName || p.planCode).split("|")[0].trim();
+                return (
+                  <tr key={p.planCode} className="hover:bg-sky-50/50 transition-colors">
+                    <td className="px-5 py-3.5 align-top">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-black text-[#0f172a]">{name}</span>
+                        {isNew && <span className="rounded-full bg-violet-100 text-violet-700 px-2 py-0.5 text-[9px] font-black uppercase shrink-0">New</span>}
+                      </div>
+                      {locations > 1 && <p className="mt-0.5 text-[10px] text-slate-400">{locations} locations</p>}
+                    </td>
+                    <td className="px-4 py-3.5 align-top text-slate-600">{spec.cpu || p.description || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-600 whitespace-nowrap">{spec.ram || (p.ramGb ? `${p.ramGb} GB` : "—")}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-600 whitespace-nowrap">{spec.storage || "—"}</td>
+                    <td className="px-4 py-3.5 align-top text-slate-600 whitespace-nowrap">{spec.bandwidth || (p.bandwidthMbps ? `${p.bandwidthMbps >= 1000 ? `${p.bandwidthMbps / 1000} Gbps` : `${p.bandwidthMbps} Mbps`}` : "—")}</td>
+                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap">
+                      <span className="text-sm font-black text-[#0f172a]">{sym(cur)}{d.monthlyPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                      <span className="text-[10px] font-normal text-slate-400">/mo</span>
+                    </td>
+                    <td className="px-5 py-3.5 align-top text-right">
+                      <button onClick={() => router.push(`/configure?category=DEDICATED&plan=${encodeURIComponent(p.planCode)}`)} className="rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700] whitespace-nowrap">Configure</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
         {advRows.length > visible && (
           <div className="mt-5 text-center">
-            <button onClick={() => setVisible((v) => v + 10)} className="inline-block rounded-lg bg-[#0b1020] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#101d42]">Show more servers ({advRows.length - visible})</button>
+            <button onClick={() => setVisible(advRows.length)} className="inline-block rounded-lg bg-[#0b1020] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#101d42]">Show more servers ({advRows.length - visible})</button>
           </div>
         )}
       </section>

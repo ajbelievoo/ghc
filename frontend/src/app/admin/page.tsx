@@ -61,6 +61,8 @@ export default function AdminPage() {
   const [metalMargin, setMetalMargin] = useState<number>(20);
   const [metalPlans, setMetalPlans] = useState<any[]>([]);
   const [metalNames, setMetalNames] = useState<Record<string, string>>({});
+  const [dedPlans, setDedPlans] = useState<any[]>([]);
+  const [dedNames, setDedNames] = useState<Record<string, string>>({});
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
   const [catalogPlans, setCatalogPlans] = useState<PlanEntry[]>([]);
@@ -137,6 +139,7 @@ export default function AdminPage() {
       if (t === "margins") {
         const m = await api.admin.getMargins(); const map: Record<string, number> = {}; m.forEach((x: any) => map[x.category] = x.percent); setMargins(map);
         try { const mv = await api.admin.getMetalVps(); setMetalMargin(mv.marginPercent ?? 20); setMetalPlans(mv.plans || []); setMetalNames(mv.names || {}); } catch {}
+        try { const md = await api.admin.getMetalDedicated(); setDedPlans(md.plans || []); setDedNames(md.names || {}); } catch {}
       }
       if (t === "coupons") { const c = await api.admin.getCoupons(); setCoupons(c || []); }
       if (t === "catalog") { setCatalogLoading(true); const params: any = { search: catalogSearch || undefined }; if (catalogCategory !== "ALL") params.category = catalogCategory; const p = await api.admin.getCatalog(params); setCatalogPlans(p || []); setCatalogLoading(false); }
@@ -203,6 +206,7 @@ export default function AdminPage() {
   const saveMargin = async (cat: string) => { try { await api.admin.updateMargin({ category: cat, percent: margins[cat] || 0 }); showToast(`Margin for ${cat} saved`, "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveMetalMargin = async () => { try { await api.admin.saveMetalVps({ marginPercent: metalMargin }); showToast("Metal margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveMetalNames = async () => { try { await api.admin.saveMetalVps({ names: metalNames }); showToast("Metal plan names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveDedNames = async () => { try { await api.admin.saveMetalDedicated({ names: dedNames }); showToast("Dedicated names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handlePlanOverride = async (planCode: string, overridePrice: string, overrideMargin: string) => { try { await api.admin.updatePlanOverride(planCode, { overridePrice: overridePrice === "" ? null : parseFloat(overridePrice), overrideMargin: overrideMargin === "" ? null : parseFloat(overrideMargin) }); showToast("Override saved for " + planCode, "success"); loadTabData("catalog"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleFulfillPayment = async (sessionId: string) => { try { await api.payments.fulfillSession(sessionId); showToast("Payment fulfilled and service activated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleRetryProvision = async (orderId: string) => { try { await api.admin.retryProvision(orderId); showToast("Provisioning retry initiated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
@@ -674,6 +678,37 @@ export default function AdminPage() {
                         </tr>
                       ))}
                       {metalPlans.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-[#0f172a]">Metal dedicated names <span className="font-normal text-slate-500">(customer-facing names on /dedicated-servers — blank = auto Metal name)</span></p>
+                  <button onClick={saveDedNames} className="rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 px-4 py-2 text-xs font-bold text-[#ff3d00] hover:bg-[#ff3d00]/20 transition-all">Save names</button>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide sticky top-0">
+                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2 w-56">Display name</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {dedPlans.map((p: any) => (
+                        <tr key={p.planCode}>
+                          <td className="px-3 py-2 font-mono text-[11px]">{p.planCode}</td>
+                          <td className="px-3 py-2">{p.invoiceName}</td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={dedNames[p.planCode] ?? p.metalName ?? ""}
+                              onChange={(e) => setDedNames((prev) => ({ ...prev, [p.planCode]: e.target.value }))}
+                              placeholder={p.autoName || p.invoiceName}
+                              className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#ff3d00]/50"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                      {dedPlans.length === 0 && <tr><td colSpan={3} className="px-3 py-6 text-center text-slate-400">No dedicated plans synced yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
