@@ -221,9 +221,9 @@ const megaMenu: MegaEntry[] = [
           ]},
           { title: "Uses", items: [
             { label: "AZ and resilience", href: "/dedicated-servers/use-cases/az-resilience", desc: "Business continuity with high availability" },
-            { label: "Grid computing", href: "/dedicated-servers/scale", desc: "Compute-intensive models for critical issues" },
-            { label: "Virtualisation and containerisation", href: "/solutions/proxmox", desc: "Cloud-native flexibility on physical servers" },
-            { label: "Website and business application", href: "/dedicated-servers/use-cases/wordpress", desc: "Scalability and security for your web applications" },
+            { label: "Grid computing", href: "/dedicated-servers/use-cases/grid-computing", desc: "Compute-intensive models for critical issues" },
+            { label: "Virtualisation and containerisation", href: "/dedicated-servers/use-cases/virtualisation", desc: "Cloud-native flexibility on physical servers" },
+            { label: "Website and business application", href: "/dedicated-servers/use-cases/web-applications", desc: "Scalability and security for your web applications" },
             { label: "All uses", href: "/dedicated-servers" },
           ]},
         ],
