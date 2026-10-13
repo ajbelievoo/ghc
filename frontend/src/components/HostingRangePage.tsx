@@ -30,6 +30,9 @@ interface RangeDef {
   expandTitle: string;
   expandText: string;
   expandCards: { t: string; d: string }[];
+  sections?: { title: string; pills: string[]; text: string }[];
+  testimonial?: { quote: string; author: string };
+  recommended?: string;
   useCases: { t: string; d: string; href: string }[];
   faqs: [string, string][];
   planCodes: string[];
@@ -99,20 +102,47 @@ const RANGES: Record<string, RangeDef> = {
       { t: "CDN option", d: "Cache content at the edge — faster for global visitors." },
       { t: "Additional databases", d: "SQL and NoSQL capacity on demand." },
     ],
+    sections: [
+      {
+        title: "Ensure quick and easy navigation for visitors.",
+        pills: ["Optimised loading", "Smooth navigation", "High availability"],
+        text: "Activate the CDN to cache your content closer to your visitors. Your pages load faster everywhere, which keeps people on your site and helps your search ranking.",
+      },
+      {
+        title: "Fuel your business growth",
+        pills: ["Scalability", "Reliability", "High performance"],
+        text: "As your ambitions grow, so does your infrastructure. Business hosting gives you the resources to reach more visitors and support growth — upgrade resources on demand, without migrating.",
+      },
+      {
+        title: "Manage your projects with increased flexibility",
+        pills: ["Databases", "Task automation", "Advanced configuration"],
+        text: "Run professional web tools on a flexible environment — schedule jobs with cron, connect over SSH/Git, and fine-tune PHP configuration for your applications.",
+      },
+      {
+        title: "Strengthen your website's security",
+        pills: ["Secure HTTPS", "Anti-DDoS protection", "Automatic backups"],
+        text: "To keep your website online and protected from attacks, we've integrated enhanced security: free SSL on every domain, anti-DDoS on the network, and automatic backups for recovery.",
+      },
+    ],
+    testimonial: {
+      quote: "We use the web hosting on several of our own sites, and the multisite plan handles our client portfolio in one place — domains, sites and email, one dashboard.",
+      author: "A GHC hosting customer",
+    },
+    recommended: "hosting-pro",
     useCases: [
-      { t: "Company website", d: "A fast, reliable home for your brand.", href: "/web-hosting" },
-      { t: "Online store", d: "PrestaShop or WooCommerce with headroom.", href: "/solutions/prestashop" },
-      { t: "Client multisites", d: "Host many sites on one business plan.", href: "/web-hosting?range=Agency" },
+      { t: "Create a business website", d: "Present your business with a fast, professional site.", href: "/web-hosting" },
+      { t: "Create an online shop with PrestaShop", d: "Launch your store with the 1-click installer.", href: "/solutions/prestashop" },
+      { t: "Manage production and pre-production environments", d: "Multisite lets you run staging next to production.", href: "/web-hosting" },
     ],
     faqs: [
-      ["What makes Business different from Eco?", "Business plans add multisite hosting (up to 100 sites), up to 100 email addresses, more resources and git/SSH access — built for professional use."],
-      ["Can I host multiple websites?", "Yes — attach additional domains and sites directly from the hosting manager."],
-      ["Is email included?", "Yes, up to 100 professional mailboxes with webmail, IMAP and SMTP."],
-      ["Does it support e-commerce?", "Yes — PrestaShop and WooCommerce run well on Business and Performance tiers."],
-      ["Can I add a CDN?", "Yes — the CDN option caches your site at global edge locations."],
-      ["Can I upgrade later?", "Yes — upgrade to a higher tier or move to a VPS when you outgrow shared hosting."],
+      ["Is Business Web Hosting suitable for my business?", "Yes — it is designed for professional use: multisite hosting, up to 100 mailboxes, SSH/git access and guaranteed resources on Performance tiers."],
+      ["What are Git and SSH used for in the Pro and Performance plans?", "Git lets you deploy code straight from your repository, and SSH gives you secure command-line access for scripts, WP-CLI and file management."],
+      ["Is this plan suitable for a high-traffic site?", "Performance tiers carry guaranteed CPU/RAM and a CDN option — they handle traffic spikes far better than shared entry plans."],
+      ["How secure are the hosting plans?", "Every plan includes free SSL, always-on anti-DDoS, automatic backups and anti-virus/anti-spam on mailboxes."],
+      ["Can I really switch hosting plans with GHC?", "Yes — upgrades are done in place from the dashboard; your files, databases and email stay untouched."],
+      ["How do I transfer my web hosting plan to GHC?", "Point your domain's DNS to our hosting after ordering, or open a support ticket — our team will help migrate files and databases."],
     ],
-    planCodes: ["hosting-pro", "hosting-startup", "hosting-performance-1", "hosting-performance-2", "hosting-performance-3", "hosting-performance-4"],
+    planCodes: ["hosting-startup", "hosting-pro", "hosting-performance-1"],
   },
   agency: {
     badge: "Agency Web Hosting",
@@ -163,6 +193,7 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
   const [searching, setSearching] = useState(false);
   const [introTab, setIntroTab] = useState(0);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const rangePlans = useMemo(
     () => def.planCodes.map((c) => plans.find((p) => p.planCode === c)).filter(Boolean),
@@ -178,16 +209,59 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
     router.push(`/domain?q=${encodeURIComponent(d)}`);
   };
 
-  const planFeatures = (p: any): string[] => {
+  const truthy = (v: any) => v !== undefined && v !== null && v !== "" && v !== "No" && v !== "0" && v !== 0;
+
+  const coreRows = (p: any): string[] => {
     const f = p.features || {};
     const out: string[] = [];
     const sites = f["Unique site"] ? "1 site" : f["Multisites"] === "Inf" ? "Unlimited sites" : f["Multisites"] ? `${f["Multisites"]} sites` : null;
     if (sites) out.push(sites);
     if (f["Emails"]) out.push(`${f["Emails"]} email addresses`);
-    if (f["Domain name"]) out.push("Free domain the first year");
-    out.push("Free SSL certificate");
-    if (f["Wordpress"] === "Yes") out.push("WordPress 1-click install");
-    return out.slice(0, 5);
+    if (Number(f["Simultaneous visitors"])) out.push(`${f["Simultaneous visitors"]} simultaneous visitors`);
+    if (truthy(f["Domain name"])) out.push("1 domain name free for the first year");
+    if (truthy(f["Databases"])) out.push(`Databases: ${f["Databases"]}`);
+    out.push("Unlimited traffic", "99.9% observed availability", "Automatic backups");
+    return out;
+  };
+
+  const detailGroups = (p: any): { title: string; rows: string[] }[] => {
+    const f = p.features || {};
+    const cms = ["Wordpress", "Joomla!", "Drupal", "Prestashop"].filter((k) => f[k] === "Yes").map((k) => k.replace("!", ""));
+    const access = [
+      f["FTP access"] === "Included" && "FTP access",
+      f["Multi FTP"] === "Included" && "Multi-FTP access",
+      f["SSH access - Multi SSH"] === "Included" && "SSH access",
+      truthy(f["Git"]) && "Git repository",
+      truthy(f["Logs access"]) && "Logs & statistics access",
+      f["HTTP/2"] === "Included" && "HTTP/2",
+      f["IPV6"] === "Included" && "IPv6",
+      f["IP GEOLOCATION"] === "Included" && "IP geolocation",
+      truthy(f["Sql"]) && `SQL databases: ${f["Sql"]}`,
+      truthy(f["Private SQL"]) && `Private SQL: ${f["Private SQL"]}`,
+      truthy(f["Cron"]) && "Cron / scheduled tasks",
+    ].filter(Boolean) as string[];
+    const security = ["Unlimited free SSL", "Anti-DDoS protection", "Anti-virus and anti-spam on email", "Automatic backups"];
+    const perf = [
+      f["CDN"] && f["CDN"] !== "Optional" ? `CDN included (${f["CDN"]})` : "CDN available as an option",
+      "Unlimited traffic",
+      "99.9% observed availability",
+    ];
+    return [
+      ...(cms.length ? [{ title: "1-click CMS", rows: cms }] : []),
+      { title: "Access and tools", rows: access },
+      { title: "Security", rows: security },
+      { title: "Performance", rows: perf },
+      { title: "Support and additional services", rows: ["Standard support included", "Guides and 24/7 help centre"] },
+    ].filter((g) => g.rows.length > 0);
+  };
+
+  const savePct = (p: any): number | null => {
+    const durs: any[] = p.durations || [];
+    const d12 = durs.find((x) => x.duration === "12_month");
+    const best = durs.reduce<any | null>((a, x) => (!a || (x.monthlyPrice || 0) < (a.monthlyPrice || 0) ? x : a), null);
+    if (!d12 || !best || best.duration === "12_month" || !d12.monthlyPrice) return null;
+    const pct = Math.round((1 - best.monthlyPrice / d12.monthlyPrice) * 100);
+    return pct > 0 ? pct : null;
   };
 
   return (
@@ -233,13 +307,29 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
         <div className={`mt-8 grid grid-cols-1 gap-6 ${rangePlans.length <= 2 ? "sm:grid-cols-2 max-w-3xl mx-auto" : rangePlans.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
           {rangePlans.map((p: any) => {
             const cheapest = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
+            const d12 = (p.durations || []).find((x: any) => x.duration === "12_month");
+            const pct = savePct(p);
+            const rec = def.recommended === p.planCode;
             return (
-              <div key={p.planCode} className="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-[#0050d7] hover:shadow-xl overflow-hidden">
+              <div key={p.planCode} className={`relative flex flex-col rounded-xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl overflow-hidden ${rec ? "border-[#0050d7] border-2" : "border-slate-200 hover:border-[#0050d7]"}`}>
+                {(pct || rec) && (
+                  <div className="flex items-center gap-2 px-4 pt-4 flex-wrap">
+                    {pct && <span className="rounded-full bg-lime-300 text-[#0f172a] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Save {pct}%</span>}
+                    {rec && <span className="rounded-full bg-[#7b2ff7] text-white px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Recommended</span>}
+                  </div>
+                )}
                 <div className="p-6 pb-4">
                   <h3 className="text-lg font-black text-[#0f172a]">{p.invoiceName || p.planCode}</h3>
-                  <p className="mt-1 text-xs text-slate-400 line-through">{cheapest?.rawPrice && cheapest.rawPrice !== cheapest.monthlyPrice ? money(cheapest.rawPrice, cheapest.currency) : ""}&nbsp;</p>
+                  {d12 && cheapest && d12.monthlyPrice > cheapest.monthlyPrice && (
+                    <p className="mt-1 text-xs text-slate-400 line-through">{money(d12.monthlyPrice, d12.currency)}/mo</p>
+                  )}
                   <p className="text-3xl font-black text-[#0f172a]">{money(cheapest?.monthlyPrice, cheapest?.currency)}<span className="text-sm font-bold text-slate-400">/mo</span></p>
-                  <p className="mt-1 text-[10px] text-slate-400">ex. taxes — billed {cheapest?.interval === 12 ? "annually" : "monthly"}</p>
+                  <p className="mt-1 text-[10px] text-slate-400 leading-4">
+                    ex. taxes{cheapest?.rawPrice && cheapest?.duration ? ` — ${money(cheapest.rawPrice, cheapest.currency)} ex. taxes for ${Number(cheapest.duration.split("_")[0])} months` : ""}
+                  </p>
+                  {d12 && cheapest && d12.monthlyPrice !== cheapest.monthlyPrice && (
+                    <p className="mt-0.5 text-[10px] text-slate-400">Renewal price: {money(d12.monthlyPrice, d12.currency)}/mo</p>
+                  )}
                   <button
                     onClick={() => router.push(`/configure?category=WEB_HOSTING&plan=${encodeURIComponent(p.planCode)}&subCategory=${range}`)}
                     className="mt-4 w-full rounded-lg bg-[#ff3d00] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#e63700] flex items-center justify-center gap-2"
@@ -248,16 +338,36 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
                   </button>
                 </div>
                 <div className="flex-1 bg-[#f8faff] border-t border-slate-100 p-6 space-y-2.5">
-                  {planFeatures(p).map((f) => (
+                  {coreRows(p).map((f) => (
                     <p key={f} className="flex items-start gap-2 text-xs text-slate-600">
                       <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {f}
                     </p>
+                  ))}
+                  {showDetails && detailGroups(p).map((g) => (
+                    <div key={g.title} className="pt-3">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-[#0f172a] border-b border-slate-200 pb-1.5 mb-2">{g.title}</p>
+                      <div className="space-y-2">
+                        {g.rows.map((f) => (
+                          <p key={f} className="flex items-start gap-2 text-xs text-slate-600">
+                            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {f}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
             );
           })}
         </div>
+        {rangePlans.length > 0 && (
+          <div className="mt-6 text-center">
+            <button onClick={() => setShowDetails(!showDetails)} className="text-sm font-bold text-[#0050d7] hover:underline inline-flex items-center gap-1.5">
+              {showDetails ? "Show less details" : "Show more details"}
+              <ChevronDown className={`w-4 h-4 transition-transform ${showDetails ? "rotate-180" : ""}`} />
+            </button>
+          </div>
+        )}
         {rangePlans.length === 0 && (
           <p className="text-center text-sm text-slate-500 mt-6">Plans for this range will appear here once available — <a href="/web-hosting" className="text-[#0050d7] font-semibold">browse all hosting plans</a>.</p>
         )}
@@ -318,6 +428,41 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
           </div>
         </div>
       </section>
+
+      {/* Alternating content sections (OVH-style) */}
+      {def.sections && def.sections.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14 space-y-14">
+          {def.sections.map((s, i) => (
+            <div key={s.title} className={`grid grid-cols-1 md:grid-cols-2 gap-10 items-center`}>
+              <div className={i % 2 === 0 ? "order-1" : "order-1 md:order-2"}>
+                <h2 className="text-xl font-black text-[#0f172a]">{s.title}</h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {s.pills.map((pl) => (
+                    <span key={pl} className="rounded-full bg-[#eef4ff] text-[#0050d7] px-3 py-1 text-[11px] font-bold">{pl}</span>
+                  ))}
+                </div>
+                <p className="mt-4 text-sm text-slate-600 leading-7">{s.text}</p>
+              </div>
+              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-[#e8f7ff] to-white" : "from-[#f3eaff] to-white"} border border-slate-100 p-10 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
+                {[Zap, Shield, Layers, Award].map((Icon, j) => (
+                  <Icon key={j} className={`w-12 h-12 ${j === i % 4 ? "text-[#0050d7]" : "text-slate-200"} ${j > 0 ? "-ml-3" : ""}`} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* Testimonial */}
+      {def.testimonial && (
+        <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-14">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 md:p-10 text-center shadow-sm">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0050d7]">My client is rich</p>
+            <p className="mt-4 text-lg md:text-xl font-bold text-[#0f172a] leading-8">&ldquo;{def.testimonial.quote}&rdquo;</p>
+            <p className="mt-4 text-xs text-slate-400">{def.testimonial.author}</p>
+          </div>
+        </section>
+      )}
 
       {/* Use cases */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">

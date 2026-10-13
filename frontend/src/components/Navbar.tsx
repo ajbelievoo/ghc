@@ -357,9 +357,9 @@ const megaMenu: MegaEntry[] = [
         cols: 3,
         columns: [
           { title: "Web hosting", items: [
-            { label: "Eco — For accessible prices", href: "/web-hosting?range=Eco", desc: "Everything you need to launch your website(s) at a lower cost" },
-            { label: "Business — For professionals", href: "/web-hosting?range=Business", desc: "Performance and flexibility for business websites" },
-            { label: "Agencies — For web agencies", href: "/web-hosting?range=Agency", desc: "Efficiently manage various client websites on a single hosting plan" },
+            { label: "Eco — For accessible prices", href: "/web-hosting/eco", desc: "Everything you need to launch your website(s) at a lower cost" },
+            { label: "Business — For professionals", href: "/web-hosting/business", desc: "Performance and flexibility for business websites" },
+            { label: "Agencies — For web agencies", href: "/web-hosting/agency", desc: "Efficiently manage various client websites on a single hosting plan" },
             { label: "Compare our web hosting plans", href: "/web-hosting", desc: "Choose the solution that best suits your needs" },
             { label: "Managed hosting for WordPress", href: "/web-hosting/wordpress", desc: "Spend less time managing your WordPress sites" },
           ]},
