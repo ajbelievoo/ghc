@@ -83,7 +83,7 @@ export default function SslCertificatesPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-[#000e9c] text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-32">
           <p className="text-xs text-white/70">SSL certificates</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; SSL certificates</p>
@@ -113,7 +113,7 @@ export default function SslCertificatesPage() {
             { name: "Sectigo DV SSL certificate", sub: "A verified, guaranteed domain name included", price: "₹4,850" },
             { name: "Sectigo EV SSL certificate", sub: "Domain and company verified, warranty included", price: "₹9,702" },
           ].map((c) => (
-            <div key={c.name} className="rounded-xl bg-[#0043b0] text-white p-6 text-center shadow-xl">
+            <div key={c.name} className="rounded-xl bg-[#15295b] text-white p-6 text-center shadow-xl">
               <p className="text-sm font-bold">{c.name}</p>
               <p className="mt-1 text-[11px] text-white/70">{c.sub}</p>
               <p className="mt-4 text-3xl font-black">{c.price}</p>
@@ -131,7 +131,7 @@ export default function SslCertificatesPage() {
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-10">
           {WHY.map((w) => (
             <div key={w.t}>
-              <w.icon className="w-9 h-9 text-[#0050d7]" strokeWidth={1.5} />
+              <w.icon className="w-9 h-9 text-[#0284c7]" strokeWidth={1.5} />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{w.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{w.d}</p>
             </div>
@@ -145,7 +145,7 @@ export default function SslCertificatesPage() {
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           {USE_CASES.map((u) => (
             <div key={u.t} className="rounded-xl border border-slate-200 bg-white p-6">
-              <p className="text-sm font-bold text-[#0f172a] border-l-2 border-[#0050d7] pl-3">{u.t}</p>
+              <p className="text-sm font-bold text-[#0f172a] border-l-2 border-[#0284c7] pl-3">{u.t}</p>
               <p className="mt-4 text-xs text-slate-500 leading-5">{u.d1}</p>
               <p className="mt-3 text-xs text-slate-500 leading-5">{u.d2}</p>
             </div>
@@ -157,7 +157,7 @@ export default function SslCertificatesPage() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16 space-y-16">
         <div>
           <h2 className="text-xl font-black text-[#0f172a]">SSL certificate: what are the advantages and how to choose?</h2>
-          <p className="mt-3 text-xs font-bold text-[#0050d7]">Ensure your company's website and its visitors are kept safe with GHCcloud.</p>
+          <p className="mt-3 text-xs font-bold text-[#0284c7]">Ensure your company's website and its visitors are kept safe with GHCcloud.</p>
           <p className="mt-4 max-w-4xl text-xs text-slate-500 leading-6">
             Your brand image is closely linked to the level of security offered by your website. To gain credibility, your website should be accessible via a secure HTTPS connection. This connection is active when a green padlock appears in the browser's address bar (Chrome, Firefox, etc.) next to the website's URL. This informs users that the content of the pages they are viewing comes from a secure and protected source, because their data is protected by encryption. Bear in mind that SSL certificates vary for each security level.
           </p>
@@ -200,11 +200,11 @@ export default function SslCertificatesPage() {
               Protecting your customers' data and transactions with encryption is an essential step in reassuring your visitors about the security of your e-commerce platform. By securing exchanges with your web server, you boost your credibility and inspire confidence at each login.
             </p>
           </div>
-          <div className="flex justify-center"><ShieldCheck className="w-20 h-20 text-[#0050d7]" strokeWidth={1.2} /></div>
+          <div className="flex justify-center"><ShieldCheck className="w-20 h-20 text-[#0284c7]" strokeWidth={1.2} /></div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="flex justify-center order-2 md:order-1"><Gauge className="w-20 h-20 text-[#7b2ff7]" strokeWidth={1.2} /></div>
+          <div className="flex justify-center order-2 md:order-1"><Gauge className="w-20 h-20 text-[#0284c7]" strokeWidth={1.2} /></div>
           <div className="order-1 md:order-2">
             <h3 className="text-lg font-black text-[#0f172a]">Boost your SEO</h3>
             <p className="mt-3 text-xs text-slate-500 leading-6">
@@ -221,7 +221,7 @@ export default function SslCertificatesPage() {
             </p>
           </div>
           <div className="flex items-center justify-center gap-3">
-            <KeyRound className="w-10 h-10 text-[#0050d7]" />
+            <KeyRound className="w-10 h-10 text-[#0284c7]" />
             <p className="text-2xl font-black text-[#0f172a]">Let's Encrypt</p>
           </div>
         </div>
@@ -236,8 +236,8 @@ export default function SslCertificatesPage() {
             <thead>
               <tr className="border-b-2 border-slate-200">
                 <th className="py-3 text-left font-semibold text-slate-500"></th>
-                <th className="py-3 text-center font-bold text-[#0f172a]">Sectigo DV SSL<br /><span className="text-[10px] font-normal text-[#0050d7] underline">Choosing a Web Hosting plan</span></th>
-                <th className="py-3 text-center font-bold text-[#0f172a]">Sectigo® EV SSL<br /><span className="text-[10px] font-normal text-[#0050d7] underline">Choosing a Web Hosting plan</span></th>
+                <th className="py-3 text-center font-bold text-[#0f172a]">Sectigo DV SSL<br /><span className="text-[10px] font-normal text-[#0284c7] underline">Choosing a Web Hosting plan</span></th>
+                <th className="py-3 text-center font-bold text-[#0f172a]">Sectigo® EV SSL<br /><span className="text-[10px] font-normal text-[#0284c7] underline">Choosing a Web Hosting plan</span></th>
               </tr>
             </thead>
             <tbody>
@@ -259,7 +259,7 @@ export default function SslCertificatesPage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[#000e9c] py-14 text-center text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] py-14 text-center text-white">
         <h2 className="text-2xl font-black">Explore our web hosting plans</h2>
         <p className="mt-3 max-w-2xl mx-auto text-sm text-white/80 px-4">Want to start building a dynamic, more elaborate website? Our web hosting solutions are designed to meet all your needs. See our comparison page to find out which hosting plan is best suited to your project.</p>
         <a href="/web-hosting" className="mt-6 inline-block rounded-lg border border-white px-6 py-2.5 text-sm font-bold hover:bg-white/10">View detailed comparison</a>

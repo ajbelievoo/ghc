@@ -50,7 +50,7 @@ export default function EcommerceHostingPage({ plans }: { plans: any[] }) {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-[#000e9c] text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-14">
           <p className="text-xs text-white/70">Hosting for e-commerce</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; Hosting for e-commerce</p>
@@ -62,13 +62,13 @@ export default function EcommerceHostingPage({ plans }: { plans: any[] }) {
                   <li key={b} className="flex items-center gap-2.5 text-sm font-semibold"><Check className="w-4 h-4 text-emerald-400 shrink-0" /> {b}</li>
                 ))}
               </ul>
-              <a href="/web-hosting" className="mt-6 inline-block rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#000e9c] hover:bg-slate-100">Get Started</a>
+              <a href="/web-hosting" className="mt-6 inline-block rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0b1020] hover:bg-slate-100">Get Started</a>
             </div>
             <div className="hidden md:flex justify-end">
-              <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#7b2ff7] to-[#0050d7] w-full max-w-md h-52 flex items-center justify-center">
+              <div className="relative rounded-xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#0891b2] to-[#00b7ff] w-full max-w-md h-52 flex items-center justify-center">
                 <Store className="w-16 h-16 text-white/80" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg"><Play className="w-6 h-6 fill-[#000e9c] text-[#000e9c]" /></div>
+                  <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg"><Play className="w-6 h-6 fill-[#0b1020] text-[#0b1020]" /></div>
                 </div>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function EcommerceHostingPage({ plans }: { plans: any[] }) {
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10">
           {ESSENTIALS.map((s) => (
             <div key={s.t}>
-              <s.icon className="w-9 h-9 text-[#0050d7]" strokeWidth={1.5} />
+              <s.icon className="w-9 h-9 text-[#0284c7]" strokeWidth={1.5} />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{s.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{s.d}</p>
             </div>
@@ -141,7 +141,7 @@ export default function EcommerceHostingPage({ plans }: { plans: any[] }) {
       </section>
 
       {/* Did you know */}
-      <section className="bg-[#000e9c] py-14 text-white text-center">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] py-14 text-white text-center">
         <h2 className="text-2xl font-black">Did you know?</h2>
         <p className="mt-2 text-xs text-white/70 px-4">Since 1999, GHCcloud has been the European reference for hosting solutions, with a presence in Europe and internationally.</p>
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -170,10 +170,10 @@ export default function EcommerceHostingPage({ plans }: { plans: any[] }) {
             { icon: Workflow, t: "Partner Network", d: "Want to delegate the management of your technical needs to the services of our professional partners? OVHcloud has a Partner Program for that — help you whenever you need it.", cta: "View the Partner Directory", href: "/marketplace" },
           ].map((s) => (
             <div key={s.t}>
-              <s.icon className="w-9 h-9 text-[#0050d7] mx-auto" strokeWidth={1.5} />
+              <s.icon className="w-9 h-9 text-[#0284c7] mx-auto" strokeWidth={1.5} />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{s.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{s.d}</p>
-              <a href={s.href} className="mt-2 inline-block text-[10px] font-bold text-[#0050d7] uppercase tracking-wide">{s.cta}</a>
+              <a href={s.href} className="mt-2 inline-block text-[10px] font-bold text-[#0284c7] uppercase tracking-wide">{s.cta}</a>
             </div>
           ))}
         </div>
@@ -192,10 +192,10 @@ export default function EcommerceHostingPage({ plans }: { plans: any[] }) {
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {AGENCY.map((a) => (
             <div key={a.t} className="rounded-xl border border-slate-200 p-6 text-center">
-              <a.icon className="w-10 h-10 text-[#0050d7] mx-auto" />
+              <a.icon className="w-10 h-10 text-[#0284c7] mx-auto" />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{a.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{a.d}</p>
-              <a href={a.href} className="mt-4 inline-block rounded-lg bg-[#0050d7] px-5 py-2 text-xs font-bold text-white hover:bg-[#0043b0]">{a.cta}</a>
+              <a href={a.href} className="mt-4 inline-block rounded-lg bg-[#ff3d00] px-5 py-2 text-xs font-bold text-white hover:bg-[#e63700]">{a.cta}</a>
             </div>
           ))}
         </div>
@@ -208,7 +208,7 @@ export default function EcommerceHostingPage({ plans }: { plans: any[] }) {
           {FAQS.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left gap-4">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}

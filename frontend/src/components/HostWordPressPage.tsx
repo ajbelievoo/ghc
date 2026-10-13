@@ -51,7 +51,7 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-[#000e9c] text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-14">
           <p className="text-xs text-white/70">Host your WordPress website</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; Host your WordPress website</p>
@@ -87,7 +87,7 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
         <ul className="mt-5 space-y-3">
           {WHY_WP.map((w) => (
             <li key={w.t} className="flex items-start gap-2 text-xs text-slate-600 leading-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />
               <span><strong className="text-[#0f172a]">{w.t}</strong> {w.d}</span>
             </li>
           ))}
@@ -99,7 +99,7 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
         <h2 className="text-xl font-black text-[#0f172a]">What type of website can you create with WordPress?</h2>
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {WP_TYPES.map((t) => (
-            <a key={t.t} href={t.href} className="rounded-xl border border-slate-200 p-5 hover:border-[#0050d7] hover:shadow-md transition-all block">
+            <a key={t.t} href={t.href} className="rounded-xl border border-slate-200 p-5 hover:border-[#0284c7] hover:shadow-md transition-all block">
               <p className="text-sm font-bold text-[#0f172a]">{t.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{t.d}</p>
             </a>
@@ -125,7 +125,7 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
         <div className="mt-4 space-y-4 text-xs text-slate-600 leading-6">
           <p>Your domain is your WordPress site's address — short, memorable, and matching your brand. Every GHC web hosting plan includes a <strong>free domain name for the first year</strong>, so you can register it right at checkout.</p>
           <p>Check availability with our WHOIS tool and choose from 800+ extensions — .com, .in, .blog, .shop and many more. Registering several extensions protects your brand.</p>
-          <p><a href="/domain" className="text-[#0050d7] font-bold underline">Search for your domain name</a> and secure it in a few clicks.</p>
+          <p><a href="/domain" className="text-[#0284c7] font-bold underline">Search for your domain name</a> and secure it in a few clicks.</p>
         </div>
       </section>
 
@@ -171,7 +171,7 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
           <p>Log in to your WordPress admin at <strong>yourdomain.com/wp-admin</strong> and start creating:</p>
           <ul className="space-y-2 pl-4">
             {STEP5.map((s) => (
-              <li key={s} className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" />{s}</li>
+              <li key={s} className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />{s}</li>
             ))}
           </ul>
           <p>Keep publishing regularly — fresh content keeps visitors coming back and improves your search ranking. Your WordPress site grows with you: add WooCommerce later to sell online, or multisite to run several sites.</p>
@@ -180,10 +180,10 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
 
       {/* CTA */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <div className="rounded-2xl bg-gradient-to-r from-[#0050d7] via-[#7b2ff7] to-[#ff7ab8] py-12 px-6 text-center">
+        <div className="rounded-2xl bg-gradient-to-r from-[#0b1020] via-[#155e75] to-[#00b7ff] py-12 px-6 text-center">
           <h2 className="text-xl md:text-2xl font-black text-white">Your WordPress site is one click away</h2>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <a href="/web-hosting" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0050d7] hover:bg-slate-100">Choose a hosting plan</a>
+            <a href="/web-hosting" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0284c7] hover:bg-slate-100">Choose a hosting plan</a>
             <a href="/web-hosting/wordpress" className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-bold text-white hover:bg-white/10">Managed WordPress hosting</a>
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
           {FAQS.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left gap-4">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}

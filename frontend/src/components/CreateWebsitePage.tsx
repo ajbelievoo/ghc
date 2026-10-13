@@ -66,7 +66,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-[#000e9c] text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-14">
           <p className="text-xs text-white/70">How to create a website</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; How to create a website</p>
@@ -76,7 +76,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
               <p className="mt-5 text-sm text-white/85 leading-7">Want to start building your first website? Build your website quickly using content management systems (CMSs) that are recognised and recommended by our teams, such as WordPress, PrestaShop, Drupal and Joomla!</p>
             </div>
             <div className="hidden md:flex justify-end">
-              <div className="rounded-xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#7b2ff7] to-[#0050d7] p-10 flex items-center justify-center">
+              <div className="rounded-xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#0891b2] to-[#00b7ff] p-10 flex items-center justify-center">
                 <LayoutGrid className="w-20 h-20 text-white" />
               </div>
             </div>
@@ -91,7 +91,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
         <ul className="mt-5 space-y-3 list-none">
           {WHY.map((w) => (
             <li key={w.t} className="flex items-start gap-2 text-xs text-slate-600 leading-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />
               <span><strong className="text-[#0f172a]">{w.t}</strong> {w.d}</span>
             </li>
           ))}
@@ -104,7 +104,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
         <p className="mt-2 text-xs text-slate-600">Depending on your goals, choose the type of site that aligns best with your project.</p>
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {TYPES.map((t) => (
-            <a key={t.t} href={t.href} className="rounded-xl border border-slate-200 p-5 hover:border-[#0050d7] hover:shadow-md transition-all block">
+            <a key={t.t} href={t.href} className="rounded-xl border border-slate-200 p-5 hover:border-[#0284c7] hover:shadow-md transition-all block">
               <p className="text-sm font-bold text-[#0f172a]">{t.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{t.d}</p>
             </a>
@@ -132,13 +132,13 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
           <p>Your domain name represents the reputation of your business on the internet and what visitors will remember when they visit your website. It must be unique, memorable, and align with your brand, business, and the needs of your target customers. Choosing a domain name is therefore a crucial step in creating your website, as it symbolises your online identity and makes it easier to access your services.</p>
           <p>Once you have chosen a domain name, it is vital to select the best domain extension to optimise your website's SEO ranking, and its related pages. Here are the main types of extensions:</p>
           <ul className="space-y-2 pl-4">
-            <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Generic:</strong> the most popular extensions, such as .com, .in, .org recognised worldwide, reassuring visitors about your website's credibility.</span></li>
-            <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Geographical:</strong> ideal for targeting internet users from a specific geographical area, such as .in, .us, .fr, .ca or .uk, these extensions improve your company's local exposure.</span></li>
-            <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Customised:</strong> ideal for providing more information on your website's activity. Extensions such as .blog or .shop specify the type of content or services offered to users.</span></li>
+            <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Generic:</strong> the most popular extensions, such as .com, .in, .org recognised worldwide, reassuring visitors about your website's credibility.</span></li>
+            <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Geographical:</strong> ideal for targeting internet users from a specific geographical area, such as .in, .us, .fr, .ca or .uk, these extensions improve your company's local exposure.</span></li>
+            <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Customised:</strong> ideal for providing more information on your website's activity. Extensions such as .blog or .shop specify the type of content or services offered to users.</span></li>
           </ul>
           <p>To maximise the impact of your domain name, it is important that it is short, easy to remember and write. This allows web users to quickly access your content online, while making it easier for them to share your site online.</p>
           <p>Once you have found the perfect domain name and verified its availability with our WHOIS tool, register it to become the official domain name holder. By doing so, you ensure that no one else will be able to use it, which is essential to protect your brand and maintain the consistency of your online presence.</p>
-          <p>Browse all of our solutions, and <a href="/domain" className="text-[#0050d7] font-bold underline">book your domain name now</a> to see your online project become a reality.</p>
+          <p>Browse all of our solutions, and <a href="/domain" className="text-[#0284c7] font-bold underline">book your domain name now</a> to see your online project become a reality.</p>
         </div>
       </section>
 
@@ -151,13 +151,13 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
           <p>Our hosting solutions vary depending on the resources allocated, including storage capacity, expected traffic, and the number of sites to deploy. Evaluate your business needs and the goals of your web project to select the hosting plan that best suits you.</p>
           <p>If your business grows, your web hosting plan can evolve accordingly. We offer flexible solutions that adapt to your goals, so you can develop your websites and applications without constraints.</p>
           <p>In today's environment, your company's online presence is more critical than ever. With our hosting services, your website will benefit from optimal speed and security, with options suitable for companies of all sizes, whether you are a startup or they account.</p>
-          <p>Explore our range of <a href="/web-hosting" className="text-[#0050d7] font-bold underline">web hosting plans</a>, including three attractive rates, and choose the solution that fits your goals.</p>
+          <p>Explore our range of <a href="/web-hosting" className="text-[#0284c7] font-bold underline">web hosting plans</a>, including three attractive rates, and choose the solution that fits your goals.</p>
           <p>Whether you want to host your personal website, business website or e-commerce website, our comparison tool will help you find the best cloud hosting package.</p>
         </div>
       </section>
 
       {/* Hosting band + plans */}
-      <section className="bg-[#000e9c] py-12 text-center">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] py-12 text-center">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <h2 className="text-xl md:text-2xl font-black text-white">Explore our other web hosting plans</h2>
           <p className="mt-3 max-w-2xl mx-auto text-sm text-white/80">We offer different types of hosting to suit all your needs. Whether you want to host your personal website, business website or online store, our comparison page will help you find the best cloud hosting package</p>
@@ -173,10 +173,10 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
         <h2 className="text-lg font-black text-[#0f172a]">3. Choose a module (CMS) and install it in just one click</h2>
         <p className="mt-4 text-xs text-slate-600 leading-6">With content management systems (CMS) such as WordPress, Joomla! and PrestaShop, you can easily create a dynamic website without needing any programming knowledge. Here are their main advantages:</p>
         <ul className="mt-4 space-y-2 text-xs text-slate-600 leading-6">
-          <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>User-friendly interface:</strong> design web pages, publish articles and customise the look of your site with ease, even as a beginner.</span></li>
-          <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Multiple features:</strong> include product specifications, contact forms, image galleries and other options to adapt the site to your specific needs.</span></li>
-          <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Community support:</strong> get advice and resources from large French-speaking communities who share tips and extensions to improve your website performance.</span></li>
-          <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Optimised SEO:</strong> CMSs are designed to promote organic SEO by focusing on content and loading speed, increasing your online exposure.</span></li>
+          <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>User-friendly interface:</strong> design web pages, publish articles and customise the look of your site with ease, even as a beginner.</span></li>
+          <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Multiple features:</strong> include product specifications, contact forms, image galleries and other options to adapt the site to your specific needs.</span></li>
+          <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Community support:</strong> get advice and resources from large French-speaking communities who share tips and extensions to improve your website performance.</span></li>
+          <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Optimised SEO:</strong> CMSs are designed to promote organic SEO by focusing on content and loading speed, increasing your online exposure.</span></li>
         </ul>
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
           {CMS_CARDS.map((c) => (
@@ -184,7 +184,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
               <p className="text-center text-lg font-black text-[#0f172a] tracking-wide">{c.logo}</p>
               <p className="mt-4 text-sm font-bold text-[#0f172a]">{c.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5 flex-1">{c.d}</p>
-              <a href={c.href} className="mt-4 inline-block rounded-lg bg-[#0050d7] px-4 py-2 text-xs font-bold text-white text-center hover:bg-[#0043b0]">{c.cta}</a>
+              <a href={c.href} className="mt-4 inline-block rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white text-center hover:bg-[#e63700]">{c.cta}</a>
             </div>
           ))}
         </div>
@@ -192,10 +192,10 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[560px] border-collapse text-xs border border-slate-200">
             <thead>
-              <tr className="bg-[#f6f8fc]">
+              <tr className="bg-slate-50">
                 <th className="py-2.5 px-3 text-left font-bold text-slate-600 border-b border-slate-200">Interest</th>
                 {["WordPress", "PrestaShop", "Joomla!", "Drupal"].map((h) => (
-                  <th key={h} className="py-2.5 px-3 text-center font-bold text-[#0050d7] border-b border-slate-200">{h}</th>
+                  <th key={h} className="py-2.5 px-3 text-center font-bold text-[#0284c7] border-b border-slate-200">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -221,7 +221,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
         <ul className="mt-4 space-y-3 text-xs text-slate-600 leading-6">
           {STEP4_OPTIONS.map((o) => (
             <li key={o.t} className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />
               <span><strong className="text-[#0f172a]">{o.t}</strong> {o.d}</span>
             </li>
           ))}
@@ -249,7 +249,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
           {FAQS.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left gap-4">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}

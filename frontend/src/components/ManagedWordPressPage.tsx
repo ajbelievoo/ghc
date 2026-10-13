@@ -85,7 +85,7 @@ export default function ManagedWordPressPage({ plans }: { plans: any[] }) {
       <Navbar />
 
       {/* Hero — full blue band */}
-      <section className="bg-[#000e9c] text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-14">
           <p className="text-xs text-white/70">Managed hosting for WordPress</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/" className="hover:underline">Home</a> &gt; Managed hosting for WordPress</p>
@@ -124,7 +124,7 @@ export default function ManagedWordPressPage({ plans }: { plans: any[] }) {
         <div className="mt-8 inline-flex flex-col items-start gap-2.5 text-left">
           {["Smart automatic updates", "Performance by design", "End-to-end automated security", "Centralized fleet management"].map((b) => (
             <p key={b} className="flex items-center gap-2.5 text-sm font-semibold text-[#0f172a]">
-              <Check className="w-4 h-4 text-[#0050d7] shrink-0" /> {b}
+              <Check className="w-4 h-4 text-[#0284c7] shrink-0" /> {b}
             </p>
           ))}
         </div>
@@ -147,13 +147,13 @@ export default function ManagedWordPressPage({ plans }: { plans: any[] }) {
               {f.bullets && (
                 <ul className="mt-4 space-y-2.5 list-none">
                   {f.bullets.map((pt) => (
-                    <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" />{pt}</li>
+                    <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />{pt}</li>
                   ))}
                 </ul>
               )}
             </div>
-            <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-[#eef4ff]" : "from-[#f3eaff]"} to-white border border-slate-100 p-10 flex items-center justify-center min-h-[240px] ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
-              <f.icon className="w-16 h-16 text-[#0050d7]" />
+            <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-sky-50" : "from-violet-50"} to-white border border-slate-100 p-10 flex items-center justify-center min-h-[240px] ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
+              <f.icon className="w-16 h-16 text-[#0284c7]" />
             </div>
           </div>
         ))}
@@ -166,20 +166,20 @@ export default function ManagedWordPressPage({ plans }: { plans: any[] }) {
             <div className="mt-6 space-y-5">
               {CONTROL.map((c) => (
                 <div key={c.t}>
-                  <p className="text-sm font-bold text-[#0f172a] flex items-center gap-2"><c.icon className="w-4 h-4 text-[#0050d7]" />{c.t}</p>
+                  <p className="text-sm font-bold text-[#0f172a] flex items-center gap-2"><c.icon className="w-4 h-4 text-[#0284c7]" />{c.t}</p>
                   <p className="mt-1 text-xs text-slate-500 leading-5 pl-6">{c.d}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="rounded-2xl bg-gradient-to-br from-[#e8f7ff] to-white border border-slate-100 p-10 flex items-center justify-center min-h-[280px]">
-            <Cloud className="w-16 h-16 text-[#0050d7]" />
+          <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-white border border-slate-100 p-10 flex items-center justify-center min-h-[280px]">
+            <Cloud className="w-16 h-16 text-[#0284c7]" />
           </div>
         </div>
       </section>
 
       {/* Scale statement + 3 icons */}
-      <section className="bg-[#f6f8fc] py-16">
+      <section className="bg-slate-50 py-16">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 text-center">
           <h2 className="text-xl md:text-2xl font-black text-[#0f172a] leading-snug">
             With Managed hosting for WordPress designed to scale, you can effortlessly create and manage all your websites on an always up-to-date, fully optimized infrastructure, giving you more time to focus on growing your business.
@@ -191,7 +191,7 @@ export default function ManagedWordPressPage({ plans }: { plans: any[] }) {
               { icon: Shield, t: "Fix websites problems before your users even notice" },
             ].map((b) => (
               <div key={b.t} className="flex flex-col items-center">
-                <b.icon className="w-10 h-10 text-[#0050d7]" />
+                <b.icon className="w-10 h-10 text-[#0284c7]" />
                 <p className="mt-3 text-sm font-semibold text-[#0f172a] leading-6">{b.t}</p>
               </div>
             ))}
@@ -213,7 +213,7 @@ export default function ManagedWordPressPage({ plans }: { plans: any[] }) {
           {FAQS.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left gap-4">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{i + 1} - {q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{i + 1} - {q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}

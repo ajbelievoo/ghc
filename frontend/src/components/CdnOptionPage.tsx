@@ -86,7 +86,7 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
 
       {/* Promo banner */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-6">
-        <div className="rounded-xl bg-lime-300 px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="rounded-xl bg-cyan-300 px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <Gauge className="w-10 h-10 text-[#0f172a] shrink-0" />
           <div>
             <p className="text-sm font-black text-[#0f172a]">CDN Basic included for free in Performance web hosting plans</p>
@@ -97,7 +97,7 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
       </section>
 
       {/* Hero */}
-      <section className="bg-[#000e9c] text-white mt-6">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white mt-6">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-40">
           <p className="text-xs text-white/70">CDN</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; <a href="/web-hosting" className="hover:underline">Web Hosting Options</a> &gt; CDN</p>
@@ -112,7 +112,7 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
       <section className="mx-auto max-w-7xl px-4 sm:px-6 -mt-28 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-4xl mx-auto">
           {OFFERS.map((o) => (
-            <div key={o.name} className="rounded-xl bg-[#0043b0] text-white p-6 text-center shadow-xl flex flex-col">
+            <div key={o.name} className="rounded-xl bg-[#15295b] text-white p-6 text-center shadow-xl flex flex-col">
               <p className="text-sm font-bold">{o.name}</p>
               <p className="mt-1.5 text-[10px] text-white/70 leading-4">{o.tag}</p>
               <p className="mt-4 text-3xl font-black">{o.price}</p>
@@ -128,10 +128,10 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-16 space-y-16">
         {OFFERS.map((o, i) => (
           <div key={o.name} className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className={`rounded-2xl bg-[#eef4ff] border border-slate-100 p-10 flex items-center justify-center min-h-[220px] ${i % 2 === 0 ? "order-2 md:order-1" : "order-2"}`}>
-              {i === 0 && <Database className="w-16 h-16 text-[#0050d7]" />}
-              {i === 1 && <Lock className="w-16 h-16 text-[#0050d7]" />}
-              {i === 2 && <Network className="w-16 h-16 text-[#0050d7]" />}
+            <div className={`rounded-2xl bg-sky-50 border border-slate-100 p-10 flex items-center justify-center min-h-[220px] ${i % 2 === 0 ? "order-2 md:order-1" : "order-2"}`}>
+              {i === 0 && <Database className="w-16 h-16 text-[#0284c7]" />}
+              {i === 1 && <Lock className="w-16 h-16 text-[#0284c7]" />}
+              {i === 2 && <Network className="w-16 h-16 text-[#0284c7]" />}
             </div>
             <div className={i % 2 === 0 ? "order-1 md:order-2" : "order-1"}>
               <h2 className="text-xl font-black text-[#0f172a]">{o.title}</h2>
@@ -139,10 +139,10 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
               <p className="mt-4 text-xs font-bold text-[#0f172a]">{o.title} includes:</p>
               <ul className="mt-2 space-y-1.5">
                 {o.includes.map((b) => (
-                  <li key={b} className="flex items-start gap-2 text-xs text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-1.5" />{b}</li>
+                  <li key={b} className="flex items-start gap-2 text-xs text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-1.5" />{b}</li>
                 ))}
               </ul>
-              <a href="/web-hosting" className="mt-5 inline-block rounded-lg border border-[#0050d7] px-5 py-2 text-xs font-bold text-[#0050d7] hover:bg-[#0050d7] hover:text-white">Order</a>
+              <a href="/web-hosting" className="mt-5 inline-block rounded-lg border border-[#0284c7] px-5 py-2 text-xs font-bold text-[#0284c7] hover:bg-[#0284c7] hover:text-white">Order</a>
             </div>
           </div>
         ))}
@@ -153,7 +153,7 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
         <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full min-w-[560px] border-collapse text-xs">
             <thead>
-              <tr className="bg-[#f6f8fc]">
+              <tr className="bg-slate-50">
                 <th className="py-3 px-4 text-left font-semibold text-slate-500"></th>
                 <th className="py-3 px-4 text-center font-black text-[#0f172a]">BASIC<br /><span className="text-[10px] font-normal text-slate-500">₹198 ex. taxes/month</span></th>
                 <th className="py-3 px-4 text-center font-black text-[#0f172a]">SECURITY<br /><span className="text-[10px] font-normal text-slate-500">₹494 ex. taxes/month</span></th>
@@ -166,8 +166,8 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
                   <td className="py-2 px-4 font-semibold text-slate-600">{r.f}</td>
                   {[r.basic, r.sec, r.adv].map((v, i) => (
                     <td key={i} className="py-2 px-4 text-center">
-                      {v === true && <Check className="w-4 h-4 text-[#0050d7] inline" />}
-                      {v === "+" && <span className="font-black text-[#0050d7]">✚</span>}
+                      {v === true && <Check className="w-4 h-4 text-[#0284c7] inline" />}
+                      {v === "+" && <span className="font-black text-[#0284c7]">✚</span>}
                     </td>
                   ))}
                 </tr>
@@ -177,7 +177,7 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
                 <td className="py-3 px-4 text-center" colSpan={0}></td>
                 {["₹198", "₹494", "₹978"].map((p) => (
                   <td key={p} className="py-3 px-4 text-center">
-                    <a href="/web-hosting" className="inline-block rounded-md bg-[#0050d7] px-4 py-1.5 text-[10px] font-black uppercase text-white hover:bg-[#0043b0]">Order</a>
+                    <a href="/web-hosting" className="inline-block rounded-md bg-[#ff3d00] px-4 py-1.5 text-[10px] font-black uppercase text-white hover:bg-[#e63700]">Order</a>
                   </td>
                 ))}
               </tr>
@@ -192,7 +192,7 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10">
           {INCLUDED.map((s) => (
             <div key={s.t}>
-              <s.icon className="w-9 h-9 text-[#0050d7]" strokeWidth={1.5} />
+              <s.icon className="w-9 h-9 text-[#0284c7]" strokeWidth={1.5} />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{s.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{s.d}</p>
             </div>
@@ -201,7 +201,7 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
       </section>
 
       {/* Compatible band + hosting plans */}
-      <section className="bg-[#000e9c] py-14">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center">
           <h2 className="text-xl md:text-2xl font-black text-white">Our Shared CDN is compatible with all of our web hosting plans:</h2>
           <a href="/compare" className="mt-5 inline-block rounded-lg border border-white px-6 py-2.5 text-sm font-bold text-white hover:bg-white/10">View detailed comparison</a>
@@ -220,7 +220,7 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
           {FAQS.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left gap-4">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}

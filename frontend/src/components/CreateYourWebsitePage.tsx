@@ -76,7 +76,7 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-[#000e9c] text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-14">
           <p className="text-xs text-white/70">Create a secure, high-performance website</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; Create a secure, high-performance website</p>
@@ -88,7 +88,7 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
               ))}
             </ul>
             <p className="mt-5 text-sm text-white/80">From ₹92.58 ex. taxes/month</p>
-            <a href="/web-hosting" className="mt-4 inline-block rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#000e9c] hover:bg-slate-100">Create my website</a>
+            <a href="/web-hosting" className="mt-4 inline-block rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0b1020] hover:bg-slate-100">Create my website</a>
           </div>
         </div>
       </section>
@@ -103,7 +103,7 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
             { icon: ShieldCheck, t: "Bonus: Peace of mind", rows: ["99.9% availability rate", "Advanced security, backups and anti-DDoS included", "Data sovereignty"] },
           ].map((c) => (
             <div key={c.t} className="text-left">
-              <c.icon className="w-9 h-9 text-[#0050d7] mx-0" strokeWidth={1.5} />
+              <c.icon className="w-9 h-9 text-[#0284c7] mx-0" strokeWidth={1.5} />
               <p className="mt-3 text-xs font-black uppercase tracking-wide text-[#0f172a]">{c.t}</p>
               <ul className="mt-3 space-y-1.5">
                 {c.rows.map((r) => (
@@ -113,7 +113,7 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
             </div>
           ))}
         </div>
-        <a href="/web-hosting" className="mt-8 inline-block rounded-lg bg-[#0050d7] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#0043b0]">Create a website</a>
+        <a href="/web-hosting" className="mt-8 inline-block rounded-lg bg-[#ff3d00] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#e63700]">Create a website</a>
       </section>
 
       {/* All-in-one solution */}
@@ -126,8 +126,8 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
                 <h3 className="text-lg font-black text-[#0f172a]">{a.t}</h3>
                 <p className="mt-3 text-xs text-slate-600 leading-6">{a.d}</p>
               </div>
-              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-[#e8f7ff]" : "from-[#f3eaff]"} to-white border border-slate-100 p-12 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
-                <a.icon className="w-16 h-16 text-[#0050d7]" strokeWidth={1.2} />
+              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-sky-50" : "from-violet-50"} to-white border border-slate-100 p-12 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
+                <a.icon className="w-16 h-16 text-[#0284c7]" strokeWidth={1.2} />
               </div>
             </div>
           ))}
@@ -140,7 +140,7 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
           {PACKAGES.map((p) => (
             <div key={p.t}>
-              <p.icon className="w-12 h-12 mx-auto text-[#0050d7]" strokeWidth={1.2} />
+              <p.icon className="w-12 h-12 mx-auto text-[#0284c7]" strokeWidth={1.2} />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{p.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{p.d}</p>
             </div>
@@ -155,9 +155,9 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
           {EVERY_PROJECT.map((t, i) => (
             <a key={t} href="/web-hosting" className="group">
               <div className={`rounded-xl h-24 flex items-center justify-center bg-gradient-to-br ${["from-sky-100", "from-orange-100", "from-violet-100", "from-emerald-100"][i % 4]} to-white border border-slate-100`}>
-                <Globe className="w-8 h-8 text-[#0050d7]/60" />
+                <Globe className="w-8 h-8 text-[#0284c7]/60" />
               </div>
-              <p className="mt-2 text-[11px] font-semibold text-[#0f172a] text-center group-hover:text-[#0050d7]">{t}</p>
+              <p className="mt-2 text-[11px] font-semibold text-[#0f172a] text-center group-hover:text-[#0284c7]">{t}</p>
             </a>
           ))}
         </div>
@@ -181,7 +181,7 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
         <h2 className="text-center text-xl md:text-2xl font-black text-[#0f172a]">Solutions for individuals and professionals at the best price!</h2>
         <PlanGrid plans={hostingPlans} recommended="hosting-pro" sub="business" />
         <div className="mt-4 text-center">
-          <a href="/compare" className="text-xs font-bold text-[#0050d7] hover:underline inline-flex items-center gap-1">View a detailed comparison of our plans <ArrowRight className="w-3 h-3" /></a>
+          <a href="/compare" className="text-xs font-bold text-[#0284c7] hover:underline inline-flex items-center gap-1">View a detailed comparison of our plans <ArrowRight className="w-3 h-3" /></a>
         </div>
       </section>
 
@@ -190,17 +190,17 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10">
           {SERVICES.map((s) => (
             <div key={s.t}>
-              <s.icon className="w-9 h-9 text-[#0050d7]" strokeWidth={1.5} />
+              <s.icon className="w-9 h-9 text-[#0284c7]" strokeWidth={1.5} />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{s.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{s.d}</p>
-              {s.link && <a href={s.href || "/web-hosting"} className="mt-2 inline-block text-[10px] font-bold text-[#0050d7] uppercase tracking-wide">{s.link} →</a>}
+              {s.link && <a href={s.href || "/web-hosting"} className="mt-2 inline-block text-[10px] font-bold text-[#0284c7] uppercase tracking-wide">{s.link} →</a>}
             </div>
           ))}
         </div>
       </section>
 
       {/* Did you know band */}
-      <section className="bg-[#000e9c] py-14 text-white text-center">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] py-14 text-white text-center">
         <h2 className="text-2xl font-black">Did you know?</h2>
         <p className="mt-2 text-xs text-white/70">Since 1999, GHCcloud has been a European reference for hosting websites, with a presence in Europe and internationally.</p>
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -229,10 +229,10 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
             { icon: Workflow, t: "Partner Network", d: "Want to delegate the management of your technical needs to the services of our professional partners? OVHcloud has a Partner Program for that — help you whenever you need it.", cta: "View the Partner Directory", href: "/marketplace" },
           ].map((s) => (
             <div key={s.t}>
-              <s.icon className="w-9 h-9 text-[#0050d7] mx-auto" strokeWidth={1.5} />
+              <s.icon className="w-9 h-9 text-[#0284c7] mx-auto" strokeWidth={1.5} />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{s.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{s.d}</p>
-              <a href={s.href} className="mt-2 inline-block text-[10px] font-bold text-[#0050d7] uppercase tracking-wide">{s.cta}</a>
+              <a href={s.href} className="mt-2 inline-block text-[10px] font-bold text-[#0284c7] uppercase tracking-wide">{s.cta}</a>
             </div>
           ))}
         </div>
@@ -249,8 +249,8 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
             <p className="mt-2 ml-6 text-xs font-normal text-slate-600 leading-6">Second of our web hosting plans available at prices that is adapted to the performance you need. Each has the option such as a free domain for the first year, custom email addresses and a CMS that can be installed in 1 click. We recommend you take a deep look at experience websites, and make sure you perform the load space you need.</p>
           </li>
           <li className="text-sm font-black text-[#0f172a]">Use our pre-installed CMS tools
-            <p className="mt-2 ml-6 text-xs font-normal text-slate-600 leading-6">A content management system, or as you know most websites you visit use the most managed CMS tools, such as WordPress, you can use to create your e-commerce site (and please note that our cookies) and take care of it seamlessly — the performance of <a href="/web-hosting" className="text-[#0050d7] underline">GHCcloud Web Hosting</a>, we get all you need to test content.</p>
-            <a href="/web-hosting" className="mt-3 ml-6 inline-block rounded-lg bg-[#0050d7] px-5 py-2 text-xs font-bold text-white hover:bg-[#0043b0]">Create a website</a>
+            <p className="mt-2 ml-6 text-xs font-normal text-slate-600 leading-6">A content management system, or as you know most websites you visit use the most managed CMS tools, such as WordPress, you can use to create your e-commerce site (and please note that our cookies) and take care of it seamlessly — the performance of <a href="/web-hosting" className="text-[#0284c7] underline">GHCcloud Web Hosting</a>, we get all you need to test content.</p>
+            <a href="/web-hosting" className="mt-3 ml-6 inline-block rounded-lg bg-[#ff3d00] px-5 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Create a website</a>
           </li>
         </ol>
       </section>
@@ -269,15 +269,15 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
                 <p>These solutions are therefore ideal if you, or someone looking for an easy way to focus on the content, for handy user feedback.</p>
               </div>
             </div>
-            <div className="rounded-2xl bg-gradient-to-br from-[#e8f7ff] to-white border border-slate-100 p-10 flex items-center justify-center min-h-[220px]">
-              <MousePointerClick className="w-16 h-16 text-[#0050d7]" />
+            <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-white border border-slate-100 p-10 flex items-center justify-center min-h-[220px]">
+              <MousePointerClick className="w-16 h-16 text-[#0284c7]" />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-            <div className="rounded-2xl bg-gradient-to-br from-[#eef4ff] to-white border border-slate-100 p-10 flex items-center justify-center min-h-[220px] order-2 md:order-1">
+            <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-white border border-slate-100 p-10 flex items-center justify-center min-h-[220px] order-2 md:order-1">
               <div className="text-center">
-                <div className="w-16 h-16 rounded-xl bg-[#0050d7] mx-auto flex items-center justify-center"><span className="text-3xl font-serif font-black text-white">W</span></div>
-                <p className="mt-3 text-sm font-black text-[#0050d7]">WORDPRESS · PRESTASHOP · JOOMLA · DRUPAL</p>
+                <div className="w-16 h-16 rounded-xl bg-[#0b1020] mx-auto flex items-center justify-center"><span className="text-3xl font-serif font-black text-white">W</span></div>
+                <p className="mt-3 text-sm font-black text-[#0284c7]">WORDPRESS · PRESTASHOP · JOOMLA · DRUPAL</p>
               </div>
             </div>
             <div className="order-1 md:order-2">
@@ -285,17 +285,17 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
               <p className="mt-4 text-xs text-slate-600 leading-6">At GHCcloud, several pre-installed CMSs are available to choose from — such as WordPress, Drupal, PrestaShop and WooCommerce.</p>
               <p className="mt-3 text-xs text-slate-600 leading-6">Each CMS has its own interface, along with its own advantages and disadvantages, to create your site or e-commerce platform.</p>
               <ul className="mt-3 space-y-2.5 text-xs text-slate-600 leading-6">
-                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Ease of use:</strong> if you're just getting started, it's best to start with a simple CMS. These solutions give you an intuitive interface for adding pages and regular updates.</span></li>
-                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Customisation:</strong> some CMSs are more flexible than others, and will allow you to create a design more in line with your expectations.</span></li>
-                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Security:</strong> using a CMS frequently updated by its developer. These updates add features and fix vulnerabilities: some CMSs, such as WordPress, offer automatic update features.</span></li>
-                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" /><span><strong>Online community:</strong> a large and strong community (such as the PrestaShop one) will give you access to many tutorials and expert blogs on the web. If you need help or advice, it's easy to find resources on the web.</span></li>
+                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Ease of use:</strong> if you're just getting started, it's best to start with a simple CMS. These solutions give you an intuitive interface for adding pages and regular updates.</span></li>
+                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Customisation:</strong> some CMSs are more flexible than others, and will allow you to create a design more in line with your expectations.</span></li>
+                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Security:</strong> using a CMS frequently updated by its developer. These updates add features and fix vulnerabilities: some CMSs, such as WordPress, offer automatic update features.</span></li>
+                <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>Online community:</strong> a large and strong community (such as the PrestaShop one) will give you access to many tutorials and expert blogs on the web. If you need help or advice, it's easy to find resources on the web.</span></li>
               </ul>
-              <p className="mt-4 text-xs text-slate-600">For more information, view our <a href="/web-hosting/create-website" className="text-[#0050d7] underline">comparison table</a>.</p>
+              <p className="mt-4 text-xs text-slate-600">For more information, view our <a href="/web-hosting/create-website" className="text-[#0284c7] underline">comparison table</a>.</p>
             </div>
           </div>
         </div>
         <div className="mt-8 text-center">
-          <a href="/web-hosting" className="inline-block rounded-lg bg-[#0050d7] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#0043b0]">Browse our offers</a>
+          <a href="/web-hosting" className="inline-block rounded-lg bg-[#ff3d00] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#e63700]">Browse our offers</a>
         </div>
       </section>
 
@@ -306,10 +306,10 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {AGENCY.map((a) => (
             <div key={a.t} className="rounded-xl border border-slate-200 p-6 text-center">
-              <a.icon className="w-10 h-10 text-[#0050d7] mx-auto" />
+              <a.icon className="w-10 h-10 text-[#0284c7] mx-auto" />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{a.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{a.d}</p>
-              <a href={a.href} className="mt-4 inline-block rounded-lg bg-[#0050d7] px-5 py-2 text-xs font-bold text-white hover:bg-[#0043b0]">{a.cta}</a>
+              <a href={a.href} className="mt-4 inline-block rounded-lg bg-[#ff3d00] px-5 py-2 text-xs font-bold text-white hover:bg-[#e63700]">{a.cta}</a>
             </div>
           ))}
         </div>
@@ -321,13 +321,13 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
         <ul className="mt-5 space-y-4 text-xs text-slate-600 leading-6">
           {BEST_PRACTICES.map((b) => (
             <li key={b.t} className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />
               <span><strong className="text-[#0f172a]">{b.t}</strong><br />{b.d}</span>
             </li>
           ))}
         </ul>
         <div className="mt-8 text-center">
-          <a href="/web-hosting" className="inline-block rounded-lg bg-[#0050d7] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#0043b0]">Create my website</a>
+          <a href="/web-hosting" className="inline-block rounded-lg bg-[#ff3d00] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#e63700]">Create my website</a>
         </div>
       </section>
 
@@ -338,7 +338,7 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
           {FAQS.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left gap-4">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}

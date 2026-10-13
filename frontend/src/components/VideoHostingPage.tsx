@@ -69,7 +69,7 @@ export default function VideoHostingPage() {
       <Navbar />
 
       {/* Hero — dark blue band + CSS video player */}
-      <section className="bg-[#000e9c] text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-14">
           <p className="text-xs text-white/70">GHC Video Center</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; Video Center</p>
@@ -89,7 +89,7 @@ export default function VideoHostingPage() {
             <div className="flex items-center justify-center md:justify-end">
               <div className="relative w-full max-w-md">
                 <Sparkles className="absolute -top-5 -left-4 w-7 h-7 text-white/70" />
-                <div className="rounded-xl border-4 border-white/90 bg-[#0a1fd4] p-4 shadow-2xl">
+                <div className="rounded-xl border-4 border-white/90 bg-[#15295b] p-4 shadow-2xl">
                   <div className="flex gap-1.5 mb-3">
                     <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
                     <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
@@ -116,7 +116,7 @@ export default function VideoHostingPage() {
       </section>
 
       {/* Grey intro band + 3 icons */}
-      <section className="bg-[#f6f8fc] py-14">
+      <section className="bg-slate-50 py-14">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 text-center">
           <h2 className="text-xl md:text-2xl font-black text-[#0f172a] leading-snug">With GHC Video Center, you can publish your videos on an ad-free, privacy-friendly platform, fully integrated into your web hosting</h2>
           <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-8">
@@ -126,7 +126,7 @@ export default function VideoHostingPage() {
               { icon: BadgeCheck, t: "No more intrusive or distractive Ads. Keep your visitors on your website" },
             ].map((b) => (
               <div key={b.t} className="flex flex-col items-center">
-                <b.icon className="w-10 h-10 text-[#0050d7]" />
+                <b.icon className="w-10 h-10 text-[#0284c7]" />
                 <p className="mt-3 text-sm font-semibold text-[#0f172a] leading-6">{b.t}</p>
               </div>
             ))}
@@ -144,7 +144,7 @@ export default function VideoHostingPage() {
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 text-left max-w-2xl mx-auto">
           {FIT_CHECKS.map((c) => (
             <p key={c} className="flex items-start gap-2 text-sm text-slate-700">
-              <Check className="w-4 h-4 text-[#0050d7] shrink-0 mt-0.5" /> {c}
+              <Check className="w-4 h-4 text-[#0284c7] shrink-0 mt-0.5" /> {c}
             </p>
           ))}
         </div>
@@ -159,13 +159,13 @@ export default function VideoHostingPage() {
               <p className="mt-4 text-sm text-slate-600 leading-7">{f.text}</p>
               <ul className="mt-4 space-y-2.5">
                 {f.bullets.map((pt) => (
-                  <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0050d7] shrink-0 mt-2" />{pt}</li>
+                  <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />{pt}</li>
                 ))}
               </ul>
-              <a href="/web-hosting" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#0050d7] px-4 py-2 text-xs font-bold text-white hover:bg-[#0043b0]">Learn more →</a>
+              <a href="/web-hosting" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Learn more →</a>
             </div>
-            <div className={`rounded-2xl bg-[#e6e6fa] p-10 flex items-center justify-center min-h-[240px] ${f.flip ? "order-2 md:order-1" : "order-2"}`}>
-              <f.icon className="w-16 h-16 text-[#0050d7]" />
+            <div className={`rounded-2xl bg-slate-100 p-10 flex items-center justify-center min-h-[240px] ${f.flip ? "order-2 md:order-1" : "order-2"}`}>
+              <f.icon className="w-16 h-16 text-[#0284c7]" />
             </div>
           </div>
         ))}
@@ -173,10 +173,10 @@ export default function VideoHostingPage() {
 
       {/* CTA band */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <div className="rounded-2xl bg-gradient-to-r from-[#0050d7] via-[#7b2ff7] to-[#ff7ab8] py-12 px-6 text-center">
+        <div className="rounded-2xl bg-gradient-to-r from-[#0b1020] via-[#155e75] to-[#00b7ff] py-12 px-6 text-center">
           <h2 className="text-xl md:text-2xl font-black text-white">Publish videos on your own terms</h2>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <a href="/web-hosting" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0050d7] hover:bg-slate-100">Get a hosting plan</a>
+            <a href="/web-hosting" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0284c7] hover:bg-slate-100">Get a hosting plan</a>
             <a href="/support" className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-bold text-white hover:bg-white/10">Contact us</a>
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function VideoHostingPage() {
           {FAQS.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left gap-4">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{i + 1} - {q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{i + 1} - {q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}

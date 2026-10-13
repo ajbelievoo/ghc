@@ -252,12 +252,12 @@ function Hero({ badge, tagline, heroDesc }: { badge: string; tagline: string; he
   };
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 rounded-2xl overflow-hidden shadow-lg">
-      <div className="bg-[#0050d7] text-white p-8 md:p-10">
-        <span className="inline-block rounded-full bg-white text-[#0050d7] px-3 py-1 text-[11px] font-black uppercase tracking-wide">{badge}</span>
+      <div className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white p-8 md:p-10">
+        <span className="inline-block rounded-full bg-white text-[#0284c7] px-3 py-1 text-[11px] font-black uppercase tracking-wide">{badge}</span>
         <h1 className="mt-4 text-2xl md:text-3xl font-black leading-tight">{tagline}</h1>
         <p className="mt-3 text-sm text-white/85 leading-6">{heroDesc}</p>
       </div>
-      <div className="bg-gradient-to-br from-[#7b2ff7] via-[#4f6df5] to-[#ff7ab8] p-8 md:p-10 flex flex-col justify-center">
+      <div className="bg-gradient-to-br from-[#0891b2] via-[#2563eb] to-[#00b7ff] p-8 md:p-10 flex flex-col justify-center">
         <div className="flex items-center gap-3 text-white/90">
           <Globe className="w-10 h-10" />
           <Server className="w-10 h-10" />
@@ -285,7 +285,7 @@ export function PlanGrid({ plans, recommended, sub }: { plans: any[]; recommende
   const [showDetails, setShowDetails] = useState(false);
   if (plans.length === 0) {
     return (
-      <p className="text-center text-sm text-slate-500 mt-6">Plans for this range will appear here once available — <a href="/web-hosting" className="text-[#0050d7] font-semibold">browse all hosting plans</a>.</p>
+      <p className="text-center text-sm text-slate-500 mt-6">Plans for this range will appear here once available — <a href="/web-hosting" className="text-[#0284c7] font-semibold">browse all hosting plans</a>.</p>
     );
   }
   return (
@@ -297,11 +297,11 @@ export function PlanGrid({ plans, recommended, sub }: { plans: any[]; recommende
           const pct = savePct(p);
           const rec = recommended === p.planCode;
           return (
-            <div key={p.planCode} className={`relative flex flex-col rounded-xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl overflow-hidden ${rec ? "border-[#0050d7] border-2" : "border-slate-200 hover:border-[#0050d7]"}`}>
+            <div key={p.planCode} className={`relative flex flex-col rounded-xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl overflow-hidden ${rec ? "border-[#0284c7] border-2" : "border-slate-200 hover:border-[#0284c7]"}`}>
               {(pct || rec) && (
                 <div className="flex items-center gap-2 px-4 pt-4 flex-wrap">
-                  {pct && <span className="rounded-full bg-lime-300 text-[#0f172a] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Save {pct}%</span>}
-                  {rec && <span className="rounded-full bg-[#7b2ff7] text-white px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Recommended</span>}
+                  {pct && <span className="rounded-full bg-cyan-300 text-[#0f172a] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Save {pct}%</span>}
+                  {rec && <span className="rounded-full bg-[#0b1020] text-white px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Recommended</span>}
                 </div>
               )}
               <div className="p-6 pb-4">
@@ -323,7 +323,7 @@ export function PlanGrid({ plans, recommended, sub }: { plans: any[]; recommende
                   <ShoppingCart className="w-4 h-4" /> Order now
                 </button>
               </div>
-              <div className="flex-1 bg-[#f8faff] border-t border-slate-100 p-6 space-y-2.5">
+              <div className="flex-1 bg-slate-50 border-t border-slate-100 p-6 space-y-2.5">
                 {coreRows(p).map((f) => (
                   <p key={f} className="flex items-start gap-2 text-xs text-slate-600">
                     <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {f}
@@ -347,7 +347,7 @@ export function PlanGrid({ plans, recommended, sub }: { plans: any[]; recommende
         })}
       </div>
       <div className="mt-6 text-center">
-        <button onClick={() => setShowDetails(!showDetails)} className="text-sm font-bold text-[#0050d7] hover:underline inline-flex items-center gap-1.5">
+        <button onClick={() => setShowDetails(!showDetails)} className="text-sm font-bold text-[#0284c7] hover:underline inline-flex items-center gap-1.5">
           {showDetails ? "Show less details" : "Show more details"}
           <ChevronDown className={`w-4 h-4 transition-transform ${showDetails ? "rotate-180" : ""}`} />
         </button>
@@ -368,14 +368,14 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
                 <h2 className="text-xl font-black text-[#0f172a]">{s.title}</h2>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {s.pills.map((pl) => (
-                    <span key={pl} className="rounded-full bg-[#eef4ff] text-[#0050d7] px-3 py-1 text-[11px] font-bold">{pl}</span>
+                    <span key={pl} className="rounded-full bg-sky-50 text-[#0284c7] px-3 py-1 text-[11px] font-bold">{pl}</span>
                   ))}
                 </div>
                 <p className="mt-4 text-sm text-slate-600 leading-7">{s.text}</p>
               </div>
-              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-[#e8f7ff] to-white" : "from-[#f3eaff] to-white"} border border-slate-100 p-10 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
+              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-sky-50 to-white" : "from-violet-50 to-white"} border border-slate-100 p-10 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
                 {[Zap, Shield, Layers, Award].map((Icon, j) => (
-                  <Icon key={j} className={`w-12 h-12 ${j === i % 4 ? "text-[#0050d7]" : "text-slate-200"} ${j > 0 ? "-ml-3" : ""}`} />
+                  <Icon key={j} className={`w-12 h-12 ${j === i % 4 ? "text-[#0284c7]" : "text-slate-200"} ${j > 0 ? "-ml-3" : ""}`} />
                 ))}
               </div>
             </div>
@@ -386,7 +386,7 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
       {def.testimonial && (
         <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-14">
           <div className="rounded-2xl border border-slate-200 bg-white p-8 md:p-10 text-center shadow-sm">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0050d7]">My client is rich</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0284c7]">My client is rich</p>
             <p className="mt-4 text-lg md:text-xl font-bold text-[#0f172a] leading-8">&ldquo;{def.testimonial.quote}&rdquo;</p>
             <p className="mt-4 text-xs text-slate-400">{def.testimonial.author}</p>
           </div>
@@ -396,21 +396,21 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {def.useCases.map((u) => (
-            <a key={u.t} href={u.href} className="rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-[#0050d7] hover:shadow-lg transition-all group">
-              <div className="h-28 bg-gradient-to-br from-[#0a2540] to-[#0050d7] flex items-center justify-center">
+            <a key={u.t} href={u.href} className="rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-[#0284c7] hover:shadow-lg transition-all group">
+              <div className="h-28 bg-gradient-to-br from-[#0a2540] to-[#00b7ff] flex items-center justify-center">
                 <Layers className="w-10 h-10 text-white/80" />
               </div>
               <div className="p-5">
-                <p className="text-sm font-bold text-[#0f172a] group-hover:text-[#0050d7]">{u.t}</p>
+                <p className="text-sm font-bold text-[#0f172a] group-hover:text-[#0284c7]">{u.t}</p>
                 <p className="mt-1.5 text-xs text-slate-500 leading-5">{u.d}</p>
-                <p className="mt-3 text-xs font-bold text-[#0050d7] flex items-center gap-1">Get started <ArrowRight className="w-3 h-3" /></p>
+                <p className="mt-3 text-xs font-bold text-[#0284c7] flex items-center gap-1">Get started <ArrowRight className="w-3 h-3" /></p>
               </div>
             </a>
           ))}
         </div>
       </section>
 
-      <section className="bg-[#f6f8fc] py-14">
+      <section className="bg-slate-50 py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <h2 className="text-xl font-black text-center text-[#0f172a]">Assistance and support</h2>
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -419,11 +419,11 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
               { icon: MessageSquare, t: "Chatbot", d: "The GHC assistant answers 24/7 about our services.", l: "Contact us →", href: "/support" },
               { icon: Headphones, t: "Support Levels", d: "Standard, Premium and Business support for every workload.", l: "Find out more →", href: "/products/support-levels" },
             ].map((a) => (
-              <a key={a.t} href={a.href} className="rounded-2xl border border-slate-200 bg-white p-7 hover:border-[#0050d7] transition-all block">
-                <a.icon className="w-8 h-8 text-[#0050d7]" />
+              <a key={a.t} href={a.href} className="rounded-2xl border border-slate-200 bg-white p-7 hover:border-[#0284c7] transition-all block">
+                <a.icon className="w-8 h-8 text-[#0284c7]" />
                 <p className="mt-4 text-sm font-bold text-[#0f172a]">{a.t}</p>
                 <p className="mt-2 text-xs text-slate-500 leading-5">{a.d}</p>
-                <p className="mt-4 text-xs font-semibold text-[#0050d7]">{a.l}</p>
+                <p className="mt-4 text-xs font-semibold text-[#0284c7]">{a.l}</p>
               </a>
             ))}
           </div>
@@ -439,21 +439,21 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
             { icon: Database, t: "Web Cloud Databases", d: "Managed SQL and NoSQL database services.", href: "/web-hosting/databases" },
             { icon: Award, t: "Start SQL", d: "Additional MySQL databases for your projects.", href: "/web-hosting" },
           ].map((a) => (
-            <a key={a.t} href={a.href} className="rounded-xl border border-slate-200 bg-white p-5 hover:border-[#0050d7] hover:shadow-md transition-all block">
-              <a.icon className="w-7 h-7 text-[#0050d7]" />
+            <a key={a.t} href={a.href} className="rounded-xl border border-slate-200 bg-white p-5 hover:border-[#0284c7] hover:shadow-md transition-all block">
+              <a.icon className="w-7 h-7 text-[#0284c7]" />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{a.t}</p>
               <p className="mt-1.5 text-[11px] text-slate-500 leading-5">{a.d}</p>
-              <p className="mt-3 text-xs font-semibold text-[#0050d7]">Find out more →</p>
+              <p className="mt-3 text-xs font-semibold text-[#0284c7]">Find out more →</p>
             </a>
           ))}
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <div className="rounded-2xl bg-gradient-to-r from-[#0050d7] via-[#7b2ff7] to-[#ff7ab8] py-12 px-6 text-center">
+        <div className="rounded-2xl bg-gradient-to-r from-[#0b1020] via-[#155e75] to-[#00b7ff] py-12 px-6 text-center">
           <h2 className="text-xl md:text-2xl font-black text-white">Your entire online presence in one place</h2>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <a href="/domain" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0050d7] hover:bg-slate-100">Find a domain</a>
+            <a href="/domain" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0284c7] hover:bg-slate-100">Find a domain</a>
             <a href="/web-hosting" className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-bold text-white hover:bg-white/10">Compare all plans</a>
           </div>
         </div>
@@ -465,7 +465,7 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
           {def.faqs.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}
@@ -530,7 +530,7 @@ export function WebHostingHubPage({ plans }: { plans: any[] }) {
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-8">
         <Hero badge="Web hosting" tagline="Comprehensive packs adapted to all your web projects" heroDesc="Fast, secure shared hosting with free domain for the first year, free SSL, email addresses and one-click CMS installs — from your first site to a whole client portfolio." />
         <p className="mt-5 text-xs text-slate-400">
-          <a href="/" className="hover:text-[#0050d7]">Home</a> &gt; Web hosting
+          <a href="/" className="hover:text-[#0284c7]">Home</a> &gt; Web hosting
         </p>
       </section>
 
@@ -540,7 +540,7 @@ export function WebHostingHubPage({ plans }: { plans: any[] }) {
             <button
               key={k}
               onClick={() => setTab(i)}
-              className={`px-5 py-2.5 text-sm font-bold border-b-2 transition ${tab === i ? "border-[#0050d7] text-[#0050d7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}
+              className={`px-5 py-2.5 text-sm font-bold border-b-2 transition ${tab === i ? "border-[#0284c7] text-[#0284c7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}
             >
               {RANGES[k].badge}
             </button>
@@ -573,7 +573,7 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-8">
         <Hero badge={def.badge} tagline={def.tagline} heroDesc={def.heroDesc} />
         <p className="mt-5 text-xs text-slate-400">
-          <a href="/web-hosting" className="hover:text-[#0050d7]">Web hosting</a> &gt; {def.badge}
+          <a href="/web-hosting" className="hover:text-[#0284c7]">Web hosting</a> &gt; {def.badge}
         </p>
       </section>
 
@@ -586,7 +586,7 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
         <h2 className="text-xl font-black text-[#0f172a]">{def.introTitle}</h2>
         <div className="mt-5 flex flex-wrap gap-6 border-b border-slate-200">
           {def.introTabs.map((t, i) => (
-            <button key={t.label} onClick={() => setIntroTab(i)} className={`pb-3 text-sm font-semibold border-b-2 transition ${introTab === i ? "border-[#0050d7] text-[#0050d7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}>
+            <button key={t.label} onClick={() => setIntroTab(i)} className={`pb-3 text-sm font-semibold border-b-2 transition ${introTab === i ? "border-[#0284c7] text-[#0284c7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}>
               {t.label}
             </button>
           ))}
@@ -596,9 +596,9 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
 
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-          <div className="rounded-2xl bg-gradient-to-br from-[#e8f7ff] to-white border border-slate-100 p-10 flex items-center justify-center order-2 md:order-1">
+          <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-white border border-slate-100 p-10 flex items-center justify-center order-2 md:order-1">
             <div className="text-center space-y-2">
-              <Globe className="w-12 h-12 mx-auto text-[#0050d7]" />
+              <Globe className="w-12 h-12 mx-auto text-[#0284c7]" />
               <p className="text-sm font-bold text-[#0f172a]">Free domain + SSL</p>
               <p className="text-xs text-slate-500">on every plan</p>
             </div>
@@ -624,7 +624,7 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
           <div className="grid grid-cols-1 gap-3">
             {def.expandCards.map((c) => (
               <div key={c.t} className="rounded-xl border border-slate-200 bg-white p-4 flex gap-3">
-                <Zap className="w-5 h-5 text-[#0050d7] shrink-0 mt-0.5" />
+                <Zap className="w-5 h-5 text-[#0284c7] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-bold text-[#0f172a]">{c.t}</p>
                   <p className="mt-0.5 text-xs text-slate-500">{c.d}</p>

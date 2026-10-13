@@ -40,7 +40,7 @@ export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
       <Navbar />
 
       {/* Hero — blue band + price card */}
-      <section className="bg-[#000e9c] text-white">
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-14">
           <p className="text-xs text-white/70">SQL and NoSQL database hosting service</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; SQL and NoSQL database hosting service</p>
@@ -70,7 +70,7 @@ export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {SERVICES.map((s) => (
             <div key={s.t}>
-              <s.icon className="w-9 h-9 text-[#0050d7]" strokeWidth={1.5} />
+              <s.icon className="w-9 h-9 text-[#0284c7]" strokeWidth={1.5} />
               <p className="mt-3 text-sm font-bold text-[#0f172a]">{s.t}</p>
               <p className="mt-2 text-xs text-slate-500 leading-5">{s.d}</p>
             </div>
@@ -87,7 +87,7 @@ export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
       {/* Alternating content */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16 space-y-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="rounded-2xl bg-gradient-to-br from-[#000e9c] to-[#0043b0] p-10 flex items-center justify-center min-h-[220px] order-2 md:order-1">
+          <div className="rounded-2xl bg-gradient-to-br from-[#0b1020] to-[#15295b] p-10 flex items-center justify-center min-h-[220px] order-2 md:order-1">
             <div className="text-center text-white">
               <Code2 className="w-14 h-14 mx-auto" />
               <p className="mt-3 text-2xl font-black tracking-widest">CMS</p>
@@ -102,7 +102,7 @@ export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
             <p className="mt-4 text-sm text-slate-600 leading-7">
               Simplify your work by centralising your databases on the same instance. Whether your web projects are operated by GHC cloud or another provider, our instances connected to the public network meet a wide range of use cases — from website databases to mobile applications, SaaS applications, and much more.
             </p>
-            <p className="mt-4 text-sm text-slate-600">Find out how to get started by reading our <a href="/kb" className="text-[#0050d7] font-semibold underline">guides</a>.</p>
+            <p className="mt-4 text-sm text-slate-600">Find out how to get started by reading our <a href="/kb" className="text-[#0284c7] font-semibold underline">guides</a>.</p>
           </div>
         </div>
 
@@ -119,14 +119,14 @@ export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
               Need to scale up your databases for growing projects? Upgrade to a higher solution in just a few minutes. We offer up to 4GB RAM and up to 64GB storage space.
             </p>
           </div>
-          <div className="rounded-2xl bg-[#eef4ff] border border-slate-100 p-10 flex items-center justify-center min-h-[220px]">
-            <Layers className="w-16 h-16 text-[#0050d7]" />
+          <div className="rounded-2xl bg-sky-50 border border-slate-100 p-10 flex items-center justify-center min-h-[220px]">
+            <Layers className="w-16 h-16 text-[#0284c7]" />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <div className="rounded-2xl bg-[#f3eaff] border border-slate-100 p-10 flex items-center justify-center min-h-[220px] order-2 md:order-1">
-            <FileText className="w-16 h-16 text-[#7b2ff7]" />
+            <FileText className="w-16 h-16 text-[#0284c7]" />
           </div>
           <div className="order-1 md:order-2">
             <h2 className="text-2xl font-black text-[#0f172a]">Optimise your tables and queries</h2>
@@ -150,7 +150,7 @@ export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
           {FAQS.map(([q, a], i) => (
             <div key={i}>
               <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left gap-4">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0284c7]" : "text-[#0f172a]"}`}>{q}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
               </button>
               {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}
