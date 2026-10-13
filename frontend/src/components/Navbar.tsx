@@ -251,7 +251,7 @@ const megaMenu: MegaEntry[] = [
             { label: "Agency / Multisites", href: "/metal/vps#usecases" },
             { label: "Developers", href: "/metal/vps/developers" },
             { label: "Resellers", href: "/metal/vps/reseller" },
-            { label: "All uses", href: "/metal/vps#usecases" },
+            { label: "All uses", href: "/metal/vps/uses" },
           ]},
           { title: "Partners", items: [
             { label: "Become a GHC Partner", href: "/register" },
