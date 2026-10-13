@@ -697,16 +697,16 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
           {user && <CartButton dark={dark} />}
 
           {user ? (
-            <div className="relative ml-3">
+            <div className="relative ml-1.5">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className={`flex items-center gap-2 rounded-full ${profileBtn} px-3 py-1.5 text-sm font-medium transition-all`}
+                className={`flex items-center gap-1 rounded-full ${profileBtn} px-1.5 py-1 text-xs font-medium transition-all`}
               >
-                <div className={`flex h-7 w-7 items-center justify-center rounded-full ${profileAvatar} text-xs font-bold`}>
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full ${profileAvatar} text-[10px] font-bold`}>
                   {user.name?.charAt(0).toUpperCase() || "U"}
                 </div>
-                <span className={`max-w-[120px] truncate hidden lg:block ${dark ? "text-white" : ""}`}>{user.name}</span>
-                <ChevronDown className="h-3.5 w-3.5" />
+                <span className={`max-w-[80px] truncate hidden xl:block ${dark ? "text-white" : ""}`}>{user.name}</span>
+                <ChevronDown className="h-3 w-3" />
               </button>
               {profileOpen && (
                 <>
