@@ -19,6 +19,7 @@ interface MegaSubMenu {
   label: string;
   href: string;
   tagline?: string;
+  cols?: number;
   columns: MegaCol[];
   footerLinks?: MegaLink[];
 }
@@ -37,10 +38,15 @@ const colGroups = (col: MegaCol): MegaGroup[] =>
 
 const megaMenu: MegaEntry[] = [
   {
-    label: "Public Cloud",
+    label: "Cloud",
     href: "/public-cloud",
-    cols: 4,
-    columns: [
+    subMenus: [
+      {
+        label: "Public Cloud",
+        href: "/public-cloud",
+        tagline: "On-demand compute, storage, network, data & AI",
+        cols: 4,
+        columns: [
       { groups: [
         { title: "Compute", items: [
           { label: "Virtual Machine Instances", href: "/public-cloud?s=vm" },
@@ -101,17 +107,19 @@ const megaMenu: MegaEntry[] = [
           { label: "OpenStack Horizon", href: "/products/horizon" },
         ]},
       ]},
-    ],
-    footerLinks: [
-      { label: "Prices", href: "/public-cloud?s=pricing" },
-      { label: "Guides & Documentation", href: "/kb" },
-      { label: "Roadmap & Changelog", href: "/status" },
-    ],
-  },
-  {
-    label: "Private Cloud",
-    href: "/private-cloud",
-    columns: [
+        ],
+        footerLinks: [
+          { label: "Prices", href: "/public-cloud?s=pricing" },
+          { label: "Guides & Documentation", href: "/kb" },
+          { label: "Roadmap & Changelog", href: "/status" },
+        ],
+      },
+      {
+        label: "Private Cloud",
+        href: "/private-cloud",
+        tagline: "Dedicated infrastructure, cloud flexibility",
+        cols: 2,
+        columns: [
       { title: "Hosted Private Cloud", items: [
         { label: "VMware on GHC", href: "/private-cloud?s=vmware", desc: "vSphere, vSAN and NSX on dedicated hosts" },
         { label: "Nutanix on GHC", href: "/private-cloud?s=nutanix", desc: "HCI private cloud on dedicated hosts" },
@@ -126,6 +134,8 @@ const megaMenu: MegaEntry[] = [
         { label: "Security & Identity", href: "/security", desc: "IAM, secrets, logs and metrics" },
         { label: "Operations", href: "/operations", desc: "Resource monitoring and management" },
       ]},
+        ],
+      },
     ],
   },
   {
@@ -604,14 +614,14 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
             e.preventDefault();
             if (domainQuery.trim()) router.push(`/domain?q=${encodeURIComponent(domainQuery.trim())}`);
           }}
-          className="hidden w-full max-w-[14rem] flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 backdrop-blur md:flex lg:max-w-[16rem] xl:max-w-[18rem] mx-2 lg:mx-3"
+          className="hidden w-full max-w-[9rem] flex-1 items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-2.5 py-1 backdrop-blur md:flex lg:max-w-[11rem] xl:max-w-[12rem] mx-2"
         >
-          <Search className="h-4 w-4 shrink-0 text-slate-400" />
+          <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           <input
             value={domainQuery}
             onChange={(e) => setDomainQuery(e.target.value)}
-            placeholder="Search domain..."
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+            placeholder="Domain..."
+            className="min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-slate-400"
           />
         </form>
 
@@ -652,7 +662,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                     return (
                       <div className="min-w-0 flex-1">
                         {sub.tagline && <p className={`px-6 pt-5 text-sm font-black ${dark ? "text-white" : "text-[#0f172a]"}`}>{sub.tagline}</p>}
-                        {renderMegaColumns(sub.columns, "grid-cols-3")}
+                        {renderMegaColumns(sub.columns, sub.cols === 2 ? "grid-cols-2" : sub.cols && sub.cols >= 4 ? "grid-cols-4" : "grid-cols-3")}
                         <div className={`${megaFooterBg} flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3 rounded-br-lg`}>
                           <Link href={sub.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>View all {sub.label} solutions</Link>
                           {(sub.footerLinks || []).map((l) => (
