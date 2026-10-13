@@ -81,7 +81,7 @@ const RANGES: Record<string, RangeDef> = {
   business: {
     badge: "Business Web Hosting",
     name: "Business",
-    tagline: "Performance and flexibility for business websites",
+    tagline: "Performance and flexibility for websites that drive your business",
     heroDesc: "More power, more sites, more email — for shops, agencies and companies that need headroom and reliability.",
     introTitle: "Professional hosting for real business",
     introTabs: [
@@ -145,7 +145,7 @@ const RANGES: Record<string, RangeDef> = {
     planCodes: ["hosting-startup", "hosting-pro", "hosting-performance-1"],
   },
   agency: {
-    badge: "Agency Web Hosting",
+    badge: "Web Hosting for Agencies",
     name: "Agency",
     tagline: "Efficiently manage various client websites on a single hosting plan",
     heroDesc: "Unlimited multisites, 1,000 mailboxes and guaranteed resources — one plan for your whole client portfolio.",
@@ -185,195 +185,403 @@ const RANGES: Record<string, RangeDef> = {
   },
 };
 
-export default function HostingRangePage({ range, plans }: { range: string; plans: any[] }) {
-  const def = RANGES[range];
+const truthy = (v: any) => v !== undefined && v !== null && v !== "" && v !== "No" && v !== "0" && v !== 0;
+
+function coreRows(p: any): string[] {
+  const f = p.features || {};
+  const out: string[] = [];
+  const sites = f["Unique site"] ? "1 site" : f["Multisites"] === "Inf" ? "Unlimited sites" : f["Multisites"] ? `${f["Multisites"]} sites` : null;
+  if (sites) out.push(sites);
+  if (f["Emails"]) out.push(`${f["Emails"]} email addresses`);
+  if (Number(f["Simultaneous visitors"])) out.push(`${f["Simultaneous visitors"]} simultaneous visitors`);
+  if (truthy(f["Domain name"])) out.push("1 domain name free for the first year");
+  if (truthy(f["Databases"])) out.push(`Databases: ${f["Databases"]}`);
+  out.push("Unlimited traffic", "99.9% observed availability", "Automatic backups");
+  return out;
+}
+
+function detailGroups(p: any): { title: string; rows: string[] }[] {
+  const f = p.features || {};
+  const cms = ["Wordpress", "Joomla!", "Drupal", "Prestashop"].filter((k) => f[k] === "Yes").map((k) => k.replace("!", ""));
+  const access = [
+    f["FTP access"] === "Included" && "FTP access",
+    f["Multi FTP"] === "Included" && "Multi-FTP access",
+    f["SSH access - Multi SSH"] === "Included" && "SSH access",
+    truthy(f["Git"]) && "Git repository",
+    truthy(f["Logs access"]) && "Logs & statistics access",
+    f["HTTP/2"] === "Included" && "HTTP/2",
+    f["IPV6"] === "Included" && "IPv6",
+    f["IP GEOLOCATION"] === "Included" && "IP geolocation",
+    truthy(f["Sql"]) && `SQL databases: ${f["Sql"]}`,
+    truthy(f["Private SQL"]) && `Private SQL: ${f["Private SQL"]}`,
+    truthy(f["Cron"]) && "Cron / scheduled tasks",
+  ].filter(Boolean) as string[];
+  const security = ["Unlimited free SSL", "Anti-DDoS protection", "Anti-virus and anti-spam on email", "Automatic backups"];
+  const perf = [
+    f["CDN"] && f["CDN"] !== "Optional" ? `CDN included (${f["CDN"]})` : "CDN available as an option",
+    "Unlimited traffic",
+    "99.9% observed availability",
+  ];
+  return [
+    ...(cms.length ? [{ title: "1-click CMS", rows: cms }] : []),
+    { title: "Access and tools", rows: access },
+    { title: "Security", rows: security },
+    { title: "Performance", rows: perf },
+    { title: "Support and additional services", rows: ["Standard support included", "Guides and 24/7 help centre"] },
+  ].filter((g) => g.rows.length > 0);
+}
+
+function savePct(p: any): number | null {
+  const durs: any[] = p.durations || [];
+  const d12 = durs.find((x) => x.duration === "12_month");
+  const best = durs.reduce<any | null>((a, x) => (!a || (x.monthlyPrice || 0) < (a.monthlyPrice || 0) ? x : a), null);
+  if (!d12 || !best || best.duration === "12_month" || !d12.monthlyPrice) return null;
+  const pct = Math.round((1 - best.monthlyPrice / d12.monthlyPrice) * 100);
+  return pct > 0 ? pct : null;
+}
+
+function Hero({ badge, tagline, heroDesc }: { badge: string; tagline: string; heroDesc: string }) {
   const router = useRouter();
-  const { currency } = useCurrency();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [introTab, setIntroTab] = useState(0);
-  const [faqOpen, setFaqOpen] = useState<number | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-
-  const rangePlans = useMemo(
-    () => def.planCodes.map((c) => plans.find((p) => p.planCode === c)).filter(Boolean),
-    [plans, def.planCodes]
-  );
-
-  if (!def) return null;
-
   const searchDomain = () => {
     const d = query.trim().toLowerCase();
     if (!d) return;
     setSearching(true);
     router.push(`/domain?q=${encodeURIComponent(d)}`);
   };
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 rounded-2xl overflow-hidden shadow-lg">
+      <div className="bg-[#0050d7] text-white p-8 md:p-10">
+        <span className="inline-block rounded-full bg-white text-[#0050d7] px-3 py-1 text-[11px] font-black uppercase tracking-wide">{badge}</span>
+        <h1 className="mt-4 text-2xl md:text-3xl font-black leading-tight">{tagline}</h1>
+        <p className="mt-3 text-sm text-white/85 leading-6">{heroDesc}</p>
+      </div>
+      <div className="bg-gradient-to-br from-[#7b2ff7] via-[#4f6df5] to-[#ff7ab8] p-8 md:p-10 flex flex-col justify-center">
+        <div className="flex items-center gap-3 text-white/90">
+          <Globe className="w-10 h-10" />
+          <Server className="w-10 h-10" />
+          <Sparkles className="w-10 h-10" />
+        </div>
+        <div className="mt-6 bg-white rounded-xl shadow-xl p-3 flex gap-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && searchDomain()}
+            placeholder="Find your domain name"
+            className="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm outline-none text-[#0f172a]"
+          />
+          <button onClick={searchDomain} className="rounded-lg bg-[#ff3d00] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#e63700] flex items-center gap-1.5 shrink-0">
+            {searching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />} Search
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const truthy = (v: any) => v !== undefined && v !== null && v !== "" && v !== "No" && v !== "0" && v !== 0;
+export function PlanGrid({ plans, recommended, sub }: { plans: any[]; recommended?: string; sub: string }) {
+  const router = useRouter();
+  const [showDetails, setShowDetails] = useState(false);
+  if (plans.length === 0) {
+    return (
+      <p className="text-center text-sm text-slate-500 mt-6">Plans for this range will appear here once available — <a href="/web-hosting" className="text-[#0050d7] font-semibold">browse all hosting plans</a>.</p>
+    );
+  }
+  return (
+    <>
+      <div className={`mt-8 grid grid-cols-1 gap-6 ${plans.length <= 2 ? "sm:grid-cols-2 max-w-3xl mx-auto" : plans.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
+        {plans.map((p: any) => {
+          const cheapest = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
+          const d12 = (p.durations || []).find((x: any) => x.duration === "12_month");
+          const pct = savePct(p);
+          const rec = recommended === p.planCode;
+          return (
+            <div key={p.planCode} className={`relative flex flex-col rounded-xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl overflow-hidden ${rec ? "border-[#0050d7] border-2" : "border-slate-200 hover:border-[#0050d7]"}`}>
+              {(pct || rec) && (
+                <div className="flex items-center gap-2 px-4 pt-4 flex-wrap">
+                  {pct && <span className="rounded-full bg-lime-300 text-[#0f172a] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Save {pct}%</span>}
+                  {rec && <span className="rounded-full bg-[#7b2ff7] text-white px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Recommended</span>}
+                </div>
+              )}
+              <div className="p-6 pb-4">
+                <h3 className="text-lg font-black text-[#0f172a]">{p.invoiceName || p.planCode}</h3>
+                {d12 && cheapest && d12.monthlyPrice > cheapest.monthlyPrice && (
+                  <p className="mt-1 text-xs text-slate-400 line-through">{money(d12.monthlyPrice, d12.currency)}/mo</p>
+                )}
+                <p className="text-3xl font-black text-[#0f172a]">{money(cheapest?.monthlyPrice, cheapest?.currency)}<span className="text-sm font-bold text-slate-400">/mo</span></p>
+                <p className="mt-1 text-[10px] text-slate-400 leading-4">
+                  ex. taxes{cheapest?.rawPrice && cheapest?.duration ? ` — ${money(cheapest.rawPrice, cheapest.currency)} ex. taxes for ${Number(cheapest.duration.split("_")[0])} months` : ""}
+                </p>
+                {d12 && cheapest && d12.monthlyPrice !== cheapest.monthlyPrice && (
+                  <p className="mt-0.5 text-[10px] text-slate-400">Renewal price: {money(d12.monthlyPrice, d12.currency)}/mo</p>
+                )}
+                <button
+                  onClick={() => router.push(`/configure?category=WEB_HOSTING&plan=${encodeURIComponent(p.planCode)}&subCategory=${sub}`)}
+                  className="mt-4 w-full rounded-lg bg-[#ff3d00] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#e63700] flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart className="w-4 h-4" /> Order now
+                </button>
+              </div>
+              <div className="flex-1 bg-[#f8faff] border-t border-slate-100 p-6 space-y-2.5">
+                {coreRows(p).map((f) => (
+                  <p key={f} className="flex items-start gap-2 text-xs text-slate-600">
+                    <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {f}
+                  </p>
+                ))}
+                {showDetails && detailGroups(p).map((g) => (
+                  <div key={g.title} className="pt-3">
+                    <p className="text-[11px] font-black uppercase tracking-wider text-[#0f172a] border-b border-slate-200 pb-1.5 mb-2">{g.title}</p>
+                    <div className="space-y-2">
+                      {g.rows.map((f) => (
+                        <p key={f} className="flex items-start gap-2 text-xs text-slate-600">
+                          <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {f}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-6 text-center">
+        <button onClick={() => setShowDetails(!showDetails)} className="text-sm font-bold text-[#0050d7] hover:underline inline-flex items-center gap-1.5">
+          {showDetails ? "Show less details" : "Show more details"}
+          <ChevronDown className={`w-4 h-4 transition-transform ${showDetails ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+    </>
+  );
+}
 
-  const coreRows = (p: any): string[] => {
-    const f = p.features || {};
-    const out: string[] = [];
-    const sites = f["Unique site"] ? "1 site" : f["Multisites"] === "Inf" ? "Unlimited sites" : f["Multisites"] ? `${f["Multisites"]} sites` : null;
-    if (sites) out.push(sites);
-    if (f["Emails"]) out.push(`${f["Emails"]} email addresses`);
-    if (Number(f["Simultaneous visitors"])) out.push(`${f["Simultaneous visitors"]} simultaneous visitors`);
-    if (truthy(f["Domain name"])) out.push("1 domain name free for the first year");
-    if (truthy(f["Databases"])) out.push(`Databases: ${f["Databases"]}`);
-    out.push("Unlimited traffic", "99.9% observed availability", "Automatic backups");
-    return out;
-  };
+function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial" | "useCases" | "faqs"> }) {
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  return (
+    <>
+      {def.sections && def.sections.length > 0 && (
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14 space-y-14">
+          {def.sections.map((s, i) => (
+            <div key={s.title} className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+              <div className={i % 2 === 0 ? "order-1" : "order-1 md:order-2"}>
+                <h2 className="text-xl font-black text-[#0f172a]">{s.title}</h2>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {s.pills.map((pl) => (
+                    <span key={pl} className="rounded-full bg-[#eef4ff] text-[#0050d7] px-3 py-1 text-[11px] font-bold">{pl}</span>
+                  ))}
+                </div>
+                <p className="mt-4 text-sm text-slate-600 leading-7">{s.text}</p>
+              </div>
+              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-[#e8f7ff] to-white" : "from-[#f3eaff] to-white"} border border-slate-100 p-10 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
+                {[Zap, Shield, Layers, Award].map((Icon, j) => (
+                  <Icon key={j} className={`w-12 h-12 ${j === i % 4 ? "text-[#0050d7]" : "text-slate-200"} ${j > 0 ? "-ml-3" : ""}`} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
-  const detailGroups = (p: any): { title: string; rows: string[] }[] => {
-    const f = p.features || {};
-    const cms = ["Wordpress", "Joomla!", "Drupal", "Prestashop"].filter((k) => f[k] === "Yes").map((k) => k.replace("!", ""));
-    const access = [
-      f["FTP access"] === "Included" && "FTP access",
-      f["Multi FTP"] === "Included" && "Multi-FTP access",
-      f["SSH access - Multi SSH"] === "Included" && "SSH access",
-      truthy(f["Git"]) && "Git repository",
-      truthy(f["Logs access"]) && "Logs & statistics access",
-      f["HTTP/2"] === "Included" && "HTTP/2",
-      f["IPV6"] === "Included" && "IPv6",
-      f["IP GEOLOCATION"] === "Included" && "IP geolocation",
-      truthy(f["Sql"]) && `SQL databases: ${f["Sql"]}`,
-      truthy(f["Private SQL"]) && `Private SQL: ${f["Private SQL"]}`,
-      truthy(f["Cron"]) && "Cron / scheduled tasks",
-    ].filter(Boolean) as string[];
-    const security = ["Unlimited free SSL", "Anti-DDoS protection", "Anti-virus and anti-spam on email", "Automatic backups"];
-    const perf = [
-      f["CDN"] && f["CDN"] !== "Optional" ? `CDN included (${f["CDN"]})` : "CDN available as an option",
-      "Unlimited traffic",
-      "99.9% observed availability",
-    ];
-    return [
-      ...(cms.length ? [{ title: "1-click CMS", rows: cms }] : []),
-      { title: "Access and tools", rows: access },
-      { title: "Security", rows: security },
-      { title: "Performance", rows: perf },
-      { title: "Support and additional services", rows: ["Standard support included", "Guides and 24/7 help centre"] },
-    ].filter((g) => g.rows.length > 0);
-  };
+      {def.testimonial && (
+        <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-14">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 md:p-10 text-center shadow-sm">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0050d7]">My client is rich</p>
+            <p className="mt-4 text-lg md:text-xl font-bold text-[#0f172a] leading-8">&ldquo;{def.testimonial.quote}&rdquo;</p>
+            <p className="mt-4 text-xs text-slate-400">{def.testimonial.author}</p>
+          </div>
+        </section>
+      )}
 
-  const savePct = (p: any): number | null => {
-    const durs: any[] = p.durations || [];
-    const d12 = durs.find((x) => x.duration === "12_month");
-    const best = durs.reduce<any | null>((a, x) => (!a || (x.monthlyPrice || 0) < (a.monthlyPrice || 0) ? x : a), null);
-    if (!d12 || !best || best.duration === "12_month" || !d12.monthlyPrice) return null;
-    const pct = Math.round((1 - best.monthlyPrice / d12.monthlyPrice) * 100);
-    return pct > 0 ? pct : null;
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {def.useCases.map((u) => (
+            <a key={u.t} href={u.href} className="rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-[#0050d7] hover:shadow-lg transition-all group">
+              <div className="h-28 bg-gradient-to-br from-[#0a2540] to-[#0050d7] flex items-center justify-center">
+                <Layers className="w-10 h-10 text-white/80" />
+              </div>
+              <div className="p-5">
+                <p className="text-sm font-bold text-[#0f172a] group-hover:text-[#0050d7]">{u.t}</p>
+                <p className="mt-1.5 text-xs text-slate-500 leading-5">{u.d}</p>
+                <p className="mt-3 text-xs font-bold text-[#0050d7] flex items-center gap-1">Get started <ArrowRight className="w-3 h-3" /></p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section className="bg-[#f6f8fc] py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <h2 className="text-xl font-black text-center text-[#0f172a]">Assistance and support</h2>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { icon: BookOpen, t: "Guides", d: "Step-by-step tutorials on configuring your services.", l: "Access documentation →", href: "/kb" },
+              { icon: MessageSquare, t: "Chatbot", d: "The GHC assistant answers 24/7 about our services.", l: "Contact us →", href: "/support" },
+              { icon: Headphones, t: "Support Levels", d: "Standard, Premium and Business support for every workload.", l: "Find out more →", href: "/products/support-levels" },
+            ].map((a) => (
+              <a key={a.t} href={a.href} className="rounded-2xl border border-slate-200 bg-white p-7 hover:border-[#0050d7] transition-all block">
+                <a.icon className="w-8 h-8 text-[#0050d7]" />
+                <p className="mt-4 text-sm font-bold text-[#0f172a]">{a.t}</p>
+                <p className="mt-2 text-xs text-slate-500 leading-5">{a.d}</p>
+                <p className="mt-4 text-xs font-semibold text-[#0050d7]">{a.l}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 py-14">
+        <h2 className="text-xl font-black text-[#0f172a]">To complement your web hosting plan</h2>
+        <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { icon: Shield, t: "Sectigo SSL certificates", d: "Gain your customers' trust with validated certificates.", href: "/products/ssl-certificates" },
+            { icon: Zap, t: "Content Delivery Network (CDN)", d: "Improve page loading speed and security.", href: "/products/cdn" },
+            { icon: Database, t: "Web Cloud Databases", d: "Managed SQL and NoSQL database services.", href: "/web-hosting/databases" },
+            { icon: Award, t: "Start SQL", d: "Additional MySQL databases for your projects.", href: "/web-hosting" },
+          ].map((a) => (
+            <a key={a.t} href={a.href} className="rounded-xl border border-slate-200 bg-white p-5 hover:border-[#0050d7] hover:shadow-md transition-all block">
+              <a.icon className="w-7 h-7 text-[#0050d7]" />
+              <p className="mt-3 text-sm font-bold text-[#0f172a]">{a.t}</p>
+              <p className="mt-1.5 text-[11px] text-slate-500 leading-5">{a.d}</p>
+              <p className="mt-3 text-xs font-semibold text-[#0050d7]">Find out more →</p>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
+        <div className="rounded-2xl bg-gradient-to-r from-[#0050d7] via-[#7b2ff7] to-[#ff7ab8] py-12 px-6 text-center">
+          <h2 className="text-xl md:text-2xl font-black text-white">Your entire online presence in one place</h2>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <a href="/domain" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0050d7] hover:bg-slate-100">Find a domain</a>
+            <a href="/web-hosting" className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-bold text-white hover:bg-white/10">Compare all plans</a>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-16">
+        <h2 className="text-xl font-black text-[#0f172a]">Your questions answered</h2>
+        <div className="mt-5 divide-y divide-slate-200 border-t border-b border-slate-200">
+          {def.faqs.map(([q, a], i) => (
+            <div key={i}>
+              <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left">
+                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
+              </button>
+              {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+export function WebHostingHubPage({ plans }: { plans: any[] }) {
+  const rangeKeys = ["eco", "business", "agency"] as const;
+  const [tab, setTab] = useState(0);
+  const def = RANGES[rangeKeys[tab]];
+  const tabPlans = useMemo(
+    () => def.planCodes.map((c) => plans.find((p) => p.planCode === c)).filter(Boolean),
+    [plans, def.planCodes]
+  );
+
+  const hub = {
+    sections: [
+      {
+        title: "Single hosting with multiple options",
+        pills: ["Multi-site", "Dashboard", "1-click CMS", "Budget-friendly"],
+        text: "Need to migrate from one website to several others? No need to add more subscriptions and interfaces — save time and money by hosting all your websites under a single plan. The multisite feature gives you a single, easy-to-manage space.",
+      },
+      {
+        title: "Quick loading websites every time",
+        pills: ["Unlimited bandwidth", "SSD storage", "CDN", "High availability"],
+        text: "Every second matters, as internet users tend to lose interest quickly. That's why fast page loading is crucial for retaining visitor attention and trust. Our hosting plans offer a consistently smooth experience on every visit.",
+      },
+      {
+        title: "Security at every level",
+        pills: ["SSL certificates", "Anti-DDoS", "Automatic backups", "Sovereignty"],
+        text: "A cyber attack or a single forgotten backup can bring your website to a halt. To protect your business, all of our web hosting plans include advanced security features: an encrypted HTTPS connection with SSL certificates, anti-DDoS protection, and automatic backups.",
+      },
+    ],
+    testimonial: {
+      quote: "We've noticed a remarkable increase in website performance, a huge improvement that greatly enhances our service quality, overall user experience, and search engine optimisation.",
+      author: "A GHC hosting customer",
+    },
+    useCases: [
+      { t: "Set up multiple websites on a single web hosting plan", d: "With multisite and multi-domain features, you can create as many websites and link as many domain names as you want.", href: "/web-hosting/agency" },
+      { t: "Create a WordPress blog or website", d: "Install WordPress in one click — themes, plugins and updates included.", href: "/web-hosting/wordpress" },
+      { t: "Launch an online shop with PrestaShop", d: "Start selling online with the 1-click PrestaShop installer.", href: "/solutions/prestashop" },
+    ],
+    faqs: [
+      ["What is web hosting?", "Web hosting is a service that stores your website's files on a server and makes them reachable on the internet. GHC hosting includes the server space, bandwidth, SSL, email and tools to manage it all."],
+      ["What are the different types of hosting?", "Shared web hosting (many sites share resources — cheapest), VPS (your own virtual server with root access), and dedicated servers (a whole physical machine). Most websites start on shared hosting."],
+      ["Web hosting, VPS, or dedicated servers: which option is best for my needs?", "Pick web hosting for standard websites and blogs — zero server administration. Choose a VPS when you need custom software or root access, and a dedicated server for heavy, mission-critical workloads."],
+      ["How do I get web hosting?", "Choose a plan above, pick or register a domain, and check out — your hosting is provisioned automatically and you can install WordPress in one click."],
+      ["How do I transfer my web hosting plan to GHC?", "Order a plan, upload your files and databases (our team can help via a support ticket), then point your domain's DNS to the new hosting."],
+      ["Can I change my hosting plan later?", "Yes — upgrades are done in place from the dashboard without downtime or data loss."],
+    ] as [string, string][],
   };
 
   return (
     <div className="min-h-screen bg-white text-[#0f172a]">
       <Navbar />
 
-      {/* Hero — OVH style blue banner + domain search */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 rounded-2xl overflow-hidden shadow-lg">
-          <div className="bg-[#0050d7] text-white p-8 md:p-10">
-            <span className="inline-block rounded-full bg-lime-300 text-[#0f172a] px-3 py-1 text-[11px] font-black uppercase tracking-wide">{def.badge}</span>
-            <h1 className="mt-4 text-2xl md:text-3xl font-black leading-tight">{def.tagline}</h1>
-            <p className="mt-3 text-sm text-white/85 leading-6">{def.heroDesc}</p>
-          </div>
-          <div className="bg-gradient-to-br from-[#7b2ff7] via-[#4f6df5] to-[#ff7ab8] p-8 md:p-10 flex flex-col justify-center">
-            <div className="flex items-center gap-3 text-white/90">
-              <Globe className="w-10 h-10" />
-              <Server className="w-10 h-10" />
-              <Sparkles className="w-10 h-10" />
-            </div>
-            <div className="mt-6 bg-white rounded-xl shadow-xl p-3 flex gap-2">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && searchDomain()}
-                placeholder="Find your domain name"
-                className="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm outline-none text-[#0f172a]"
-              />
-              <button onClick={searchDomain} className="rounded-lg bg-[#ff3d00] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#e63700] flex items-center gap-1.5 shrink-0">
-                {searching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />} Search
-              </button>
-            </div>
-          </div>
-        </div>
+        <Hero badge="Web hosting" tagline="Comprehensive packs adapted to all your web projects" heroDesc="Fast, secure shared hosting with free domain for the first year, free SSL, email addresses and one-click CMS installs — from your first site to a whole client portfolio." />
         <p className="mt-5 text-xs text-slate-400">
-          <a href="/web-hosting" className="hover:text-[#0050d7]">Web hosting</a> &gt; {def.badge} &gt; See all hosting
+          <a href="/" className="hover:text-[#0050d7]">Home</a> &gt; Web hosting
         </p>
       </section>
 
-      {/* Plans */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
-        <h2 className="text-center text-2xl font-black text-[#0f172a]">Explore our web hosting plans</h2>
-        <div className={`mt-8 grid grid-cols-1 gap-6 ${rangePlans.length <= 2 ? "sm:grid-cols-2 max-w-3xl mx-auto" : rangePlans.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
-          {rangePlans.map((p: any) => {
-            const cheapest = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
-            const d12 = (p.durations || []).find((x: any) => x.duration === "12_month");
-            const pct = savePct(p);
-            const rec = def.recommended === p.planCode;
-            return (
-              <div key={p.planCode} className={`relative flex flex-col rounded-xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl overflow-hidden ${rec ? "border-[#0050d7] border-2" : "border-slate-200 hover:border-[#0050d7]"}`}>
-                {(pct || rec) && (
-                  <div className="flex items-center gap-2 px-4 pt-4 flex-wrap">
-                    {pct && <span className="rounded-full bg-lime-300 text-[#0f172a] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Save {pct}%</span>}
-                    {rec && <span className="rounded-full bg-[#7b2ff7] text-white px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide">Recommended</span>}
-                  </div>
-                )}
-                <div className="p-6 pb-4">
-                  <h3 className="text-lg font-black text-[#0f172a]">{p.invoiceName || p.planCode}</h3>
-                  {d12 && cheapest && d12.monthlyPrice > cheapest.monthlyPrice && (
-                    <p className="mt-1 text-xs text-slate-400 line-through">{money(d12.monthlyPrice, d12.currency)}/mo</p>
-                  )}
-                  <p className="text-3xl font-black text-[#0f172a]">{money(cheapest?.monthlyPrice, cheapest?.currency)}<span className="text-sm font-bold text-slate-400">/mo</span></p>
-                  <p className="mt-1 text-[10px] text-slate-400 leading-4">
-                    ex. taxes{cheapest?.rawPrice && cheapest?.duration ? ` — ${money(cheapest.rawPrice, cheapest.currency)} ex. taxes for ${Number(cheapest.duration.split("_")[0])} months` : ""}
-                  </p>
-                  {d12 && cheapest && d12.monthlyPrice !== cheapest.monthlyPrice && (
-                    <p className="mt-0.5 text-[10px] text-slate-400">Renewal price: {money(d12.monthlyPrice, d12.currency)}/mo</p>
-                  )}
-                  <button
-                    onClick={() => router.push(`/configure?category=WEB_HOSTING&plan=${encodeURIComponent(p.planCode)}&subCategory=${range}`)}
-                    className="mt-4 w-full rounded-lg bg-[#ff3d00] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#e63700] flex items-center justify-center gap-2"
-                  >
-                    <ShoppingCart className="w-4 h-4" /> Order now
-                  </button>
-                </div>
-                <div className="flex-1 bg-[#f8faff] border-t border-slate-100 p-6 space-y-2.5">
-                  {coreRows(p).map((f) => (
-                    <p key={f} className="flex items-start gap-2 text-xs text-slate-600">
-                      <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {f}
-                    </p>
-                  ))}
-                  {showDetails && detailGroups(p).map((g) => (
-                    <div key={g.title} className="pt-3">
-                      <p className="text-[11px] font-black uppercase tracking-wider text-[#0f172a] border-b border-slate-200 pb-1.5 mb-2">{g.title}</p>
-                      <div className="space-y-2">
-                        {g.rows.map((f) => (
-                          <p key={f} className="flex items-start gap-2 text-xs text-slate-600">
-                            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {f}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {rangePlans.length > 0 && (
-          <div className="mt-6 text-center">
-            <button onClick={() => setShowDetails(!showDetails)} className="text-sm font-bold text-[#0050d7] hover:underline inline-flex items-center gap-1.5">
-              {showDetails ? "Show less details" : "Show more details"}
-              <ChevronDown className={`w-4 h-4 transition-transform ${showDetails ? "rotate-180" : ""}`} />
+        <div className="flex flex-wrap gap-2 justify-center">
+          {rangeKeys.map((k, i) => (
+            <button
+              key={k}
+              onClick={() => setTab(i)}
+              className={`px-5 py-2.5 text-sm font-bold border-b-2 transition ${tab === i ? "border-[#0050d7] text-[#0050d7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}
+            >
+              {RANGES[k].badge}
             </button>
-          </div>
-        )}
-        {rangePlans.length === 0 && (
-          <p className="text-center text-sm text-slate-500 mt-6">Plans for this range will appear here once available — <a href="/web-hosting" className="text-[#0050d7] font-semibold">browse all hosting plans</a>.</p>
-        )}
+          ))}
+        </div>
+        <PlanGrid plans={tabPlans} recommended={def.recommended} sub={rangeKeys[tab]} />
       </section>
 
-      {/* Intro with tabs */}
+      <BottomSections def={hub} />
+      <Footer />
+    </div>
+  );
+}
+
+export default function HostingRangePage({ range, plans }: { range: string; plans: any[] }) {
+  const def = RANGES[range];
+  const [introTab, setIntroTab] = useState(0);
+
+  const rangePlans = useMemo(
+    () => (def ? def.planCodes.map((c) => plans.find((p) => p.planCode === c)).filter(Boolean) : []),
+    [plans, def]
+  );
+
+  if (!def) return null;
+
+  return (
+    <div className="min-h-screen bg-white text-[#0f172a]">
+      <Navbar />
+
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-8">
+        <Hero badge={def.badge} tagline={def.tagline} heroDesc={def.heroDesc} />
+        <p className="mt-5 text-xs text-slate-400">
+          <a href="/web-hosting" className="hover:text-[#0050d7]">Web hosting</a> &gt; {def.badge}
+        </p>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
+        <h2 className="text-center text-2xl font-black text-[#0f172a]">Explore our {def.name} Web Hosting plans</h2>
+        <PlanGrid plans={rangePlans} recommended={def.recommended} sub={range} />
+      </section>
+
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl font-black text-[#0f172a]">{def.introTitle}</h2>
         <div className="mt-5 flex flex-wrap gap-6 border-b border-slate-200">
@@ -386,7 +594,6 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
         <p className="mt-5 max-w-3xl text-sm text-slate-600 leading-7">{def.introTabs[introTab].text}</p>
       </section>
 
-      {/* Build presence */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div className="rounded-2xl bg-gradient-to-br from-[#e8f7ff] to-white border border-slate-100 p-10 flex items-center justify-center order-2 md:order-1">
@@ -408,7 +615,6 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
         </div>
       </section>
 
-      {/* Expand */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div>
@@ -429,127 +635,7 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
         </div>
       </section>
 
-      {/* Alternating content sections (OVH-style) */}
-      {def.sections && def.sections.length > 0 && (
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14 space-y-14">
-          {def.sections.map((s, i) => (
-            <div key={s.title} className={`grid grid-cols-1 md:grid-cols-2 gap-10 items-center`}>
-              <div className={i % 2 === 0 ? "order-1" : "order-1 md:order-2"}>
-                <h2 className="text-xl font-black text-[#0f172a]">{s.title}</h2>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {s.pills.map((pl) => (
-                    <span key={pl} className="rounded-full bg-[#eef4ff] text-[#0050d7] px-3 py-1 text-[11px] font-bold">{pl}</span>
-                  ))}
-                </div>
-                <p className="mt-4 text-sm text-slate-600 leading-7">{s.text}</p>
-              </div>
-              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-[#e8f7ff] to-white" : "from-[#f3eaff] to-white"} border border-slate-100 p-10 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
-                {[Zap, Shield, Layers, Award].map((Icon, j) => (
-                  <Icon key={j} className={`w-12 h-12 ${j === i % 4 ? "text-[#0050d7]" : "text-slate-200"} ${j > 0 ? "-ml-3" : ""}`} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {/* Testimonial */}
-      {def.testimonial && (
-        <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-14">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 md:p-10 text-center shadow-sm">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0050d7]">My client is rich</p>
-            <p className="mt-4 text-lg md:text-xl font-bold text-[#0f172a] leading-8">&ldquo;{def.testimonial.quote}&rdquo;</p>
-            <p className="mt-4 text-xs text-slate-400">{def.testimonial.author}</p>
-          </div>
-        </section>
-      )}
-
-      {/* Use cases */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {def.useCases.map((u) => (
-            <a key={u.t} href={u.href} className="rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-[#0050d7] hover:shadow-lg transition-all group">
-              <div className="h-28 bg-gradient-to-br from-[#0a2540] to-[#0050d7] flex items-center justify-center">
-                <Layers className="w-10 h-10 text-white/80" />
-              </div>
-              <div className="p-5">
-                <p className="text-sm font-bold text-[#0f172a] group-hover:text-[#0050d7]">{u.t}</p>
-                <p className="mt-1.5 text-xs text-slate-500 leading-5">{u.d}</p>
-                <p className="mt-3 text-xs font-bold text-[#0050d7] flex items-center gap-1">Get started <ArrowRight className="w-3 h-3" /></p>
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* Assistance */}
-      <section className="bg-[#f6f8fc] py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <h2 className="text-xl font-black text-[#0f172a]">Assistance and support</h2>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { icon: BookOpen, t: "Guides", d: "Step-by-step tutorials on configuring your services.", l: "Access documentation →", href: "/kb" },
-              { icon: MessageSquare, t: "Chatbot", d: "The GHC assistant answers 24/7 about our services.", l: "Contact us →", href: "/support" },
-              { icon: Headphones, t: "Support levels", d: "Standard, Premium and Business support for every workload.", l: "Find out more →", href: "/products/support-levels" },
-            ].map((a) => (
-              <a key={a.t} href={a.href} className="rounded-2xl border border-slate-200 bg-white p-7 hover:border-[#0050d7] transition-all block">
-                <a.icon className="w-8 h-8 text-[#0050d7]" />
-                <p className="mt-4 text-sm font-bold text-[#0f172a]">{a.t}</p>
-                <p className="mt-2 text-xs text-slate-500 leading-5">{a.d}</p>
-                <p className="mt-4 text-xs font-semibold text-[#0050d7]">{a.l}</p>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Complement products */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 py-14">
-        <h2 className="text-xl font-black text-[#0f172a]">To complement your web hosting plan</h2>
-        <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { icon: Shield, t: "SSL certificates", d: "Gain your customers' trust with validated certificates.", href: "/products/ssl-certificates" },
-            { icon: Zap, t: "Content Delivery Network", d: "Improve page loading speed and security.", href: "/products/cdn" },
-            { icon: Database, t: "Web Cloud Databases", d: "Managed SQL and NoSQL database services.", href: "/public-cloud?s=db-mysql" },
-            { icon: Award, t: "Start SQL", d: "Additional MySQL databases for your projects.", href: "/web-hosting" },
-          ].map((a) => (
-            <a key={a.t} href={a.href} className="rounded-xl border border-slate-200 bg-white p-5 hover:border-[#0050d7] hover:shadow-md transition-all block">
-              <a.icon className="w-7 h-7 text-[#0050d7]" />
-              <p className="mt-3 text-sm font-bold text-[#0f172a]">{a.t}</p>
-              <p className="mt-1.5 text-[11px] text-slate-500 leading-5">{a.d}</p>
-              <p className="mt-3 text-xs font-semibold text-[#0050d7]">Find out more →</p>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA band */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <div className="rounded-2xl bg-gradient-to-r from-[#0050d7] via-[#7b2ff7] to-[#ff7ab8] py-12 px-6 text-center">
-          <h2 className="text-xl md:text-2xl font-black text-white">Your entire online presence in one place</h2>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <a href="/domain" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0050d7] hover:bg-slate-100">Find a domain</a>
-            <a href="/web-hosting" className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-bold text-white hover:bg-white/10">Compare all plans</a>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-16">
-        <h2 className="text-xl font-black text-[#0f172a]">Your questions answered</h2>
-        <div className="mt-5 divide-y divide-slate-200 border-t border-b border-slate-200">
-          {def.faqs.map(([q, a], i) => (
-            <div key={i}>
-              <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="flex w-full items-center justify-between py-4 text-left">
-                <span className={`text-sm font-semibold ${faqOpen === i ? "text-[#0050d7]" : "text-[#0f172a]"}`}>{q}</span>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${faqOpen === i ? "rotate-180" : ""}`} />
-              </button>
-              {faqOpen === i && <p className="pb-5 text-sm text-slate-600 leading-7 pr-8">{a}</p>}
-            </div>
-          ))}
-        </div>
-      </section>
-
+      <BottomSections def={def} />
       <Footer />
     </div>
   );

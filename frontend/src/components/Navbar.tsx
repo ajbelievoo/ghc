@@ -366,7 +366,7 @@ const megaMenu: MegaEntry[] = [
           { groups: [
             { title: "Additional products", items: [
               { label: "Video", href: "/web-hosting/video", desc: "Stream videos without slowing down your websites" },
-              { label: "Additional databases", href: "/web-hosting", desc: "SQL and NoSQL services, guaranteed resources" },
+              { label: "Additional databases", href: "/web-hosting/databases", desc: "SQL and NoSQL services, guaranteed resources" },
               { label: "SSL Certificates", href: "/products/ssl-certificates", desc: "Enhance the security of your website" },
               { label: "CDN option", href: "/products/cdn", desc: "Improve page loading speed and ensure security against attacks" },
             ]},

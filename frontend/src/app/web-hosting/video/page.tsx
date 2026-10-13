@@ -1,7 +1,5 @@
-import CategoryPage from "@/components/CategoryPage";
-import { fetchPlans } from "@/lib/plans";
+import VideoHostingPage from "@/components/VideoHostingPage";
 
-export default async function VideoHostingPage() {
-  const plans = await fetchPlans("WEB_HOSTING");
-  return <CategoryPage categoryKey="WEB_HOSTING" subCategory="video" initialPlans={plans} />;
+export default function VideoPage() {
+  return <VideoHostingPage />;
 }
