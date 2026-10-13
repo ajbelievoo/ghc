@@ -314,8 +314,32 @@ def server_plans(category: Optional[str] = None, family: Optional[str] = None, c
     plans = get_active_plans(db, cat)
     out = [_plan_to_frontend(p, currency, db) for p in plans]
     if cat == ServiceCategory.DEDICATED:
+        # Standard storefront = "Essential" brand (never Metal). Admin can
+        # override each plan's public name via /admin/essential-dedicated.
+        from app.services.catalog_service import get_essential_ded_names, default_dedicated_display_name
+        ess_names = get_essential_ded_names(db)
+        ess_norm = {_normalize_public_plan_code(k): v for k, v in ess_names.items()}
         for p, d in zip(plans, out):
             d["spec"] = _ded_spec_display(p)
+            d["displayName"] = (
+                ess_names.get(p.plan_code)
+                or ess_norm.get(_normalize_public_plan_code(p.plan_code))
+                or default_dedicated_display_name(p.invoice_name or "", p.plan_code, prefix="Essential")
+            )
+        d_brand = "essential"
+        for d in out:
+            d["brand"] = d_brand
+    if cat == ServiceCategory.VPS:
+        from app.services.catalog_service import get_essential_vps_names, default_essential_vps_name
+        ess_names = get_essential_vps_names(db)
+        ess_norm = {_normalize_public_plan_code(k): v for k, v in ess_names.items()}
+        for p, d in zip(plans, out):
+            d["displayName"] = (
+                ess_names.get(p.plan_code)
+                or ess_norm.get(_normalize_public_plan_code(p.plan_code))
+                or default_essential_vps_name(p.plan_code, p.invoice_name or "")
+            )
+            d["brand"] = "essential"
     return out
 
 
@@ -528,6 +552,88 @@ def admin_save_metal_dedicated(body: dict, db: Session = Depends(get_db), admin:
         if not isinstance(body["names"], dict):
             raise HTTPException(status_code=400, detail="names must be an object {planCode: name}")
         set_metal_ded_names(db, body["names"])
+    return {"success": True}
+
+
+def _set_category_margin(db: Session, category: ServiceCategory, percent: float) -> None:
+    if percent < 0 or percent > 500:
+        raise HTTPException(status_code=400, detail="marginPercent must be between 0 and 500")
+    row = db.query(MarginSetting).filter(MarginSetting.category == category).first()
+    if not row:
+        row = MarginSetting(category=category, percent=percent)
+        db.add(row)
+    else:
+        row.percent = percent
+    db.commit()
+
+
+@router.get("/admin/essential-vps")
+def admin_get_essential_vps(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Standard-storefront VPS branding — Essential margin (= the VPS category
+    margin) + per-plan public names, so it never matches the Metal channel."""
+    from app.services.catalog_service import get_essential_vps_names, default_essential_vps_name, get_margin_for_category
+    names = get_essential_vps_names(db)
+    names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
+    plans = get_active_plans(db, ServiceCategory.VPS)
+    return {
+        "marginPercent": float(get_margin_for_category(db, ServiceCategory.VPS)),
+        "names": names,
+        "plans": [
+            {
+                "planCode": p.plan_code,
+                "invoiceName": p.invoice_name,
+                "essentialName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or "",
+                "autoName": default_essential_vps_name(p.plan_code, p.invoice_name or ""),
+                "rawPrice": p.durations[0].raw_price if p.durations else None,
+                "currency": (p.durations[0].currency if p.durations else p.currency),
+            }
+            for p in plans
+        ],
+    }
+
+
+@router.post("/admin/essential-vps")
+def admin_save_essential_vps(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import set_essential_vps_names
+    if "marginPercent" in body and body["marginPercent"] is not None:
+        _set_category_margin(db, ServiceCategory.VPS, float(body["marginPercent"]))
+    if "names" in body and body["names"] is not None:
+        if not isinstance(body["names"], dict):
+            raise HTTPException(status_code=400, detail="names must be an object {planCode: name}")
+        set_essential_vps_names(db, body["names"])
+    return {"success": True}
+
+
+@router.get("/admin/essential-dedicated")
+def admin_get_essential_dedicated(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import get_essential_ded_names, default_dedicated_display_name, get_margin_for_category
+    names = get_essential_ded_names(db)
+    names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
+    plans = get_active_plans(db, ServiceCategory.DEDICATED)
+    return {
+        "marginPercent": float(get_margin_for_category(db, ServiceCategory.DEDICATED)),
+        "names": names,
+        "plans": [
+            {
+                "planCode": p.plan_code,
+                "invoiceName": p.invoice_name,
+                "essentialName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or "",
+                "autoName": default_dedicated_display_name(p.invoice_name or "", p.plan_code, prefix="Essential"),
+            }
+            for p in plans
+        ],
+    }
+
+
+@router.post("/admin/essential-dedicated")
+def admin_save_essential_dedicated(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import set_essential_ded_names
+    if "marginPercent" in body and body["marginPercent"] is not None:
+        _set_category_margin(db, ServiceCategory.DEDICATED, float(body["marginPercent"]))
+    if "names" in body and body["names"] is not None:
+        if not isinstance(body["names"], dict):
+            raise HTTPException(status_code=400, detail="names must be an object {planCode: name}")
+        set_essential_ded_names(db, body["names"])
     return {"success": True}
 
 

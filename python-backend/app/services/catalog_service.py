@@ -433,7 +433,7 @@ def set_metal_ded_names(db: Session, names: Dict[str, str]) -> None:
     db.commit()
 
 
-def default_dedicated_display_name(invoice_name: str, plan_code: str) -> str:
+def default_dedicated_display_name(invoice_name: str, plan_code: str, prefix: str = "Metal") -> str:
     """Branded fallback name, e.g. 'ADVANCE-2 | AMD EPYC 4344P' (26adv02-…) → 'Metal Advance 2 (2026)'."""
     base = (invoice_name or "").split("|")[0].strip() or plan_code or ""
     tokens = re.split(r"[-_\s]+", base)
@@ -451,7 +451,68 @@ def default_dedicated_display_name(invoice_name: str, plan_code: str) -> str:
     ym = re.match(r"^(\d{2})", plan_code or "")
     if ym and 20 <= int(ym.group(1)) <= 29:
         label = f"{label} ({2000 + int(ym.group(1))})"
-    return f"Metal {label}" if label else f"Metal {plan_code}"
+    return f"{prefix} {label}" if label else f"{prefix} {plan_code}"
+
+
+# ---------- Essential channel (standard /vps + /dedicated-servers branding) ----------
+# The same upstream catalog is also sold on the regular pages under the
+# "Essential" public identity — own display names + own (lower) category margin,
+# so the two storefronts never show matching plan names or prices.
+
+ESS_VPS_NAMES_KEY = "essential_vps_names"
+ESS_DED_NAMES_KEY = "essential_ded_names"
+
+
+def _get_names_map(db: Session, key: str) -> Dict[str, str]:
+    row = db.query(AdminConfig).filter(AdminConfig.key == key).first()
+    if row and row.value:
+        try:
+            data = json.loads(row.value)
+            if isinstance(data, dict):
+                return {str(k): str(v) for k, v in data.items() if str(v).strip()}
+        except Exception:
+            pass
+    return {}
+
+
+def _set_names_map(db: Session, key: str, names: Dict[str, str]) -> None:
+    clean = {str(k): str(v).strip() for k, v in (names or {}).items() if str(v).strip()}
+    row = db.query(AdminConfig).filter(AdminConfig.key == key).first()
+    if not row:
+        row = AdminConfig(key=key, value=json.dumps(clean))
+        db.add(row)
+    else:
+        row.value = json.dumps(clean)
+    db.commit()
+
+
+def get_essential_vps_names(db: Session) -> Dict[str, str]:
+    return _get_names_map(db, ESS_VPS_NAMES_KEY)
+
+
+def set_essential_vps_names(db: Session, names: Dict[str, str]) -> None:
+    _set_names_map(db, ESS_VPS_NAMES_KEY, names)
+
+
+def get_essential_ded_names(db: Session) -> Dict[str, str]:
+    return _get_names_map(db, ESS_DED_NAMES_KEY)
+
+
+def set_essential_ded_names(db: Session, names: Dict[str, str]) -> None:
+    _set_names_map(db, ESS_DED_NAMES_KEY, names)
+
+
+def default_essential_vps_name(plan_code: str, invoice_name: str) -> str:
+    """Public name on the standard VPS channel — 'Essential' brand, never 'Metal'.
+
+    vps-2027-model3 → 'Essential VPS-3'; other families keep a cleaned
+    invoice-style name (e.g. 'VPS Elite 8-16-640')."""
+    code = (plan_code or "").lower()
+    m = re.match(r"vps-\d+-model(\d+)(\.lz)?", code)
+    if m:
+        return f"Essential VPS-{m.group(1)}" + (" LZ" if m.group(2) else "")
+    base = re.sub(r"\s+", " ", (invoice_name or "").split("|")[0].strip())
+    return base or f"Essential {plan_code}"
 
 
 COMMITMENT_MONTHS = (3, 6, 12)
