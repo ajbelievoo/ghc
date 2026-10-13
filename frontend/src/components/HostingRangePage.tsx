@@ -434,8 +434,8 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
         <h2 className="text-xl font-black text-[#0f172a]">To complement your web hosting plan</h2>
         <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: Shield, t: "Sectigo SSL certificates", d: "Gain your customers' trust with validated certificates.", href: "/products/ssl-certificates" },
-            { icon: Zap, t: "Content Delivery Network (CDN)", d: "Improve page loading speed and security.", href: "/products/cdn" },
+            { icon: Shield, t: "Sectigo SSL certificates", d: "Gain your customers' trust with validated certificates.", href: "/web-hosting/ssl" },
+            { icon: Zap, t: "Content Delivery Network (CDN)", d: "Improve page loading speed and security.", href: "/web-hosting/cdn" },
             { icon: Database, t: "Web Cloud Databases", d: "Managed SQL and NoSQL database services.", href: "/web-hosting/databases" },
             { icon: Award, t: "Start SQL", d: "Additional MySQL databases for your projects.", href: "/web-hosting" },
           ].map((a) => (

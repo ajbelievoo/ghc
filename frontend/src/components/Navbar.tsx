@@ -367,13 +367,13 @@ const megaMenu: MegaEntry[] = [
             { title: "Additional products", items: [
               { label: "Video", href: "/web-hosting/video", desc: "Stream videos without slowing down your websites" },
               { label: "Additional databases", href: "/web-hosting/databases", desc: "SQL and NoSQL services, guaranteed resources" },
-              { label: "SSL Certificates", href: "/products/ssl-certificates", desc: "Enhance the security of your website" },
-              { label: "CDN option", href: "/products/cdn", desc: "Improve page loading speed and ensure security against attacks" },
+              { label: "SSL Certificates", href: "/web-hosting/ssl", desc: "Enhance the security of your website" },
+              { label: "CDN option", href: "/web-hosting/cdn", desc: "Improve page loading speed and ensure security against attacks" },
             ]},
           ]},
           { groups: [
             { title: "Uses", items: [
-              { label: "How do I create a website?", href: "/kb", desc: "Complete guide to launching your website" },
+              { label: "How do I create a website?", href: "/web-hosting/create-website", desc: "Complete guide to launching your website" },
               { label: "Host your WordPress website", href: "/web-hosting/wordpress", desc: "Choose the best hosting plan for a WordPress blog" },
               { label: "Create your website in 1 click", href: "/web-hosting", desc: "Turnkey solution to get started" },
               { label: "Create an online store", href: "/solutions/prestashop", desc: "Quickly and efficiently sell online" },
