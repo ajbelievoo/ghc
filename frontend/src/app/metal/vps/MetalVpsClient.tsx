@@ -67,6 +67,8 @@ const METAL_FAMILIES: Record<string, {
   benefits?: { t: string; d: string }[];
   whyChoose?: { t: string; d: string }[];
   howTo?: { title: string; body: string };
+  heroNote?: string;
+  platforms?: { label: string; d: string }[];
   faqs?: { q: string; a: string }[];
 }> = {
   "": {
@@ -110,10 +112,43 @@ const METAL_FAMILIES: Record<string, {
   },
   "plesk": {
     crumb: "Plesk VPS",
-    rangeTitle: "Metal Plesk VPS",
-    title: "Metal Plesk VPS Offer",
-    subtitle: "Web hosting made simple with a unified interface",
-    bullets: ["Plesk Obsidian control panel pre-installed", "Manage multiple websites from one interface", "Automated backups and security tools"],
+    rangeTitle: "Metal Plesk VPS Offer",
+    title: "Explore Metal Plesk VPS servers",
+    subtitle: "Combine powerful hosting and ease of use by unleashing the power of Plesk's user-friendly control panel alongside the exceptional power and flexibility of Metal VPS.",
+    bullets: [
+      "Enhanced performance: Metal's high-performance servers deliver allocated resources, ensuring your websites and applications run smoothly.",
+      "Global accessibility: Deploy your VPS in any of our 10 data centres worldwide, providing low-latency access for your audience.",
+      "Unwavering security: Benefit from the industry's best anti-DDoS protection, a 99.9% uptime guarantee, and unlimited traffic.",
+      "Scalable solutions: Tailor your configuration and upgrade resources independently, adapting to your evolving needs effortlessly.",
+    ],
+    heroNote: "You have the flexibility to choose from different levels of Plesk licences to suit your specific needs. These include Plesk Web Admin for managing up to 10 domains, Plesk Web Pro for up to 30 domains, and Plesk Web Host for an unlimited number of domains.",
+    exploreTitle: "Metal Plesk VPS Offer",
+    exploreSub: "Effortlessly manage websites, domains, and emails with Plesk's user-friendly control panel on high-performance Metal VPS. Enjoy global accessibility, robust security, and scalable solutions. Perfect for businesses, developers, and online entrepreneurs.",
+    whyChoose: [
+      { t: "Unmatched power and flexibility", d: "Metal's Plesk VPS options are built for speed and reliability. Our servers, assembled and configured in-house, give you the latest architecture, NVMe SSD storage, and a highly resilient infrastructure. Enjoy optimal speeds and resource efficiency, empowering you to focus on scaling your projects." },
+      { t: "Your dedicated virtual space", d: "With GHC, you get a fully isolated Plesk environment dedicated to your web projects and business applications. Enjoy full admin access and complete control over your virtual server, tailoring it to your specific needs. Scale resources effortlessly as your projects grow without hardware constraints holding you back." },
+      { t: "Simplicity meets control", d: "Say goodbye to hardware worries. Our server solution eliminates concerns about component upgrades and technical faults while still granting you full administrative control over your Plesk VPS solution." },
+      { t: "Unlimited possibilities with unlimited traffic", d: "Host bandwidth-intensive services and applications without worry. Our VPS solutions offer unlimited traffic with a maximum bandwidth of 3 Gbps unmetered, ensuring optimal user experiences and eliminating surprise costs." },
+      { t: "Safeguard your valuable data with backup options", d: "Protect your valuable data with our robust backup solutions. Choose automated, scheduled backups for peace of mind or take snapshot backups on demand via the GHC Control Panel. Your data's safety is our priority." },
+      { t: "Always-on availability", d: "GHC's infrastructure guarantees minimal latency and hardware availability backed by an 99.9% SLA. Deploy your business applications confidently, knowing they'll benefit from constant, stable service, even in demanding production environments." },
+    ],
+    platforms: [
+      { label: "Cheap VPS", d: "Our cheap VPS delivers budget-friendly virtual private servers, perfect for those seeking cost-effective solutions for projects requiring specific configurations or testing environments." },
+      { label: "VPS for gaming", d: "Experience smooth gameplay and scalability for growing communities with our affordable solutions, tailor-made for hosting game servers." },
+      { label: "VPS PrestaShop", d: "Our scalable and secure VPS hosting is specifically designed for e-commerce websites built on PrestaShop, ensuring your online store thrives." },
+      { label: "VPS Linux", d: "Enjoy full root access and a wide range of Linux distributions with our scalable Linux VPS, featuring unlimited traffic and NVMe SSD storage for lightning-fast speeds." },
+      { label: "VPS cPanel", d: "Simplify website management with VPS hosting featuring the intuitive cPanel control panel, providing a dedicated environment for enhanced control and scalability." },
+      { label: "VPS Ubuntu", d: "Our VPS hosting supports the popular Ubuntu Linux distribution — affordable, user-friendly, and secure, making it an ideal choice for beginners and experienced users alike." },
+      { label: "VPS WordPress", d: "Experience dedicated and scalable hosting specifically designed for WordPress, ensuring optimal performance and handling traffic spikes with ease, thanks to unlimited traffic." },
+      { label: "VPS Windows", d: "Host Windows-based applications and services with our flexible and scalable VPS hosting, offering full control and customisation within a dedicated environment." },
+      { label: "VPS Debian", d: "Choose stable, secure, and customisable VPS hosting powered by the Debian Linux distribution, which is suitable for a wide variety of applications and workloads." },
+    ],
+    faqs: [
+      { q: "Why choose a Metal VPS?", a: "Metal VPS hosting is the ideal choice because our high-performance servers are meticulously designed and configured to deliver optimal speeds, empowering your projects to thrive. You'll also enjoy global accessibility with the ability to deploy your VPS in any of our 10 strategically located data centres for low-latency access and a seamless experience for your users worldwide. Robust security is a priority, so we safeguard your online presence with industry-leading anti-DDoS protection and backed by a 99.9% SLA. Flexibility and scalability are built-in, allowing you to tailor your configuration and upgrade resources independently, adapting to your evolving needs effortlessly." },
+      { q: "What is Plesk VPS?", a: "Plesk VPS is a powerful combination of Plesk's intuitive control panel and the power and flexibility of a virtual private server. It provides a dedicated environment for your web projects, along with an easy-to-use interface for managing websites, domains, email accounts, and DNS settings, making it an ideal solution for users of all technical levels." },
+      { q: "How to install Plesk on VPS?", a: "With GHC, Plesk comes pre-installed on our Plesk VPS solutions, making the setup process incredibly simple. You can choose from different Plesk licences depending on the number of domains you need to manage, ensuring you have the right tools for your specific needs." },
+      { q: "Why deploy Plesk on a Metal VPS?", a: "Deploying Plesk on a Metal server offers a multitude of advantages. Our servers guarantee that your websites and applications run smoothly, delivering optimal performance. Our global reach, with 10 data centres, ensures low-latency access and a seamless experience for your users worldwide." },
+    ],
   },
   "cpanel": {
     crumb: "cPanel VPS",
@@ -218,6 +253,7 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
                   </li>
                 ))}
               </ul>
+              {fam.heroNote && <p className="mt-6 max-w-2xl text-xs leading-5 text-white/50">{fam.heroNote}</p>}
               <a href="#plans" className="ghc-metal-btn mt-8 inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-bold">
                 <Zap className="h-4 w-4" /> Deploy in seconds
               </a>
@@ -467,6 +503,19 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
           <a href="#plans" className="ghc-metal-btn relative mt-6 inline-block rounded-lg px-7 py-3 text-sm font-bold">Choose a Metal VPS</a>
         </div>
       </section>
+
+      {/* ─── Other platforms ─── */}
+      {fam.platforms && (
+        <section className="mx-auto max-w-4xl px-6 pb-14">
+          <h2 className="text-xl font-black"><span className="ghc-metal-text-grad">For which other platforms does GHC provide VPS?</span></h2>
+          <p className="mt-2 text-sm text-white/55">At GHC, we offer immense flexibility — it doesn't matter which VPS distributions you need. Some of our offerings include:</p>
+          <ul className="mt-4 space-y-3">
+            {fam.platforms.map((pl) => (
+              <li key={pl.label} className="text-sm leading-6 text-white/65"><span className="font-bold text-[#ffb347]">● {pl.label}:</span> {pl.d}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* ─── FAQ ─── */}
       <section className="border-t border-white/5">
