@@ -76,6 +76,7 @@ const FAQS: [string, string][] = [
 
 export default function CdnOptionPage({ plans }: { plans: any[] }) {
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [tier, setTier] = useState(0);
   const hostingPlans = ["hosting-startup", "hosting-pro", "hosting-performance-1"]
     .map((c) => plans.find((p) => p.planCode === c))
     .filter(Boolean);
@@ -124,28 +125,40 @@ export default function CdnOptionPage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* 3 feature blocks */}
-      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-16 space-y-16">
-        {OFFERS.map((o, i) => (
-          <div key={o.name} className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className={`rounded-2xl bg-sky-50 border border-slate-100 p-10 flex items-center justify-center min-h-[220px] ${i % 2 === 0 ? "order-2 md:order-1" : "order-2"}`}>
-              {i === 0 && <Database className="w-16 h-16 text-[#0284c7]" />}
-              {i === 1 && <Lock className="w-16 h-16 text-[#0284c7]" />}
-              {i === 2 && <Network className="w-16 h-16 text-[#0284c7]" />}
+      {/* Tier switcher */}
+      <section className="mx-auto max-w-5xl px-4 sm:px-6 py-16">
+        <div className="flex justify-center">
+          <div className="inline-flex flex-wrap justify-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 p-1.5">
+            {OFFERS.map((o, i) => (
+              <button key={o.name} onClick={() => setTier(i)} className={`rounded-full px-5 py-2 text-xs font-bold transition ${tier === i ? "bg-[#0b1020] text-white shadow" : "text-slate-500 hover:text-[#0f172a]"}`}>
+                {o.name}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-8 rounded-3xl border border-slate-200 bg-white overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <div className="p-8 md:p-10">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-sky-50 border border-sky-100">
+                  {[Database, Lock, Network].map((Icon, i) => i === tier ? <Icon key={i} className="w-5 h-5 text-[#0284c7]" /> : null)}
+                </div>
+                <h2 className="text-xl font-black text-[#0f172a]">{OFFERS[tier].title}</h2>
+                <span className="ml-auto text-lg font-black text-[#0284c7]">{OFFERS[tier].price}<span className="text-[10px] font-normal text-slate-400">/mo</span></span>
+              </div>
+              <p className="mt-5 text-sm text-slate-600 leading-7">{OFFERS[tier].text}</p>
+              <a href="/web-hosting" className="mt-6 inline-block rounded-lg bg-[#ff3d00] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#e63700]">Order</a>
             </div>
-            <div className={i % 2 === 0 ? "order-1 md:order-2" : "order-1"}>
-              <h2 className="text-xl font-black text-[#0f172a]">{o.title}</h2>
-              <p className="mt-3 text-xs text-slate-600 leading-6">{o.text}</p>
-              <p className="mt-4 text-xs font-bold text-[#0f172a]">{o.title} includes:</p>
-              <ul className="mt-2 space-y-1.5">
-                {o.includes.map((b) => (
-                  <li key={b} className="flex items-start gap-2 text-xs text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-1.5" />{b}</li>
+            <div className="bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-8 md:p-10">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">{OFFERS[tier].title} includes</p>
+              <ul className="mt-4 space-y-2.5">
+                {OFFERS[tier].includes.map((b) => (
+                  <li key={b} className="flex items-start gap-2.5 text-sm text-slate-600"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{b}</li>
                 ))}
               </ul>
-              <a href="/web-hosting" className="mt-5 inline-block rounded-lg border border-[#0284c7] px-5 py-2 text-xs font-bold text-[#0284c7] hover:bg-[#0284c7] hover:text-white">Order</a>
             </div>
           </div>
-        ))}
+        </div>
       </section>
 
       {/* Comparison table */}

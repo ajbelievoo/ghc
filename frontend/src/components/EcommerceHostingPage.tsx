@@ -110,19 +110,25 @@ export default function EcommerceHostingPage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-14 space-y-10">
-        <div className="md:pl-[40%]">
-          <h3 className="text-base font-black text-[#0f172a]">I run a local business and it's my first time selling online</h3>
+      {/* Testimonials — quote cards */}
+      <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 relative overflow-hidden">
+          <span className="absolute top-0 left-0 h-full w-1.5 bg-[#00b7ff]" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#0284c7]">Customer story</p>
+          <h3 className="mt-2 text-base font-black text-[#0f172a]">I run a local business and it's my first time selling online</h3>
           <p className="mt-2 text-xs text-slate-600 leading-6">
             As a novice in selling online, having my website available and easy to update and a secure platform was essential to me. With Performance hosting, I can quickly get my online store up and running. My website is managed 24/7, and I can easily share my inventory with my PrestaShop catalogue; any orders are directly addressed to the site. The team's are managing the hosting. PrestaShop was pre-installed in my hosting, so I can access and track online family purchases. I think for my website, new customers can discover me and order products through my shop.
           </p>
         </div>
-        <div className="md:pr-[40%]">
-          <h3 className="text-base font-black text-[#0f172a]">I sell exclusively online</h3>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 relative overflow-hidden">
+          <span className="absolute top-0 left-0 h-full w-1.5 bg-[#ff3d00]" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#0284c7]">Customer story</p>
+          <h3 className="mt-2 text-base font-black text-[#0f172a]">I sell exclusively online</h3>
           <p className="mt-2 text-xs text-slate-600 leading-6">
             My e-commerce website is my only point of sale, so it's important that I make it as efficient as possible. With GHCcloud Performance hosting, I get a solution tailored to the needs of my online store, PrestaShop, an SSL certificate to keep my customers secure, and infrastructure that can be configured with a few clicks. This comes in handy when my sales spike during promotions! And if something goes wrong, I can access recovery options, and other business offered by PrestaShop, such as tools, payment and delivery management.
           </p>
+        </div>
         </div>
       </section>
 

@@ -68,48 +68,47 @@ export default function VideoHostingPage() {
     <div className="min-h-screen bg-white text-[#0f172a]">
       <Navbar />
 
-      {/* Hero — dark blue band + CSS video player */}
-      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-14">
+      {/* Hero — centered headline + player mock below */}
+      <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white overflow-hidden">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-16">
           <p className="text-xs text-white/70">GHC Video Center</p>
           <p className="mt-1 text-[11px] text-white/50"><a href="/web-hosting" className="hover:underline">Web hosting</a> &gt; Video Center</p>
-          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-black leading-tight">Your videos, Your brand<br />No ads. No third party tracking</h1>
-              <p className="mt-5 text-sm text-white/85 leading-7">Upload your videos, embed them on your website and keep full control over your content.</p>
-              <ul className="mt-6 space-y-2.5">
-                {["Easy upload", "Simple integration on any website", "Customizable player", "Best quality delivery"].map((b) => (
-                  <li key={b} className="flex items-center gap-2.5 text-sm font-semibold">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" /> {b}
-                  </li>
-                ))}
-              </ul>
+          <div className="mt-12 text-center">
+            <h1 className="text-3xl md:text-5xl font-black leading-tight max-w-3xl mx-auto">Your videos. Your brand.<br /><span className="text-[#00b7ff]">No ads. No third-party tracking.</span></h1>
+            <p className="mt-5 text-sm text-white/80 leading-7 max-w-xl mx-auto">Upload your videos, embed them on your website and keep full control over your content.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+              {["Easy upload", "Simple integration", "Customizable player", "Best quality delivery"].map((b) => (
+                <span key={b} className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-4 py-1.5 text-xs font-semibold">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" /> {b}
+                </span>
+              ))}
             </div>
-            {/* CSS video player mock */}
-            <div className="flex items-center justify-center md:justify-end">
-              <div className="relative w-full max-w-md">
-                <Sparkles className="absolute -top-5 -left-4 w-7 h-7 text-white/70" />
-                <div className="rounded-xl border-4 border-white/90 bg-[#15295b] p-4 shadow-2xl">
-                  <div className="flex gap-1.5 mb-3">
-                    <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
-                  </div>
-                  <div className="flex items-center justify-center py-8">
-                    <div className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center">
-                      <Play className="w-9 h-9 fill-white" />
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="h-1.5 flex-1 rounded-full bg-white/30 relative">
-                      <div className="absolute inset-y-0 left-0 w-1/3 rounded-full bg-white" />
-                      <div className="absolute -top-1 left-1/3 w-3.5 h-3.5 rounded-full bg-white" />
-                    </div>
-                    <Pause className="w-4 h-4" />
-                    <Square className="w-4 h-4" />
+          </div>
+          {/* CSS video player mock — centered, larger */}
+          <div className="mt-12 flex justify-center">
+            <div className="relative w-full max-w-2xl">
+              <Sparkles className="absolute -top-5 -left-4 w-7 h-7 text-white/70" />
+              <div className="rounded-xl border-4 border-white/90 bg-[#15295b] p-4 md:p-5 shadow-2xl">
+                <div className="flex gap-1.5 mb-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/80" />
+                </div>
+                <div className="flex items-center justify-center py-12 md:py-16">
+                  <div className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
+                    <Play className="w-9 h-9 fill-white" />
                   </div>
                 </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 rounded-full bg-white/30 relative">
+                    <div className="absolute inset-y-0 left-0 w-1/3 rounded-full bg-white" />
+                    <div className="absolute -top-1 left-1/3 w-3.5 h-3.5 rounded-full bg-white" />
+                  </div>
+                  <Pause className="w-4 h-4" />
+                  <Square className="w-4 h-4" />
+                </div>
               </div>
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-[#ff3d00] px-5 py-1.5 text-[11px] font-black uppercase tracking-widest shadow-lg">100% ad-free player</div>
             </div>
           </div>
         </div>
@@ -141,34 +140,39 @@ export default function VideoHostingPage() {
           We built video hosting as an add-on to GHC Web Hosting to help you publish videos on your own website, without ads, without tracking, and without needing a developer.
           No more intrusive logos, competitor's ads or external recommendations that send visitors away from your website.
         </p>
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3 text-left max-w-2xl mx-auto">
+        <div className="mt-8 flex flex-wrap justify-center gap-2.5 max-w-3xl mx-auto">
           {FIT_CHECKS.map((c) => (
-            <p key={c} className="flex items-start gap-2 text-sm text-slate-700">
-              <Check className="w-4 h-4 text-[#0284c7] shrink-0 mt-0.5" /> {c}
-            </p>
+            <span key={c} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
+              <Check className="w-3.5 h-3.5 text-[#0284c7] shrink-0" /> {c}
+            </span>
           ))}
         </div>
       </section>
 
-      {/* Alternating features */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16 space-y-16">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className={f.flip ? "order-1 md:order-2" : "order-1"}>
-              <h2 className="text-2xl font-black text-[#0f172a]">{f.title}</h2>
-              <p className="mt-4 text-sm text-slate-600 leading-7">{f.text}</p>
-              <ul className="mt-4 space-y-2.5">
-                {f.bullets.map((pt) => (
-                  <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />{pt}</li>
-                ))}
-              </ul>
-              <a href="/web-hosting" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Learn more →</a>
+      {/* Features — numbered timeline rows */}
+      <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-16">
+        <div className="space-y-6">
+          {FEATURES.map((f, i) => (
+            <div key={f.title} className="grid grid-cols-1 md:grid-cols-12 gap-6 rounded-2xl border border-slate-200 bg-white p-6 md:p-8 hover:border-[#0284c7] transition-colors">
+              <div className="md:col-span-1 flex md:flex-col items-start md:items-center gap-2">
+                <span className="text-4xl font-black text-sky-100 leading-none">{String(i + 1).padStart(2, "0")}</span>
+                <f.icon className="w-6 h-6 text-[#0284c7]" />
+              </div>
+              <div className="md:col-span-5">
+                <h2 className="text-lg font-black text-[#0f172a]">{f.title}</h2>
+                <p className="mt-3 text-sm text-slate-600 leading-7">{f.text}</p>
+              </div>
+              <div className="md:col-span-6 md:border-l md:border-slate-100 md:pl-6">
+                <ul className="space-y-2.5">
+                  {f.bullets.map((pt) => (
+                    <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#00b7ff] shrink-0 mt-2" />{pt}</li>
+                  ))}
+                </ul>
+                <a href="/web-hosting" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#ff3d00] px-4 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Learn more →</a>
+              </div>
             </div>
-            <div className={`rounded-2xl bg-slate-100 p-10 flex items-center justify-center min-h-[240px] ${f.flip ? "order-2 md:order-1" : "order-2"}`}>
-              <f.icon className="w-16 h-16 text-[#0284c7]" />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
 
       {/* CTA band */}

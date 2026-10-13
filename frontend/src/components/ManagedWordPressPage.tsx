@@ -130,50 +130,83 @@ export default function ManagedWordPressPage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Alternating feature blocks */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16 space-y-16">
-        {FEATURES.map((f, i) => (
-          <div key={f.title} className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div className={i % 2 === 0 ? "order-1" : "order-1 md:order-2"}>
-              <h2 className="text-2xl font-black text-[#0f172a]">{f.title}</h2>
+      {/* Update flow — 3-step pipeline */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16">
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 md:p-10">
+          <p className="text-[11px] font-black uppercase tracking-widest text-[#0284c7]">How safe updates work</p>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { n: "01", icon: Copy, t: "Clone & test", d: "Your site is cloned to an isolated environment first — the update runs on the copy, not on live traffic." },
+              { n: "02", icon: Shield, t: "Verify before deploy", d: "Core, theme and plugin updates are checked. If anything breaks, the live site is never touched." },
+              { n: "03", icon: RefreshCw, t: "Deploy or roll back", d: "Successful updates deploy to production; failures auto-roll back and flag for review." },
+            ].map((s, i) => (
+              <div key={s.n} className="relative rounded-2xl bg-white border border-slate-200 p-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-3xl font-black text-sky-100">{s.n}</span>
+                  <s.icon className="w-6 h-6 text-[#0284c7]" />
+                </div>
+                <p className="mt-4 text-sm font-bold text-[#0f172a]">{s.t}</p>
+                <p className="mt-1.5 text-xs text-slate-500 leading-5">{s.d}</p>
+                {i < 2 && <div className="hidden md:block absolute top-1/2 -right-3 w-6 h-0.5 bg-cyan-300" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Feature cards — 2x2 grid */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16">
+        <h2 className="text-xl font-black text-center text-[#0f172a]">Everything handled for your fleet</h2>
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {FEATURES.map((f, i) => (
+            <div key={f.title} className="relative rounded-2xl border border-slate-200 bg-white p-7 overflow-hidden hover:border-[#0284c7] hover:shadow-lg transition-all">
+              <span className={`absolute top-0 left-0 h-1.5 w-full ${["bg-[#00b7ff]", "bg-emerald-400", "bg-violet-500", "bg-[#ff3d00]"][i % 4]}`} />
+              <div className="flex items-center gap-3 pt-2">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-sky-50 border border-sky-100">
+                  <f.icon className="w-5 h-5 text-[#0284c7]" />
+                </div>
+                <h2 className="text-lg font-black text-[#0f172a]">{f.title}</h2>
+              </div>
               <p className="mt-4 text-sm text-slate-600 leading-7">{f.text}</p>
               {f.points && (
-                <ul className="mt-4 space-y-2">
+                <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {f.points.map((pt) => (
-                    <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{pt}</li>
+                    <li key={pt} className="flex items-start gap-2 text-xs text-slate-600"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{pt}</li>
                   ))}
                 </ul>
               )}
               {f.bullets && (
-                <ul className="mt-4 space-y-2.5 list-none">
+                <ul className="mt-4 space-y-2 list-none">
                   {f.bullets.map((pt) => (
-                    <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" />{pt}</li>
+                    <li key={pt} className="flex items-start gap-2 text-xs text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-[#00b7ff] shrink-0 mt-1.5" />{pt}</li>
                   ))}
                 </ul>
               )}
             </div>
-            <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-sky-50" : "from-violet-50"} to-white border border-slate-100 p-10 flex items-center justify-center min-h-[240px] ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
-              <f.icon className="w-16 h-16 text-[#0284c7]" />
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
+      </section>
 
-        {/* More control, more possibilities */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-          <div>
-            <h2 className="text-2xl font-black text-[#0f172a]">More control, more possibilities</h2>
-            <p className="mt-3 text-sm text-slate-600">Gain full control, enhanced speed, and built-in flexibility for every WordPress project.</p>
-            <div className="mt-6 space-y-5">
+      {/* More control — checklist split */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16">
+        <div className="rounded-3xl bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white p-6 md:p-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div>
+              <h2 className="text-2xl font-black">More control, more possibilities</h2>
+              <p className="mt-3 text-sm text-white/75 leading-6">Gain full control, enhanced speed, and built-in flexibility for every WordPress project — all from one dashboard.</p>
+              <div className="mt-6 flex items-center gap-3 text-white/60">
+                <Cloud className="w-12 h-12" />
+                <div className="text-xs leading-5">One panel. Every WordPress site.<br />Install, clone, update, monitor.</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {CONTROL.map((c) => (
-                <div key={c.t}>
-                  <p className="text-sm font-bold text-[#0f172a] flex items-center gap-2"><c.icon className="w-4 h-4 text-[#0284c7]" />{c.t}</p>
-                  <p className="mt-1 text-xs text-slate-500 leading-5 pl-6">{c.d}</p>
+                <div key={c.t} className="rounded-xl bg-white/5 border border-white/10 p-4">
+                  <p className="text-sm font-bold flex items-center gap-2"><c.icon className="w-4 h-4 text-[#00b7ff] shrink-0" />{c.t}</p>
+                  <p className="mt-1.5 text-xs text-white/65 leading-5">{c.d}</p>
                 </div>
               ))}
             </div>
-          </div>
-          <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-white border border-slate-100 p-10 flex items-center justify-center min-h-[280px]">
-            <Cloud className="w-16 h-16 text-[#0284c7]" />
           </div>
         </div>
       </section>

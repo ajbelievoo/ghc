@@ -110,31 +110,39 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
       {/* 5 steps */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl font-black text-[#0f172a]">How to host a WordPress website in 5 steps</h2>
-        <ol className="mt-5 space-y-1.5 text-xs text-[#0f172a] font-semibold list-decimal list-inside">
-          <li>Book a domain name — the address of your WordPress site</li>
-          <li>Choose a WordPress-ready web hosting plan</li>
-          <li>Install WordPress in one click</li>
-          <li>Configure and secure your website</li>
-          <li>Publish your pages and posts</li>
-        </ol>
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          {["Book a domain name", "Pick a WordPress plan", "Install in 1 click", "Configure & secure", "Publish content"].map((s, i) => (
+            <div key={s} className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-[#0f172a] shadow-sm">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0b1020] text-[10px] font-black text-[#00b7ff]">{i + 1}</span>
+                {s}
+              </span>
+              {i < 4 && <span className="text-slate-300 font-bold hidden sm:inline">→</span>}
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Step 1 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">1. Book a domain name for your WordPress site</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">1</span>Book a domain name for your WordPress site</h2>
         <div className="mt-4 space-y-4 text-xs text-slate-600 leading-6">
           <p>Your domain is your WordPress site's address — short, memorable, and matching your brand. Every GHC web hosting plan includes a <strong>free domain name for the first year</strong>, so you can register it right at checkout.</p>
           <p>Check availability with our WHOIS tool and choose from 800+ extensions — .com, .in, .blog, .shop and many more. Registering several extensions protects your brand.</p>
           <p><a href="/domain" className="text-[#0284c7] font-bold underline">Search for your domain name</a> and secure it in a few clicks.</p>
         </div>
+        </div>
       </section>
 
       {/* Step 2 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">2. Choose a WordPress-ready web hosting plan</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">2</span>Choose a WordPress-ready web hosting plan</h2>
         <div className="mt-4 space-y-4 text-xs text-slate-600 leading-6">
           <p>WordPress needs a PHP environment and a database — every GHC hosting plan provides both, tuned for WordPress performance. Pick based on your traffic: Starter for a first blog, Pro for business sites and small shops, Performance for high-traffic stores.</p>
           <p>All plans include unlimited traffic, free SSL, anti-DDoS protection, automatic backups and email addresses — no hidden extras needed to run WordPress properly.</p>
+        </div>
         </div>
       </section>
 
@@ -146,27 +154,32 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
 
       {/* Step 3 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">3. Install WordPress in one click</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">3</span>Install WordPress in one click</h2>
         <div className="mt-4 space-y-4 text-xs text-slate-600 leading-6">
           <p>No FTP uploads, no database creation, no config files. From your GHC Control Panel, select your domain, click <strong>"Install WordPress"</strong>, set your admin username and password — and your site is ready in under a minute.</p>
           <p>The installer configures the database, applies the latest stable WordPress version and secures the installation automatically.</p>
+        </div>
         </div>
       </section>
 
       {/* Step 4 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">4. Configure and secure your website</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">4</span>Configure and secure your website</h2>
         <div className="mt-4 space-y-3 text-xs text-slate-600 leading-6">
           <p><strong className="text-[#0f172a]">Pick a theme:</strong> choose from thousands of free themes in the WordPress library, or upload a premium theme — responsive designs adapt to mobile automatically.</p>
           <p><strong className="text-[#0f172a]">Install key plugins:</strong> caching, SEO (Yoast/RankMath), contact forms, security — only install what you need to keep the site fast.</p>
           <p><strong className="text-[#0f172a]">Secure it:</strong> your free SSL is already active (HTTPS padlock). Keep WordPress, themes and plugins updated, use strong admin passwords, and enable automatic updates.</p>
           <p><strong className="text-[#0f172a]">Set up email:</strong> create professional addresses like contact@yourdomain — included with every plan.</p>
         </div>
+        </div>
       </section>
 
       {/* Step 5 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">5. Publish your pages and posts</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">5</span>Publish your pages and posts</h2>
         <div className="mt-4 space-y-4 text-xs text-slate-600 leading-6">
           <p>Log in to your WordPress admin at <strong>yourdomain.com/wp-admin</strong> and start creating:</p>
           <ul className="space-y-2 pl-4">
@@ -175,6 +188,7 @@ export default function HostWordPressPage({ plans }: { plans: any[] }) {
             ))}
           </ul>
           <p>Keep publishing regularly — fresh content keeps visitors coming back and improves your search ranking. Your WordPress site grows with you: add WooCommerce later to sell online, or multisite to run several sites.</p>
+        </div>
         </div>
       </section>
 

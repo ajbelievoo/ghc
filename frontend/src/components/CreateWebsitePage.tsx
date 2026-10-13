@@ -116,18 +116,23 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl font-black text-[#0f172a]">How to create a website in 5 steps</h2>
         <p className="mt-2 text-xs text-slate-600">To help you as much as possible with creating your website and publishing your first webpages, we recommend following these steps.</p>
-        <ol className="mt-5 space-y-1.5 text-xs text-[#0f172a] font-semibold list-decimal list-inside">
-          <li>Book a domain name: more than 800 extensions available</li>
-          <li>Choose a web hosting plan to host the traffic you expect for your website</li>
-          <li>Choose a module (CMS) and install it in just one click</li>
-          <li>Configure the website and add options to improve its performance</li>
-          <li>Publish pages directly to your CMS</li>
-        </ol>
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          {["Book a domain name", "Choose a hosting plan", "Install your CMS in 1 click", "Configure & add options", "Publish your pages"].map((s, i) => (
+            <div key={s} className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-[#0f172a] shadow-sm">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0b1020] text-[10px] font-black text-[#00b7ff]">{i + 1}</span>
+                {s}
+              </span>
+              {i < 4 && <span className="text-slate-300 font-bold hidden sm:inline">→</span>}
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Step 1 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">1. Book a domain name: more than 800 extensions available</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">1</span>Book a domain name: more than 800 extensions available</h2>
         <div className="mt-4 space-y-4 text-xs text-slate-600 leading-6">
           <p>Your domain name represents the reputation of your business on the internet and what visitors will remember when they visit your website. It must be unique, memorable, and align with your brand, business, and the needs of your target customers. Choosing a domain name is therefore a crucial step in creating your website, as it symbolises your online identity and makes it easier to access your services.</p>
           <p>Once you have chosen a domain name, it is vital to select the best domain extension to optimise your website's SEO ranking, and its related pages. Here are the main types of extensions:</p>
@@ -140,11 +145,13 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
           <p>Once you have found the perfect domain name and verified its availability with our WHOIS tool, register it to become the official domain name holder. By doing so, you ensure that no one else will be able to use it, which is essential to protect your brand and maintain the consistency of your online presence.</p>
           <p>Browse all of our solutions, and <a href="/domain" className="text-[#0284c7] font-bold underline">book your domain name now</a> to see your online project become a reality.</p>
         </div>
+        </div>
       </section>
 
       {/* Step 2 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">2. Choose a web hosting plan to suit the traffic you expect for your website</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">2</span>Choose a web hosting plan to suit the traffic you expect for your website</h2>
         <div className="mt-4 space-y-4 text-xs text-slate-600 leading-6">
           <p>A website is bound on many elements, such as programming tools, images, databases and scripts. Once you have created your website, it must be accessible to all internet users. This is where web hosting comes in.</p>
           <p>Web hosting is essential to ensure your website's online availability. It involves using an infrastructure, such as a server, to display your website and make the files accessible to each visitor. You can choose between two types of servers: the cloud, which is an ideal solution for low-cost hosting, while ensuring continuous availability. Unlike some website creation platforms, a web hosting plan ensures that your website stays online without any unwanted advertising.</p>
@@ -153,6 +160,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
           <p>In today's environment, your company's online presence is more critical than ever. With our hosting services, your website will benefit from optimal speed and security, with options suitable for companies of all sizes, whether you are a startup or they account.</p>
           <p>Explore our range of <a href="/web-hosting" className="text-[#0284c7] font-bold underline">web hosting plans</a>, including three attractive rates, and choose the solution that fits your goals.</p>
           <p>Whether you want to host your personal website, business website or e-commerce website, our comparison tool will help you find the best cloud hosting package.</p>
+        </div>
         </div>
       </section>
 
@@ -170,7 +178,8 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
 
       {/* Step 3 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">3. Choose a module (CMS) and install it in just one click</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">3</span>Choose a module (CMS) and install it in just one click</h2>
         <p className="mt-4 text-xs text-slate-600 leading-6">With content management systems (CMS) such as WordPress, Joomla! and PrestaShop, you can easily create a dynamic website without needing any programming knowledge. Here are their main advantages:</p>
         <ul className="mt-4 space-y-2 text-xs text-slate-600 leading-6">
           <li className="flex gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[#0284c7] shrink-0 mt-2" /><span><strong>User-friendly interface:</strong> design web pages, publish articles and customise the look of your site with ease, even as a beginner.</span></li>
@@ -212,11 +221,13 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
           </table>
         </div>
         <p className="mt-2 text-[10px] text-slate-400">Source data: WordPress, PrestaShop, Joomla and Drupal official marketplaces.</p>
+        </div>
       </section>
 
       {/* Step 4 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">4. Configure the website and add options to improve its performance</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">4</span>Configure the website and add options to improve its performance</h2>
         <p className="mt-4 text-xs text-slate-600 leading-6">To create the ideal website and performance levels, you can improve the best information if you don't want to have to worry about installation or technical updates, you can improve the performance of your website by enabling the following options:</p>
         <ul className="mt-4 space-y-3 text-xs text-slate-600 leading-6">
           {STEP4_OPTIONS.map((o) => (
@@ -226,11 +237,13 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
             </li>
           ))}
         </ul>
+        </div>
       </section>
 
       {/* Step 5 */}
       <section className="mx-auto max-w-5xl px-4 sm:px-6 pb-14">
-        <h2 className="text-lg font-black text-[#0f172a]">5. Publish pages directly to your CMS</h2>
+        <div className="border-l-4 border-[#00b7ff] pl-5 md:pl-6">
+        <h2 className="flex items-center gap-3 text-lg font-black text-[#0f172a]"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">5</span>Publish pages directly to your CMS</h2>
         <div className="mt-4 space-y-4 text-xs text-slate-600 leading-6">
           <p>Once you have chosen your domain and installed the CMS modules, log in using the credentials provided in the confirmation email. Now is the time to create your webpages, work on design, and write quality content for each of your site.</p>
           <p>Choose a layout that optimises the presentation of your content, whether in text, images or videos, while highlighting key elements. Align with a graphic charter that includes fonts, colours, images and logos. This will allow you to easily customise themes and templates, adapted to your business, while maintaining visual consistency across your entire website.</p>
@@ -239,6 +252,7 @@ export default function CreateWebsitePage({ plans }: { plans: any[] }) {
           <p>Explore our <strong>Visibility Pro</strong> solution, which gives you a simple, easy-to-use interface for promoting your website.</p>
           <p>Once you have created your website, it's vital to keep feeding it regularly with new content, to keep your visitors interested and ensure good exposure. <em>Also improve your site's natural referencing ranking (SEO) on other search engines to achieve the best position on search results pages, which will increase traffic.</em></p>
           <p>To do this, periodically check your website's structure and the internal mesh between pages. Optimum organisation will help search engines to better understand your site, which will help its ranking.</p>
+        </div>
         </div>
       </section>
 

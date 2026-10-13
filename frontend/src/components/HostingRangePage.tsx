@@ -251,30 +251,33 @@ function Hero({ badge, tagline, heroDesc }: { badge: string; tagline: string; he
     router.push(`/domain?q=${encodeURIComponent(d)}`);
   };
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 rounded-2xl overflow-hidden shadow-lg">
-      <div className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white p-8 md:p-10">
-        <span className="inline-block rounded-full bg-white text-[#0284c7] px-3 py-1 text-[11px] font-black uppercase tracking-wide">{badge}</span>
-        <h1 className="mt-4 text-2xl md:text-3xl font-black leading-tight">{tagline}</h1>
-        <p className="mt-3 text-sm text-white/85 leading-6">{heroDesc}</p>
+    <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white px-6 py-14 md:py-16 text-center">
+      <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-[#00b7ff]/15 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-24 -left-16 w-80 h-80 rounded-full bg-[#7c3aed]/20 blur-3xl pointer-events-none" />
+      <span className="relative inline-block rounded-full bg-[#00b7ff] text-[#0b1020] px-4 py-1.5 text-[11px] font-black uppercase tracking-widest">{badge}</span>
+      <h1 className="relative mt-5 text-3xl md:text-4xl font-black leading-tight max-w-2xl mx-auto">{tagline}</h1>
+      <p className="relative mt-4 text-sm text-white/80 leading-7 max-w-xl mx-auto">{heroDesc}</p>
+      <div className="relative mt-8 mx-auto max-w-lg bg-white/95 backdrop-blur rounded-full shadow-2xl p-2 flex gap-2">
+        <div className="flex items-center pl-3 text-slate-400"><Search className="w-4 h-4" /></div>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && searchDomain()}
+          placeholder="Find your domain name"
+          className="flex-1 min-w-0 rounded-full px-2 py-2.5 text-sm outline-none text-[#0f172a] bg-transparent"
+        />
+        <button onClick={searchDomain} className="rounded-full bg-[#ff3d00] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#e63700] flex items-center gap-1.5 shrink-0">
+          {searching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} Search
+        </button>
       </div>
-      <div className="bg-gradient-to-br from-[#0891b2] via-[#2563eb] to-[#00b7ff] p-8 md:p-10 flex flex-col justify-center">
-        <div className="flex items-center gap-3 text-white/90">
-          <Globe className="w-10 h-10" />
-          <Server className="w-10 h-10" />
-          <Sparkles className="w-10 h-10" />
-        </div>
-        <div className="mt-6 bg-white rounded-xl shadow-xl p-3 flex gap-2">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && searchDomain()}
-            placeholder="Find your domain name"
-            className="flex-1 min-w-0 rounded-lg px-3 py-2.5 text-sm outline-none text-[#0f172a]"
-          />
-          <button onClick={searchDomain} className="rounded-lg bg-[#ff3d00] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#e63700] flex items-center gap-1.5 shrink-0">
-            {searching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />} Search
-          </button>
-        </div>
+      <div className="relative mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-white/60 text-[11px] font-semibold">
+        <span className="flex items-center gap-1.5"><Globe className="w-4 h-4" /> Free domain</span>
+        <span className="hidden sm:inline w-1 h-1 rounded-full bg-white/30" />
+        <span className="flex items-center gap-1.5"><Shield className="w-4 h-4" /> Free SSL</span>
+        <span className="hidden sm:inline w-1 h-1 rounded-full bg-white/30" />
+        <span className="flex items-center gap-1.5"><Zap className="w-4 h-4" /> 1-click CMS</span>
+        <span className="hidden sm:inline w-1 h-1 rounded-full bg-white/30" />
+        <span className="flex items-center gap-1.5"><Server className="w-4 h-4" /> Anti-DDoS</span>
       </div>
     </div>
   );
@@ -363,20 +366,20 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
       {def.sections && def.sections.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14 space-y-14">
           {def.sections.map((s, i) => (
-            <div key={s.title} className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-              <div className={i % 2 === 0 ? "order-1" : "order-1 md:order-2"}>
+            <div key={s.title} className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+              <div className="md:col-span-2 flex md:justify-center">
+                <span className="text-5xl md:text-6xl font-black text-sky-100 select-none">{String(i + 1).padStart(2, "0")}</span>
+              </div>
+              <div className="md:col-span-6">
                 <h2 className="text-xl font-black text-[#0f172a]">{s.title}</h2>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {s.pills.map((pl) => (
                     <span key={pl} className="rounded-full bg-sky-50 text-[#0284c7] px-3 py-1 text-[11px] font-bold">{pl}</span>
                   ))}
                 </div>
-                <p className="mt-4 text-sm text-slate-600 leading-7">{s.text}</p>
               </div>
-              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-sky-50 to-white" : "from-violet-50 to-white"} border border-slate-100 p-10 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
-                {[Zap, Shield, Layers, Award].map((Icon, j) => (
-                  <Icon key={j} className={`w-12 h-12 ${j === i % 4 ? "text-[#0284c7]" : "text-slate-200"} ${j > 0 ? "-ml-3" : ""}`} />
-                ))}
+              <div className="md:col-span-4">
+                <p className="text-sm text-slate-600 leading-7 border-l-4 border-cyan-300 pl-4">{s.text}</p>
               </div>
             </div>
           ))}
@@ -384,27 +387,24 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
       )}
 
       {def.testimonial && (
-        <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-14">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 md:p-10 text-center shadow-sm">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0284c7]">My client is rich</p>
-            <p className="mt-4 text-lg md:text-xl font-bold text-[#0f172a] leading-8">&ldquo;{def.testimonial.quote}&rdquo;</p>
-            <p className="mt-4 text-xs text-slate-400">{def.testimonial.author}</p>
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
+          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] p-8 md:p-12">
+            <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-[#00b7ff]/10 blur-3xl pointer-events-none" />
+            <p className="relative text-xs font-black uppercase tracking-[0.25em] text-[#00b7ff]">What customers say</p>
+            <p className="relative mt-4 max-w-3xl text-lg md:text-2xl font-bold text-white leading-9">&ldquo;{def.testimonial.quote}&rdquo;</p>
+            <p className="relative mt-5 text-xs text-white/50">{def.testimonial.author}</p>
           </div>
         </section>
       )}
 
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {def.useCases.map((u) => (
-            <a key={u.t} href={u.href} className="rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-[#0284c7] hover:shadow-lg transition-all group">
-              <div className="h-28 bg-gradient-to-br from-[#0a2540] to-[#00b7ff] flex items-center justify-center">
-                <Layers className="w-10 h-10 text-white/80" />
-              </div>
-              <div className="p-5">
-                <p className="text-sm font-bold text-[#0f172a] group-hover:text-[#0284c7]">{u.t}</p>
-                <p className="mt-1.5 text-xs text-slate-500 leading-5">{u.d}</p>
-                <p className="mt-3 text-xs font-bold text-[#0284c7] flex items-center gap-1">Get started <ArrowRight className="w-3 h-3" /></p>
-              </div>
+          {def.useCases.map((u, i) => (
+            <a key={u.t} href={u.href} className="relative rounded-2xl border border-slate-200 bg-white p-6 pt-8 hover:border-[#0284c7] hover:shadow-lg transition-all group overflow-hidden">
+              <span className={`absolute top-0 left-0 right-0 h-1.5 ${["bg-[#00b7ff]", "bg-violet-500", "bg-[#ff3d00]"][i % 3]}`} />
+              <p className="text-sm font-bold text-[#0f172a] group-hover:text-[#0284c7]">{u.t}</p>
+              <p className="mt-1.5 text-xs text-slate-500 leading-5">{u.d}</p>
+              <p className="mt-4 text-xs font-bold text-[#0284c7] flex items-center gap-1">Get started <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" /></p>
             </a>
           ))}
         </div>
@@ -413,17 +413,21 @@ function BottomSections({ def }: { def: Pick<RangeDef, "sections" | "testimonial
       <section className="bg-slate-50 py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <h2 className="text-xl font-black text-center text-[#0f172a]">Assistance and support</h2>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
               { icon: BookOpen, t: "Guides", d: "Step-by-step tutorials on configuring your services.", l: "Access documentation →", href: "/kb" },
               { icon: MessageSquare, t: "Chatbot", d: "The GHC assistant answers 24/7 about our services.", l: "Contact us →", href: "/support" },
               { icon: Headphones, t: "Support Levels", d: "Standard, Premium and Business support for every workload.", l: "Find out more →", href: "/products/support-levels" },
             ].map((a) => (
-              <a key={a.t} href={a.href} className="rounded-2xl border border-slate-200 bg-white p-7 hover:border-[#0284c7] transition-all block">
-                <a.icon className="w-8 h-8 text-[#0284c7]" />
-                <p className="mt-4 text-sm font-bold text-[#0f172a]">{a.t}</p>
-                <p className="mt-2 text-xs text-slate-500 leading-5">{a.d}</p>
-                <p className="mt-4 text-xs font-semibold text-[#0284c7]">{a.l}</p>
+              <a key={a.t} href={a.href} className="rounded-xl border border-slate-200 bg-white p-6 flex gap-4 hover:border-[#0284c7] hover:shadow-md transition-all">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-sky-50 border border-sky-100">
+                  <a.icon className="w-5 h-5 text-[#0284c7]" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[#0f172a]">{a.t}</p>
+                  <p className="mt-1 text-xs text-slate-500 leading-5">{a.d}</p>
+                  <p className="mt-2.5 text-xs font-semibold text-[#0284c7]">{a.l}</p>
+                </div>
               </a>
             ))}
           </div>
@@ -535,16 +539,18 @@ export function WebHostingHubPage({ plans }: { plans: any[] }) {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
-        <div className="flex flex-wrap gap-2 justify-center">
-          {rangeKeys.map((k, i) => (
-            <button
-              key={k}
-              onClick={() => setTab(i)}
-              className={`px-5 py-2.5 text-sm font-bold border-b-2 transition ${tab === i ? "border-[#0284c7] text-[#0284c7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}
-            >
-              {RANGES[k].badge}
-            </button>
-          ))}
+        <div className="flex justify-center">
+          <div className="inline-flex flex-wrap justify-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 p-1.5">
+            {rangeKeys.map((k, i) => (
+              <button
+                key={k}
+                onClick={() => setTab(i)}
+                className={`rounded-full px-5 py-2.5 text-sm font-bold transition ${tab === i ? "bg-[#0b1020] text-white shadow" : "text-slate-500 hover:text-[#0f172a] hover:bg-white"}`}
+              >
+                {RANGES[k].badge}
+              </button>
+            ))}
+          </div>
         </div>
         <PlanGrid plans={tabPlans} recommended={def.recommended} sub={rangeKeys[tab]} />
       </section>
@@ -582,55 +588,57 @@ export default function HostingRangePage({ range, plans }: { range: string; plan
         <PlanGrid plans={rangePlans} recommended={def.recommended} sub={range} />
       </section>
 
+      {/* Intro — segmented pills + content card */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <h2 className="text-xl font-black text-[#0f172a]">{def.introTitle}</h2>
-        <div className="mt-5 flex flex-wrap gap-6 border-b border-slate-200">
-          {def.introTabs.map((t, i) => (
-            <button key={t.label} onClick={() => setIntroTab(i)} className={`pb-3 text-sm font-semibold border-b-2 transition ${introTab === i ? "border-[#0284c7] text-[#0284c7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <p className="mt-5 max-w-3xl text-sm text-slate-600 leading-7">{def.introTabs[introTab].text}</p>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-          <div className="rounded-2xl bg-gradient-to-br from-sky-50 to-white border border-slate-100 p-10 flex items-center justify-center order-2 md:order-1">
-            <div className="text-center space-y-2">
-              <Globe className="w-12 h-12 mx-auto text-[#0284c7]" />
-              <p className="text-sm font-bold text-[#0f172a]">Free domain + SSL</p>
-              <p className="text-xs text-slate-500">on every plan</p>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <div className="md:col-span-4">
+            <h2 className="text-xl font-black text-[#0f172a]">{def.introTitle}</h2>
+            <p className="mt-3 text-xs text-slate-500">Pick a topic — quick answers without leaving the page.</p>
+          </div>
+          <div className="md:col-span-8">
+            <div className="flex flex-wrap gap-2">
+              {def.introTabs.map((t, i) => (
+                <button key={t.label} onClick={() => setIntroTab(i)} className={`rounded-full px-4 py-2 text-xs font-bold transition ${introTab === i ? "bg-[#0b1020] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+              <p className="text-sm text-slate-600 leading-7">{def.introTabs[introTab].text}</p>
             </div>
           </div>
-          <div className="order-1 md:order-2">
-            <h2 className="text-xl font-black text-[#0f172a]">{def.presence.title}</h2>
-            <p className="mt-3 text-sm text-slate-600 leading-7">{def.presence.text}</p>
-            <ul className="mt-4 space-y-2">
-              {def.presence.points.map((pt) => (
-                <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{pt}</li>
-              ))}
-            </ul>
-          </div>
         </div>
       </section>
 
+      {/* Included + scale — merged panel */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-          <div>
-            <h2 className="text-xl font-black text-[#0f172a]">{def.expandTitle}</h2>
-            <p className="mt-3 text-sm text-slate-600 leading-7">{def.expandText}</p>
-          </div>
-          <div className="grid grid-cols-1 gap-3">
-            {def.expandCards.map((c) => (
-              <div key={c.t} className="rounded-xl border border-slate-200 bg-white p-4 flex gap-3">
-                <Zap className="w-5 h-5 text-[#0284c7] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-[#0f172a]">{c.t}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{c.d}</p>
-                </div>
+        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 md:p-10">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-10">
+            <div className="md:col-span-3">
+              <p className="text-[11px] font-black uppercase tracking-widest text-[#0284c7]">Included in every {def.name} plan</p>
+              <h2 className="mt-2 text-xl font-black text-[#0f172a]">{def.presence.title}</h2>
+              <p className="mt-3 text-sm text-slate-600 leading-7">{def.presence.text}</p>
+              <ul className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {def.presence.points.map((pt) => (
+                  <li key={pt} className="flex items-start gap-2 text-sm text-slate-600"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />{pt}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="md:col-span-2 border-t md:border-t-0 md:border-l border-slate-200 md:pl-10 pt-8 md:pt-0">
+              <h3 className="text-base font-black text-[#0f172a]">{def.expandTitle}</h3>
+              <p className="mt-2 text-xs text-slate-500 leading-5">{def.expandText}</p>
+              <div className="mt-5 space-y-3">
+                {def.expandCards.map((c) => (
+                  <div key={c.t} className="rounded-xl bg-white border border-slate-200 p-4 flex gap-3">
+                    <Zap className="w-5 h-5 text-[#0284c7] shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-[#0f172a]">{c.t}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{c.d}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>

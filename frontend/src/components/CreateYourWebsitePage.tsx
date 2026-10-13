@@ -119,16 +119,13 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
       {/* All-in-one solution */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl md:text-2xl font-black text-center text-[#0f172a]">An all-in-one solution to boost your company's web visibility</h2>
-        <div className="mt-10 space-y-10">
+        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-5">
           {ALL_IN_ONE.map((a, i) => (
-            <div key={a.t} className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
-              <div className={i % 2 === 0 ? "order-1" : "order-1 md:order-2"}>
-                <h3 className="text-lg font-black text-[#0f172a]">{a.t}</h3>
-                <p className="mt-3 text-xs text-slate-600 leading-6">{a.d}</p>
-              </div>
-              <div className={`rounded-2xl bg-gradient-to-br ${i % 2 === 0 ? "from-sky-50" : "from-violet-50"} to-white border border-slate-100 p-12 flex items-center justify-center ${i % 2 === 0 ? "order-2" : "order-2 md:order-1"}`}>
-                <a.icon className="w-16 h-16 text-[#0284c7]" strokeWidth={1.2} />
-              </div>
+            <div key={a.t} className="relative rounded-2xl border border-slate-200 bg-white p-7 pt-9 overflow-hidden hover:shadow-lg transition-all">
+              <span className={`absolute top-0 left-0 right-0 h-1.5 ${["bg-[#00b7ff]", "bg-violet-500", "bg-emerald-400"][i % 3]}`} />
+              <a.icon className="w-10 h-10 text-[#0284c7]" strokeWidth={1.4} />
+              <h3 className="mt-4 text-base font-black text-[#0f172a]">{a.t}</h3>
+              <p className="mt-3 text-xs text-slate-600 leading-6">{a.d}</p>
             </div>
           ))}
         </div>
@@ -151,13 +148,10 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
       {/* A website for every project */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl md:text-2xl font-black text-center text-[#0f172a]">A website for every project</h2>
-        <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {EVERY_PROJECT.map((t, i) => (
-            <a key={t} href="/web-hosting" className="group">
-              <div className={`rounded-xl h-24 flex items-center justify-center bg-gradient-to-br ${["from-sky-100", "from-orange-100", "from-violet-100", "from-emerald-100"][i % 4]} to-white border border-slate-100`}>
-                <Globe className="w-8 h-8 text-[#0284c7]/60" />
-              </div>
-              <p className="mt-2 text-[11px] font-semibold text-[#0f172a] text-center group-hover:text-[#0284c7]">{t}</p>
+        <div className="mt-8 flex flex-wrap justify-center gap-2.5 max-w-4xl mx-auto">
+          {EVERY_PROJECT.map((t) => (
+            <a key={t} href="/web-hosting" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:border-[#00b7ff] hover:text-[#0284c7] transition-all">
+              <Globe className="w-3.5 h-3.5 text-[#00b7ff]" /> {t}
             </a>
           ))}
         </div>
@@ -241,18 +235,22 @@ export default function CreateYourWebsitePage({ plans }: { plans: any[] }) {
       {/* Step by step */}
       <section className="mx-auto max-w-4xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl md:text-2xl font-black text-center text-[#0f172a]">Create your bespoke website, step by step</h2>
-        <ol className="mt-8 space-y-8 list-decimal list-inside">
-          <li className="text-sm font-black text-[#0f172a]">Choose your domain name
-            <p className="mt-2 ml-6 text-xs font-normal text-slate-600 leading-6">Let's start with your web address. To access your website, the domain name is the address (including .com or .net) that people will type into their web browsers. You can find more detailed info on how to order a domain name on the associated page.</p>
-          </li>
-          <li className="text-sm font-black text-[#0f172a]">Select the right hosting plan
-            <p className="mt-2 ml-6 text-xs font-normal text-slate-600 leading-6">Second of our web hosting plans available at prices that is adapted to the performance you need. Each has the option such as a free domain for the first year, custom email addresses and a CMS that can be installed in 1 click. We recommend you take a deep look at experience websites, and make sure you perform the load space you need.</p>
-          </li>
-          <li className="text-sm font-black text-[#0f172a]">Use our pre-installed CMS tools
-            <p className="mt-2 ml-6 text-xs font-normal text-slate-600 leading-6">A content management system, or as you know most websites you visit use the most managed CMS tools, such as WordPress, you can use to create your e-commerce site (and please note that our cookies) and take care of it seamlessly — the performance of <a href="/web-hosting" className="text-[#0284c7] underline">GHCcloud Web Hosting</a>, we get all you need to test content.</p>
-            <a href="/web-hosting" className="mt-3 ml-6 inline-block rounded-lg bg-[#ff3d00] px-5 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Create a website</a>
-          </li>
-        </ol>
+        <div className="mt-8 space-y-4">
+          {[
+            { t: "Choose your domain name", d: "Let's start with your web address. To access your website, the domain name is the address (including .com or .net) that people will type into their web browsers. You can find more detailed info on how to order a domain name on the associated page." },
+            { t: "Select the right hosting plan", d: "Second of our web hosting plans available at prices that is adapted to the performance you need. Each has the option such as a free domain for the first year, custom email addresses and a CMS that can be installed in 1 click. We recommend you take a deep look at experience websites, and make sure you perform the load space you need." },
+            { t: "Use our pre-installed CMS tools", d: "A content management system, or as you know most websites you visit use the most managed CMS tools, such as WordPress, you can use to create your e-commerce site (and please note that our cookies) and take care of it seamlessly — the performance of GHCcloud Web Hosting, we get all you need to test content." },
+          ].map((s, i) => (
+            <div key={s.t} className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1020] text-sm font-black text-[#00b7ff]">{i + 1}</span>
+              <div>
+                <p className="text-sm font-black text-[#0f172a]">{s.t}</p>
+                <p className="mt-2 text-xs text-slate-600 leading-6">{s.d}</p>
+                {i === 2 && <a href="/web-hosting" className="mt-3 inline-block rounded-lg bg-[#ff3d00] px-5 py-2 text-xs font-bold text-white hover:bg-[#e63700]">Create a website</a>}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Pre-installed CMS tools */}

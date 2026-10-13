@@ -29,8 +29,16 @@ const FAQS: [string, string][] = [
   ["How do I get started?", "Order a Web Cloud Database instance, create your databases and users in the control panel, authorise your hosting IPs, and connect your application with the provided host and credentials."],
 ];
 
+const ENGINES = [
+  { name: "MySQL (Percona)", d: "The world's most popular open-source relational engine — the default for WordPress, Joomla and most CMS workloads. Percona build for extra performance tooling.", tag: "Most popular" },
+  { name: "MariaDB", d: "Drop-in MySQL replacement with faster replication and a fully community-driven roadmap. Great for Drupal and custom apps.", tag: "MySQL-compatible" },
+  { name: "PostgreSQL", d: "Advanced relational engine with JSONB, powerful indexing and strict data integrity — preferred for SaaS and analytics-heavy apps.", tag: "Advanced SQL" },
+  { name: "Valkey", d: "Redis-compatible in-memory key-value store. Use it for caching, sessions, queues and real-time features alongside your SQL databases.", tag: "NoSQL / cache" },
+];
+
 export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [engine, setEngine] = useState(0);
   const hostingPlans = ["hosting-startup", "hosting-pro", "hosting-performance-1"]
     .map((c) => plans.find((p) => p.planCode === c))
     .filter(Boolean);
@@ -64,15 +72,49 @@ export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Services included — 8 cards */}
+      {/* Engine picker — tabs */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pt-14">
+        <h2 className="text-xl font-black text-[#0f172a]">Pick your engine</h2>
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-200">
+            {ENGINES.map((e, i) => (
+              <button
+                key={e.name}
+                onClick={() => setEngine(i)}
+                className={`px-4 py-5 text-left transition ${engine === i ? "bg-[#0b1020] text-white" : "hover:bg-slate-50"}`}
+              >
+                <p className={`text-sm font-bold ${engine === i ? "text-white" : "text-[#0f172a]"}`}>{e.name}</p>
+                <p className={`mt-1 text-[10px] font-bold uppercase tracking-wider ${engine === i ? "text-[#00b7ff]" : "text-[#0284c7]"}`}>{e.tag}</p>
+              </button>
+            ))}
+          </div>
+          <div className="p-6 md:p-8 border-t border-slate-200 bg-slate-50">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#0b1020]">
+                <Database className="w-5 h-5 text-[#00b7ff]" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-[#0f172a]">{ENGINES[engine].name}</p>
+                <p className="mt-1.5 text-sm text-slate-600 leading-7 max-w-3xl">{ENGINES[engine].d}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Services included — icon-left rows */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-14">
         <h2 className="text-xl font-black text-[#0f172a]">Services included with your Web Cloud Databases</h2>
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-5">
           {SERVICES.map((s) => (
-            <div key={s.t}>
-              <s.icon className="w-9 h-9 text-[#0284c7]" strokeWidth={1.5} />
-              <p className="mt-3 text-sm font-bold text-[#0f172a]">{s.t}</p>
-              <p className="mt-2 text-xs text-slate-500 leading-5">{s.d}</p>
+            <div key={s.t} className="flex gap-4 rounded-xl border border-slate-200 bg-white p-5 hover:border-[#0284c7] transition-colors">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 border border-sky-100">
+                <s.icon className="w-5 h-5 text-[#0284c7]" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#0f172a]">{s.t}</p>
+                <p className="mt-1.5 text-xs text-slate-500 leading-5">{s.d}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -84,61 +126,25 @@ export default function WebCloudDatabasesPage({ plans }: { plans: any[] }) {
         <PlanGrid plans={hostingPlans} recommended="hosting-pro" sub="business" />
       </section>
 
-      {/* Alternating content */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16 space-y-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="rounded-2xl bg-gradient-to-br from-[#0b1020] to-[#15295b] p-10 flex items-center justify-center min-h-[220px] order-2 md:order-1">
-            <div className="text-center text-white">
-              <Code2 className="w-14 h-14 mx-auto" />
-              <p className="mt-3 text-2xl font-black tracking-widest">CMS</p>
-              <p className="text-xs text-white/60 mt-1">WordPress · PrestaShop · Joomla · Drupal</p>
-            </div>
+      {/* Why Cloud DB — 3 cards */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-16">
+        <h2 className="text-xl font-black text-[#0f172a]">Why move to a dedicated database instance</h2>
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="rounded-2xl bg-gradient-to-br from-[#0b1020] to-[#15295b] text-white p-7">
+            <Code2 className="w-9 h-9 text-[#00b7ff]" />
+            <p className="mt-4 text-base font-black">Level up your web projects</p>
+            <p className="mt-2.5 text-xs text-white/75 leading-5">Every CMS — WordPress, PrestaShop, Joomla, Drupal — runs faster on a dedicated database. Centralise all your databases on one instance, reachable from GHC hosting or anywhere on the public network: websites, mobile apps, SaaS.</p>
+            <a href="/kb" className="mt-4 inline-block text-xs font-bold text-[#00b7ff]">Read the guides →</a>
           </div>
-          <div className="order-1 md:order-2">
-            <h2 className="text-2xl font-black text-[#0f172a]">Take your web projects to the next level</h2>
-            <p className="mt-4 text-sm text-slate-600 leading-7">
-              If you're looking to deploy a website, you'll undoubtedly need a database. Databases optimise the overall functioning of content management systems (CMS), such as <strong>WordPress</strong> or <strong>PrestaShop</strong> (for e-commerce websites).
-            </p>
-            <p className="mt-4 text-sm text-slate-600 leading-7">
-              Simplify your work by centralising your databases on the same instance. Whether your web projects are operated by GHC cloud or another provider, our instances connected to the public network meet a wide range of use cases — from website databases to mobile applications, SaaS applications, and much more.
-            </p>
-            <p className="mt-4 text-sm text-slate-600">Find out how to get started by reading our <a href="/kb" className="text-[#0284c7] font-semibold underline">guides</a>.</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-7">
+            <Layers className="w-9 h-9 text-[#0284c7]" />
+            <p className="mt-4 text-base font-black text-[#0f172a]">Total flexibility & scalability</p>
+            <p className="mt-2.5 text-xs text-slate-500 leading-5">Unlimited databases with separate access. Configure engine settings straight from the GHC Control Panel. Scale to 4GB RAM / 64GB storage in minutes as projects grow — burst beyond allocation for intensive processing.</p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-2xl font-black text-[#0f172a]">Get total flexibility for configuration and scalability</h2>
-            <p className="mt-4 text-sm text-slate-600 leading-7">
-              You can create as many databases and projects as you like, and assign separate accesses to them.
-            </p>
-            <p className="mt-4 text-sm text-slate-600 leading-7">
-              With the advanced features included with your service, you can configure your environment to suit your needs. Depending on your database engine, you can modify different settings directly via the GHC Control Panel.
-            </p>
-            <p className="mt-4 text-sm text-slate-600 leading-7">
-              Need to scale up your databases for growing projects? Upgrade to a higher solution in just a few minutes. We offer up to 4GB RAM and up to 64GB storage space.
-            </p>
-          </div>
-          <div className="rounded-2xl bg-sky-50 border border-slate-100 p-10 flex items-center justify-center min-h-[220px]">
-            <Layers className="w-16 h-16 text-[#0284c7]" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="rounded-2xl bg-[#f3eaff] border border-slate-100 p-10 flex items-center justify-center min-h-[220px] order-2 md:order-1">
-            <FileText className="w-16 h-16 text-[#0284c7]" />
-          </div>
-          <div className="order-1 md:order-2">
-            <h2 className="text-2xl font-black text-[#0f172a]">Optimise your tables and queries</h2>
-            <p className="mt-4 text-sm text-slate-600 leading-7">
-              For intensive processing, you can temporarily exceed the RAM/CPU resources allocated to you, so that your business is not affected.
-            </p>
-            <p className="mt-4 text-sm text-slate-600 leading-7">
-              Get phpMyAdmin and phpPgAdmin to simplify your database management by enabling access to GHC cloud Web Hosting plans via the GHC Control Panel.
-            </p>
-            <p className="mt-4 text-sm text-slate-600 leading-7">
-              A query that takes too long to close can block other queries, increasing your database's overall response time. By checking your logs, you can identify your slowest queries and optimise them accordingly.
-            </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-7">
+            <FileText className="w-9 h-9 text-[#0284c7]" />
+            <p className="mt-4 text-base font-black text-[#0f172a]">Optimise tables & queries</p>
+            <p className="mt-2.5 text-xs text-slate-500 leading-5">phpMyAdmin and phpPgAdmin built in via the control panel. Slow-query logs show which queries block response times so you can optimise indexes and requests.</p>
           </div>
         </div>
       </section>
