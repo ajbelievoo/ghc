@@ -420,8 +420,8 @@ def default_dedicated_display_name(invoice_name: str, plan_code: str) -> str:
     for t in tokens:
         if not t:
             continue
-        if t.isupper() and len(t) <= 4 and any(c.isalpha() for c in t):
-            parts.append(t)  # keep short acronyms: STOR, HG, RI
+        if t.isupper() and t in ("STOR", "SAP", "HCI", "HDS", "HG", "RI", "GP"):
+            parts.append(t)  # keep real acronyms only; title-case words like GAME
         elif t.isdigit():
             parts.append(t)
         else:
