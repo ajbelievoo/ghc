@@ -614,9 +614,9 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
             e.preventDefault();
             if (domainQuery.trim()) router.push(`/domain?q=${encodeURIComponent(domainQuery.trim())}`);
           }}
-          className="hidden w-full max-w-[9rem] flex-1 items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-2.5 py-1 backdrop-blur md:flex lg:max-w-[11rem] xl:max-w-[12rem] mx-2"
+          className="mx-1.5 hidden w-full max-w-[7.5rem] items-center gap-1 rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 backdrop-blur md:flex lg:max-w-[9rem] xl:max-w-[10.5rem]"
         >
-          <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <Search className="h-3 w-3 shrink-0 text-slate-400" />
           <input
             value={domainQuery}
             onChange={(e) => setDomainQuery(e.target.value)}
