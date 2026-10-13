@@ -682,6 +682,26 @@ async def cloud_billing_loop():
         await asyncio.sleep(600)  # every 10 minutes
 
 
+async def catalog_sync_loop():
+    """Keep the OVH product catalog fresh — full sync every 6 hours."""
+    from app.services.catalog_service import sync_all_catalogs
+    from app.services.ovh_client import get_ovh_client_from_db
+    await asyncio.sleep(120)  # let the app settle after boot
+    while True:
+        db = None
+        try:
+            db = SessionLocal()
+            ovh = get_ovh_client_from_db(db)
+            results = await asyncio.to_thread(sync_all_catalogs, db, ovh)
+            logger.info(f"Catalog sync: {results}")
+        except Exception as e:
+            logger.error(f"Catalog sync failed: {e}")
+        finally:
+            if db:
+                db.close()
+        await asyncio.sleep(21600)  # every 6 hours
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Database schema management:
@@ -723,10 +743,12 @@ async def lifespan(app: FastAPI):
     auto_scaling_task = asyncio.create_task(auto_scaling_loop())
     marketplace_task = asyncio.create_task(marketplace_worker())
     cloud_billing_task = asyncio.create_task(cloud_billing_loop())
+    catalog_task = asyncio.create_task(catalog_sync_loop())
     yield
     task.cancel()
     ping_task.cancel()
     metrics_task.cancel()
+    catalog_task.cancel()
     auto_scaling_task.cancel()
     marketplace_task.cancel()
     cloud_billing_task.cancel()

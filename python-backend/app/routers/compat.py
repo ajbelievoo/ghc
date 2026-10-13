@@ -312,7 +312,61 @@ def server_plans(category: Optional[str] = None, family: Optional[str] = None, c
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid category")
     plans = get_active_plans(db, cat)
-    return [_plan_to_frontend(p, currency, db) for p in plans]
+    out = [_plan_to_frontend(p, currency, db) for p in plans]
+    if cat == ServiceCategory.DEDICATED:
+        from app.services.catalog_service import get_metal_ded_names, default_dedicated_display_name
+        names = get_metal_ded_names(db)
+        names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
+        for p, d in zip(plans, out):
+            d["displayName"] = (
+                names.get(p.plan_code)
+                or names_norm.get(_normalize_public_plan_code(p.plan_code))
+                or default_dedicated_display_name(p.invoice_name or "", p.plan_code)
+            )
+            d["spec"] = _ded_spec_display(p)
+    return out
+
+
+def _ded_spec_display(p: PlanCatalog) -> dict:
+    """Human-readable spec strings for dedicated plan rows."""
+    meta = (p.catalog_metadata or {}).get("_ghc") or {}
+    cpu_bits = []
+    if meta.get("cpu_model"):
+        brand = (meta.get("cpu_brand") or "").strip()
+        model = str(meta["cpu_model"]).strip()
+        cpu_bits.append(f"{brand} {model}".strip() if brand and brand.lower() not in model.lower() else model)
+    if p.cpu_cores:
+        ct = f"{p.cpu_cores}c"
+        if meta.get("cpu_threads"):
+            ct += f"/{meta['cpu_threads']}t"
+        cpu_bits.append(ct)
+    if meta.get("cpu_freq"):
+        fr = meta["cpu_freq"]
+        cpu_bits.append(f"{fr} GHz" + (f" ({meta['cpu_boost']} GHz boost)" if meta.get("cpu_boost") else ""))
+    storage = None
+    if meta.get("storage_label"):
+        storage = _storage_label_to_human(str(meta["storage_label"]))
+    if not storage and p.disk_gb:
+        storage = f"{p.disk_gb} GB" + (f" {str(p.disk_type).upper()}" if p.disk_type else "")
+    bw = None
+    if p.bandwidth_mbps:
+        bw = f"{p.bandwidth_mbps / 1000:g} Gbps" if p.bandwidth_mbps >= 1000 else f"{p.bandwidth_mbps} Mbps"
+    return {
+        "cpu": " · ".join(cpu_bits) or p.description,
+        "ram": f"{p.ram_gb} GB" if p.ram_gb else None,
+        "storage": storage,
+        "bandwidth": bw,
+    }
+
+
+def _storage_label_to_human(code: str) -> Optional[str]:
+    """'softraid-2x960nvme-pcie-gen4-x' → '2×960 GB NVMe Gen4'."""
+    parts = []
+    for m in _re.finditer(r"(\d+)x(\d{3,5})(nvme|ssd|sata|sas|hdd)", code.lower()):
+        label = f"{m.group(1)}×{m.group(2)} GB {m.group(3).upper()}"
+        g = _re.search(r"gen(\d)", code.lower())
+        parts.append(label + (f" Gen{g.group(1)}" if g and m.group(3) == "nvme" else ""))
+    return " + ".join(parts) if parts else None
 
 
 @router.get("/metal/vps/plans")
@@ -373,6 +427,36 @@ def admin_save_metal_vps(body: dict, db: Session = Depends(get_db), admin: User 
         if not isinstance(body["names"], dict):
             raise HTTPException(status_code=400, detail="names must be an object {planCode: name}")
         set_metal_vps_names(db, body["names"])
+    return {"success": True}
+
+
+@router.get("/admin/metal-dedicated")
+def admin_get_metal_dedicated(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import get_metal_ded_names, default_dedicated_display_name
+    names = get_metal_ded_names(db)
+    names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
+    plans = get_active_plans(db, ServiceCategory.DEDICATED)
+    return {
+        "names": names,
+        "plans": [
+            {
+                "planCode": p.plan_code,
+                "invoiceName": p.invoice_name,
+                "metalName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or "",
+                "autoName": default_dedicated_display_name(p.invoice_name or "", p.plan_code),
+            }
+            for p in plans
+        ],
+    }
+
+
+@router.post("/admin/metal-dedicated")
+def admin_save_metal_dedicated(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import set_metal_ded_names
+    if "names" in body and body["names"] is not None:
+        if not isinstance(body["names"], dict):
+            raise HTTPException(status_code=400, detail="names must be an object {planCode: name}")
+        set_metal_ded_names(db, body["names"])
     return {"success": True}
 
 

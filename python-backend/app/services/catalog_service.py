@@ -94,6 +94,70 @@ def _first_disk_tech(disks: List[Any]) -> Optional[str]:
     return None
 
 
+def _addon_family_default(plan: Dict[str, Any], family: str) -> Optional[str]:
+    """Default addon code for a family (memory/storage/bandwidth) on a bare-metal plan."""
+    for fam in plan.get("addonFamilies") or []:
+        if isinstance(fam, dict) and fam.get("name") == family:
+            default = fam.get("default")
+            if default:
+                return str(default)
+            addons = fam.get("addons") or []
+            if addons:
+                return str(addons[0])
+    return None
+
+
+def _parse_storage_addon(code: str) -> Tuple[Optional[int], Optional[str]]:
+    """'softraid-2x960nvme-pcie-gen4-x' / 'hybridsoftraid-2x960nvme-...-2x1920nvme-...' → (total GB, type)."""
+    total = 0
+    tech = None
+    for m in re.finditer(r"(\d+)x(\d{3,5})(nvme|ssd|sata|sas|hdd)", code.lower()):
+        total += int(m.group(1)) * int(m.group(2))
+        if not tech:
+            tech = m.group(3)
+    if not total:
+        m = re.search(r"(\d{3,5})(nvme|ssd|sata|sas|hdd)", code.lower())
+        if m:
+            total = int(m.group(1))
+            tech = m.group(2)
+    return (total or None), tech
+
+
+def _dedicated_spec_extras(product: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
+    """Real dedicated specs: CPU from product technical blob, RAM/storage/bandwidth
+    from the plan's default addon in each addonFamily."""
+    out: Dict[str, Any] = {}
+    cpu = ((product.get("blobs") or {}).get("technical") or {}).get("server", {}).get("cpu") or {}
+    if isinstance(cpu, dict) and cpu:
+        out["cpu_cores"] = _coerce_int(cpu.get("cores"))
+        out["cpu_brand"] = cpu.get("brand")
+        out["cpu_model"] = cpu.get("model")
+        out["cpu_threads"] = _coerce_int(cpu.get("threads"))
+        out["cpu_freq"] = cpu.get("frequency")
+        out["cpu_boost"] = cpu.get("boost")
+    ram_code = _addon_family_default(plan, "memory")
+    if ram_code:
+        m = re.search(r"ram-(\d+)g", ram_code.lower())
+        if m:
+            out["ram_gb"] = int(m.group(1))
+        out["ram_label"] = ram_code
+    stor_code = _addon_family_default(plan, "storage") or _addon_family_default(plan, "system-storage")
+    if stor_code:
+        gb, tech = _parse_storage_addon(stor_code)
+        if gb:
+            out["disk_gb"] = gb
+        if tech:
+            out["disk_type"] = tech
+        out["storage_label"] = stor_code
+    bw_code = _addon_family_default(plan, "bandwidth")
+    if bw_code:
+        m = re.search(r"bandwidth-(\d+)", bw_code.lower())
+        if m:
+            out["bandwidth_mbps"] = int(m.group(1))
+        out["bandwidth_label"] = bw_code
+    return out
+
+
 def _extract_specs(product: Dict[str, Any], plan: Dict[str, Any], category: ServiceCategory) -> Dict[str, Any]:
     """Extract technical specs from OVH catalog blobs."""
     prod_blobs = product.get("blobs", {}) or {}
@@ -113,31 +177,39 @@ def _extract_specs(product: Dict[str, Any], plan: Dict[str, Any], category: Serv
     _d = lambda v: v if isinstance(v, dict) else {}
 
     if category == ServiceCategory.DEDICATED:
+        extras = _dedicated_spec_extras(product, plan)
+        server = _d(tech.get("server"))
         cpu = (
-            _find_feature(features, ["cpu_cores", "cpu", "processor", "cores"])
+            extras.get("cpu_cores")
+            or _d(server.get("cpu")).get("cores")
+            or _find_feature(features, ["cpu_cores", "cpu", "processor", "cores"])
             or _d(tech.get("cpu")).get("cores")
             or _d(tech.get("cpu")).get("number")
             or _d(product.get("cpu")).get("cores")
             or _d(plan.get("cpu")).get("cores")
         )
         ram = (
-            _find_feature(features, ["ram", "memory", "ddr", "gb_ram"])
+            extras.get("ram_gb")
+            or _find_feature(features, ["ram", "memory", "ddr", "gb_ram"])
             or _d(tech.get("memory")).get("size")
             or _d(product.get("memory")).get("size")
             or _d(plan.get("memory")).get("size")
         )
         disk = (
-            _find_feature(features, ["storage", "disk", "hdd", "ssd", "nvme"])
+            extras.get("disk_gb")
+            or _find_feature(features, ["storage", "disk", "hdd", "ssd", "nvme"])
             or _first_disk_capacity(_d(tech.get("storage")).get("disks", []))
             or _first_disk_capacity(_d(product.get("storage")).get("disks", []))
             or _first_disk_capacity(_d(plan.get("storage")).get("disks", []))
         )
         disk_type = (
-            _find_feature(features, ["disk_type", "technology", "storage_type"])
+            extras.get("disk_type")
+            or _find_feature(features, ["disk_type", "technology", "storage_type"])
             or _first_disk_tech(_d(tech.get("storage")).get("disks", []))
         )
         bw = (
-            _find_feature(features, ["bandwidth", "traffic", "connection"])
+            extras.get("bandwidth_mbps")
+            or _find_feature(features, ["bandwidth", "traffic", "connection"])
             or _d(_d(tech.get("network")).get("public")).get("bandwidth")
             or _d(tech.get("bandwidth")).get("level")
             or _d(product.get("bandwidth")).get("level")
@@ -180,7 +252,7 @@ def _extract_specs(product: Dict[str, Any], plan: Dict[str, Any], category: Serv
         or plan.get("invoiceName")
     )
 
-    return {
+    result = {
         "cpu_cores": _coerce_int(cpu),
         "ram_gb": _coerce_int(ram),
         "disk_gb": _coerce_int(disk),
@@ -188,6 +260,9 @@ def _extract_specs(product: Dict[str, Any], plan: Dict[str, Any], category: Serv
         "bandwidth_mbps": _coerce_int(bw),
         "description": description,
     }
+    if category == ServiceCategory.DEDICATED:
+        result["extras"] = extras
+    return result
 
 
 def _pcc_host_family(plan_code: str) -> Optional[str]:
@@ -305,6 +380,53 @@ def set_metal_vps_names(db: Session, names: Dict[str, str]) -> None:
     db.commit()
 
 
+# ---------- Metal dedicated channel (own display names over the bare-metal catalog) ----------
+
+METAL_DED_NAMES_KEY = "metal_ded_names"
+
+
+def get_metal_ded_names(db: Session) -> Dict[str, str]:
+    """Custom public display names for dedicated/Metal servers, keyed by real plan_code."""
+    row = db.query(AdminConfig).filter(AdminConfig.key == METAL_DED_NAMES_KEY).first()
+    if row and row.value:
+        try:
+            data = json.loads(row.value)
+            if isinstance(data, dict):
+                return {str(k): str(v) for k, v in data.items() if str(v).strip()}
+        except Exception:
+            pass
+    return {}
+
+
+def set_metal_ded_names(db: Session, names: Dict[str, str]) -> None:
+    clean = {str(k): str(v).strip() for k, v in (names or {}).items() if str(v).strip()}
+    row = db.query(AdminConfig).filter(AdminConfig.key == METAL_DED_NAMES_KEY).first()
+    if not row:
+        row = AdminConfig(key=METAL_DED_NAMES_KEY, value=json.dumps(clean))
+        db.add(row)
+    else:
+        row.value = json.dumps(clean)
+    db.commit()
+
+
+def default_dedicated_display_name(invoice_name: str, plan_code: str) -> str:
+    """Branded fallback name, e.g. 'ADVANCE-2 | AMD EPYC 4344P' → 'Metal Advance 2'."""
+    base = (invoice_name or "").split("|")[0].strip() or plan_code or ""
+    tokens = re.split(r"[-_\s]+", base)
+    parts = []
+    for t in tokens:
+        if not t:
+            continue
+        if t.isupper() and len(t) <= 4 and any(c.isalpha() for c in t):
+            parts.append(t)  # keep short acronyms: STOR, HG, RI
+        elif t.isdigit():
+            parts.append(t)
+        else:
+            parts.append(t[0].upper() + t[1:].lower())
+    label = " ".join(parts).strip()
+    return f"Metal {label}" if label else f"Metal {plan_code}"
+
+
 COMMITMENT_MONTHS = (3, 6, 12)
 DEFAULT_COMMITMENT_DISCOUNTS = {"3_month": 0.0, "6_month": 5.0, "12_month": 10.0}
 
@@ -412,6 +534,9 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
             if category == ServiceCategory.PRIVATE_CLOUD and plan_code.startswith("pcc-host-"):
                 specs = {**_pcc_host_specs(plan_code, invoice_name), **{k: v for k, v in specs.items() if v}}
             plan_family = _pcc_host_family(plan_code) if category == ServiceCategory.PRIVATE_CLOUD else None
+            spec_meta = dict(plan)
+            if specs.get("extras"):
+                spec_meta["_ghc"] = specs["extras"]
 
             # Detect currency from first pricing with formattedPrice before using it.
             # Fall back to the subsidiary's currency (formattedPrice may be blank).
@@ -451,7 +576,7 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
                 existing.disk_gb = specs.get("disk_gb")
                 existing.disk_type = specs.get("disk_type")
                 existing.bandwidth_mbps = specs.get("bandwidth_mbps")
-                existing.catalog_metadata = plan
+                existing.catalog_metadata = spec_meta
                 existing.is_active = True
             else:
                 existing = PlanCatalog(
@@ -465,7 +590,7 @@ def sync_category(db: Session, ovh: OvhClient, registry: Dict[str, Any]) -> Tupl
                     disk_gb=specs.get("disk_gb"),
                     disk_type=specs.get("disk_type"),
                     bandwidth_mbps=specs.get("bandwidth_mbps"),
-                    catalog_metadata=plan,
+                    catalog_metadata=spec_meta,
                     currency=plan_currency,
                 )
                 db.add(existing)
