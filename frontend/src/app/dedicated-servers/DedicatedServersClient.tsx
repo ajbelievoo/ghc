@@ -56,11 +56,33 @@ const RANGE_FEATURES: { label: string; per: Record<string, string | boolean> }[]
   { label: "SLA", per: { game: "99.90%", advance: "99.90%", scale: "99.99%", "high-grade": "99.99%", storage: "99.90%" } },
 ];
 
-const USE_CASES = [
-  { icon: Boxes, tag: "Virtualisation", title: "Consolidate. Containerize. Go at full speed.", desc: "Deploy Proxmox, VMware or Kubernetes on isolated bare metal — full control, no noisy neighbours.", cta: { label: "Discover virtualisation", href: "/private-cloud" } },
-  { icon: Activity, tag: "Resilience", title: "Stay online, whatever happens.", desc: "Anti-DDoS, guaranteed bandwidth and redundant network links keep your services reachable.", cta: { label: "Discover resilience", href: "/dedicated-servers/advance" } },
-  { icon: DatabaseIcon, tag: "Data", title: "Structure your data. Power through your work.", desc: "High-capacity storage servers for databases, analytics pipelines and backup repositories.", cta: { label: "Discover storage", href: "/dedicated-servers/storage" } },
-  { icon: Zap, tag: "Media", title: "Encode faster. Stream without limits.", desc: "High-frequency CPUs and GPU options for transcoding, rendering and game streaming.", cta: { label: "Discover game servers", href: "/dedicated-servers/game" } },
+const UC_LABEL: Record<string, string> = {
+  "archive-backup-recovery": "Archiving, backup & recovery",
+  "artificial-intelligence": "Artificial intelligence",
+  bdd: "Databases",
+  "big-data-analytics": "Big Data & Analytics",
+  "confidential-computing": "Confidential computing",
+  gaming: "Gaming servers",
+  "grid-computing": "Grid computing",
+  hosting: "Website hosting",
+  hpc: "High Performance Computing (HPC)",
+  "hyperconverged-infrastructure": "Hyperconverged infrastructure (HCI)",
+  "multi-az": "3-AZ",
+  sds: "Software defined storage",
+  vdi: "Virtual Desktop Infrastructure (VDI)",
+  "virtualisation-containerisation-orchestration": "Virtualisation, containerisation & orchestration",
+};
+
+const UC_FEATURES: { tag: string; title: string; uc: string; chips?: string[]; navy?: boolean }[] = [
+  { tag: "Web Hosting & PHP", title: "Launch your websites. Enhance them.", uc: "hosting", chips: ["WordPress", "Drupal", "PrestaShop", "Magento"] },
+  { tag: "Databases", title: "Structure your data. Power through your work.", uc: "bdd", chips: ["ClickHouse", "PostgreSQL", "Cassandra", "HBase", "InfluxDB"], navy: true },
+  { tag: "Virtualisation", title: "Consolidate. Control. Pick up the pace.", uc: "virtualisation-containerisation-orchestration", chips: ["VMware ESXi", "Proxmox VE", "KVM", "Kubernetes"] },
+  { tag: "In-memory database", title: "In-memory data. Instant responses.", uc: "bdd", chips: ["KeyDB", "RocksDB", "Redis", "etcd", "Valkey", "Speedb"], navy: true },
+  { tag: "Search and analyze", title: "Index. Analyse. Find it in an instant.", uc: "big-data-analytics", chips: ["Elastic", "OpenSearch", "Splunk", "Apache Solr"] },
+  { tag: "Event streaming", title: "Manage your events, in real time.", uc: "bdd", chips: ["Kafka", "RabbitMQ", "NATS JetStream", "Pulsar"], navy: true },
+  { tag: "Distributed file systems", title: "Store at scale. Enjoy easy access.", uc: "sds", chips: ["Hadoop", "CephFS", "GlusterFS", "Lustre"] },
+  { tag: "Machine Learning & GPU", title: "Intelligent computing, on a controlled basis.", uc: "artificial-intelligence", chips: ["TensorFlow GPU", "PyTorch GPU", "scikit-learn"], navy: true },
+  { tag: "HPC", title: "Deploy your models with no core limit.", uc: "hpc", chips: ["MPI", "OpenMP", "CUDA"] },
 ];
 
 const FEATURE_TABS: { id: string; label: string; items: { t: string; d: string }[] }[] = [
@@ -160,6 +182,19 @@ export default function DedicatedServersClient({ initialPlans }: { initialPlans?
       }
     });
     return stats;
+  }, [plans]);
+
+  const ucMin = useMemo(() => {
+    const m: Record<string, { price: number; cur: string }> = {};
+    for (const p of plans) {
+      const d = (p.durations || []).slice().sort((a: any, b: any) => (a.monthlyPrice || 0) - (b.monthlyPrice || 0))[0];
+      if (!d) continue;
+      const cur = d.currency || p.currency || "USD";
+      for (const u of String((p as any).features?.["baremetal-server-usecases"] || "").split(",").map((x: string) => x.trim()).filter(Boolean)) {
+        if (!m[u] || d.monthlyPrice! < m[u].price) m[u] = { price: d.monthlyPrice!, cur };
+      }
+    }
+    return m;
   }, [plans]);
 
   const activeTab = FEATURE_TABS.find((t) => t.id === tab) || FEATURE_TABS[0];
@@ -307,17 +342,52 @@ export default function DedicatedServersClient({ initialPlans }: { initialPlans?
         <Link href="/support" className="mt-4 inline-block rounded border border-[#00b7ff] px-6 py-2.5 text-sm font-bold text-[#00b7ff] hover:bg-[#e6f7ff]">Help me choose</Link>
       </section>
 
-      {/* Use cases */}
-      <section className="mx-auto max-w-7xl px-6 py-10">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {USE_CASES.map((u) => (
-            <div key={u.title} className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <span className="text-[10px] font-black uppercase tracking-wide text-[#00b7ff]">{u.tag}</span>
-              <h3 className="mt-2 text-sm font-bold">{u.title}</h3>
-              <p className="mt-2 flex-1 text-xs leading-relaxed text-slate-500">{u.desc}</p>
-              <Link href={u.cta.href} className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#00b7ff] hover:underline">{u.cta.label} <ArrowRight className="h-3.5 w-3.5" /></Link>
-            </div>
+      {/* Use cases — OVH-style hub */}
+      <section className="mx-auto max-w-7xl px-6 py-12">
+        <div className="rounded-2xl bg-gradient-to-r from-[#0f0c29] via-[#101d42] to-[#0a2a5e] border border-slate-800 px-8 py-9 relative overflow-hidden">
+          <Cpu className="absolute right-8 top-1/2 -translate-y-1/2 h-32 w-32 text-[#00b7ff]/15 hidden md:block" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#00b7ff]">Dedicated servers</p>
+          <h2 className="mt-2 text-2xl md:text-3xl font-black text-white">The right server for every use case</h2>
+        </div>
+        <p className="mt-4 text-[11px] text-slate-400"><Link href="/" className="hover:underline text-[#0050d7]">Home</Link> &gt; Dedicated Servers &gt; Use cases</p>
+
+        {/* scrollable use-case strip */}
+        <div className="mt-4 flex gap-3 overflow-x-auto pb-3 snap-x">
+          <Link href="/dedicated-servers/prices" className="snap-start shrink-0 w-40 rounded-xl border-2 border-[#0050d7] bg-white p-4 hover:shadow-md transition-all flex flex-col">
+            <p className="text-[12px] font-black leading-4">See the full list of servers</p>
+            <ChevronDown className="mt-auto h-4 w-4 -rotate-90 text-[#0050d7]" />
+          </Link>
+          {Object.entries(UC_LABEL).filter(([k]) => ucMin[k]).map(([k, v]) => (
+            <Link key={k} href={`/dedicated-servers/prices?use_cases=${k}`} className="snap-start shrink-0 w-40 rounded-xl border border-slate-200 bg-white p-4 hover:border-[#0050d7] hover:shadow-md transition-all flex flex-col">
+              <p className="text-[12px] font-black leading-4 min-h-[36px]">{v}</p>
+              <p className="mt-2 text-[10px] text-slate-500">Starting from
+                <span className="block text-sm font-black text-[#0050d7]">{money(ucMin[k].price, ucMin[k].cur)} <span className="text-[9px] font-normal">excl. VAT</span></span>
+              </p>
+              <ChevronDown className="mt-auto h-4 w-4 -rotate-90 text-[#0050d7]" />
+            </Link>
           ))}
+        </div>
+
+        {/* feature cards */}
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {UC_FEATURES.map((f) => {
+            const mn = ucMin[f.uc];
+            return (
+              <Link key={f.title} href={`/dedicated-servers/prices?use_cases=${f.uc}`} className={`rounded-2xl p-6 border transition-all hover:shadow-lg group ${f.navy ? "bg-[#0f0c29] border-white/10 text-white" : "bg-sky-50/60 border-slate-200"}`}>
+                <span className={`inline-block rounded-md px-2 py-1 text-[9px] font-black uppercase tracking-wider ${f.navy ? "bg-[#00b7ff]/15 text-[#00b7ff]" : "bg-[#0050d7]/10 text-[#0050d7]"}`}>{f.tag}</span>
+                <h3 className="mt-3 text-lg font-black leading-6">{f.title}</h3>
+                {mn && <p className={`mt-2 text-[11px] ${f.navy ? "text-white/50" : "text-slate-500"}`}>Starting from <span className={`font-black ${f.navy ? "text-[#00b7ff]" : "text-[#0050d7]"}`}>{money(mn.price, mn.cur)} excl. VAT</span></p>}
+                {f.chips && (
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {f.chips.map((ch) => (
+                      <span key={ch} className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold ${f.navy ? "bg-white/10 text-white/80" : "bg-white border border-slate-200 text-slate-600"}`}>{ch} <ChevronDown className="h-3 w-3 -rotate-90" /></span>
+                    ))}
+                  </div>
+                )}
+                <span className={`mt-5 inline-flex items-center gap-1 text-xs font-bold ${f.navy ? "text-[#00b7ff]" : "text-[#0050d7]"}`}>See servers <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" /></span>
+              </Link>
+            );
+          })}
         </div>
       </section>
 
