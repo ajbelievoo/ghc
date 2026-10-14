@@ -48,3 +48,10 @@ get explicit user approval first. See python-backend/AGENTS.md for details.
 - **Metal** = the premium menu (`/metal/*`, `/api/metal/*/plans`, `brand=metal` orders). `metal_vps_margin`/`metal_ded_margin` = 45%; names `metal_vps_names`/`metal_ded_names` → `Metal VPS-N`, `Metal <Range> <n> (<year>)`.
 - The two channels must NEVER show matching names — Metal pages keep the dark `ghc-metal-*` theme, Essential pages stay light/OVH-blue.
 - Admin: `/admin` → Margins tab → blue "ESSENTIAL" block (VPS/dedicated margins + per-plan name tables) and orange "METAL" block. Admin APIs: `/api/admin/essential-vps`, `/api/admin/essential-dedicated`, `/api/admin/metal-vps`, `/api/admin/metal-dedicated`.
+
+## Free orders mode (added 2026-10-14)
+
+- `admin_configs.free_orders_mode` (`true`/`false`) toggles a promo mode where customers activate services at ₹0 with no payment step.
+- Admin UI: `/admin` → Margins tab → "FREE ORDERS MODE" toggle (confirm dialog when enabling). APIs: `GET/POST /api/admin/free-orders` (admin), `GET /api/billing/free-orders` (public).
+- When enabled, `create_customer_order` sets `customer_amount`/`tax_amount` to 0 and tags `configuration_payload._free_order`. The configure page reads the public flag → shows "FREE" pricing + "Activate now — FREE" button that uses the wallet path (₹0 deduction → PAYMENT_RECEIVED → auto-provision). `payments_checkout` short-circuits ₹0 orders (auto-paid + provision, redirects to /dashboard); `/cart/checkout` forces ₹0 carts through the wallet fulfillment path; `/orders/{id}/provision` accepts `_free_order` as paid evidence.
+- Upstream (OVH) costs are still real — the order keeps the true `ovh_base_amount` for admin visibility.
