@@ -46,8 +46,10 @@ def provision_order(order_id: str, db: Session = Depends(get_db), user: User = D
     order = db.query(CustomerOrder).filter(CustomerOrder.id == order_id, CustomerOrder.user_id == user.id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    free_order = bool((order.configuration_payload or {}).get("_free_order"))
     paid = (
-        order.status == OrderStatus.PAYMENT_RECEIVED
+        free_order
+        or order.status == OrderStatus.PAYMENT_RECEIVED
         or db.query(PaymentTransaction).filter(
             PaymentTransaction.order_id == order.id,
             PaymentTransaction.status == PaymentStatus.COMPLETED,

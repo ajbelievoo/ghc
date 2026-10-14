@@ -502,6 +502,26 @@ def set_essential_ded_names(db: Session, names: Dict[str, str]) -> None:
     _set_names_map(db, ESS_DED_NAMES_KEY, names)
 
 
+# ---------- Free orders mode (admin toggle — customers activate services at ₹0) ----------
+
+FREE_MODE_KEY = "free_orders_mode"
+
+
+def is_free_mode(db: Session) -> bool:
+    row = db.query(AdminConfig).filter(AdminConfig.key == FREE_MODE_KEY).first()
+    return bool(row and str(row.value).lower() in ("1", "true", "yes", "on"))
+
+
+def set_free_mode(db: Session, enabled: bool) -> None:
+    row = db.query(AdminConfig).filter(AdminConfig.key == FREE_MODE_KEY).first()
+    if not row:
+        row = AdminConfig(key=FREE_MODE_KEY, value="true" if enabled else "false")
+        db.add(row)
+    else:
+        row.value = "true" if enabled else "false"
+    db.commit()
+
+
 def default_essential_vps_name(plan_code: str, invoice_name: str) -> str:
     """Public name on the standard VPS channel — 'Essential' brand, never 'Metal'.
 

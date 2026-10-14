@@ -158,6 +158,7 @@ function ConfigurePageContent() {
   const [imageTab, setImageTab] = useState<"dist" | "app">("dist");
   const [selectedApp, setSelectedApp] = useState<string>("");
   const [couponCode, setCouponCode] = useState("");
+  const [freeMode, setFreeMode] = useState(false);
   const [couponResult, setCouponResult] = useState<any>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
@@ -240,14 +241,16 @@ function ConfigurePageContent() {
         brand === "metal" ? api.server.metalVpsPlans() : api.server.plans(category),
         api.server.gateways(),
         localStorage.getItem("token") ? api.auth.me().catch(() => null) : Promise.resolve(null),
+        api.billing.freeOrders().catch(() => ({ enabled: false })),
       ])
-        .then(([p, g, me]: any[]) => {
+        .then(([p, g, me, fr]: any[]) => {
           if (!alive) return;
           setPlans(p || []);
           const active = (g || []).filter((x: any) => x.isActive).map((x: any) => x.name);
           setGateways(active);
           if (active[0]) setGateway(active[0]);
           if (me?.user) setUser(me.user);
+          setFreeMode(!!fr?.enabled);
         })
         .finally(() => alive && setLoading(false));
     };
@@ -348,9 +351,9 @@ function ConfigurePageContent() {
       if (datacenter) configuration.datacenter = datacenter;
       if (brand === "metal") configuration._brand = "metal";
 
-      if (!gateway) { showToast("No payment gateway is configured. Please contact support or set up a gateway in admin.", "error"); setPaying(false); return; }
+      if (!gateway && !freeMode) { showToast("No payment gateway is configured. Please contact support or set up a gateway in admin.", "error"); setPaying(false); return; }
 
-      if (gateway === "wallet") {
+      if (freeMode || gateway === "wallet") {
         const res = await api.billing.payWithWallet({
           planCode: plan.planCode,
           durationLabel: selectedDuration.durationLabel,
@@ -699,14 +702,27 @@ function ConfigurePageContent() {
                   <p className="text-sm font-black text-[#0f172a]">Total</p>
                   <p className="text-[10px] text-slate-500">{selectedDuration?.durationLabel === "1_month" ? "including taxes/month" : `including taxes for ${selectedDuration?.durationLabel.replace("_", " ")}`}</p>
                 </div>
-                <p className="text-xl font-black text-[#0f172a]">{fmtCurrency(total, planCurrency)}</p>
+                {freeMode ? (
+                  <div className="flex items-center gap-2">
+                    <p className="text-xl font-black text-emerald-600">FREE</p>
+                    <p className="text-sm font-semibold text-slate-400 line-through">{fmtCurrency(total, planCurrency)}</p>
+                  </div>
+                ) : (
+                  <p className="text-xl font-black text-[#0f172a]">{fmtCurrency(total, planCurrency)}</p>
+                )}
               </div>
+              {freeMode && (
+                <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700">
+                  Free launch offer — no payment required. Your service will be activated instantly.
+                </div>
+              )}
               <div className="mt-2 space-y-1 border-t border-dashed border-slate-200 pt-2 text-xs text-slate-600">
-                <div className="flex justify-between"><span>Subtotal</span><span>{fmtCurrency(subtotal, planCurrency)}</span></div>
+                <div className="flex justify-between"><span>Subtotal</span><span>{freeMode ? "₹0.00" : fmtCurrency(subtotal, planCurrency)}</span></div>
                 {discount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-semibold"><span>Coupon {couponResult?.code} ({couponResult?.discountType === "percent" ? `${couponResult?.discountValue}%` : "fixed"} off)</span><span>-{fmtCurrency(discount, planCurrency)}</span></div>
                 )}
-                <div className="flex justify-between"><span>GST ({(taxRate*100).toFixed(0)}%)</span><span>{fmtCurrency(tax, planCurrency)}</span></div>
+                <div className="flex justify-between"><span>GST ({(taxRate*100).toFixed(0)}%)</span><span>{freeMode ? "₹0.00" : fmtCurrency(tax, planCurrency)}</span></div>
+                {!freeMode && (
                 <div className="mt-2 flex gap-2">
                   <input
                     type="text"
@@ -734,11 +750,12 @@ function ConfigurePageContent() {
                     >{couponLoading ? "…" : "Apply"}</button>
                   )}
                 </div>
+                )}
                 {couponError && <p className="text-[11px] font-semibold text-red-500">{couponError}</p>}
               </div>
               {!user && <p className="mt-3 rounded bg-[#fff4ef] p-2 text-[10px] font-bold text-[#ff3d00]">Sign in or create account before payment.</p>}
-              <button onClick={startPayment} disabled={paying || !providerConfig?.available || (providerDatacenters.length > 0 && !datacenter)} className="mt-4 flex w-full items-center justify-center gap-2 rounded bg-[#0f0c29] px-5 py-3 text-sm font-bold text-white hover:bg-[#302b63] disabled:opacity-50">
-                Continue order →
+              <button onClick={startPayment} disabled={paying || !providerConfig?.available || (providerDatacenters.length > 0 && !datacenter)} className={`mt-4 flex w-full items-center justify-center gap-2 rounded px-5 py-3 text-sm font-bold text-white disabled:opacity-50 ${freeMode ? "bg-emerald-600 hover:bg-emerald-700" : "bg-[#0f0c29] hover:bg-[#302b63]"}`}>
+                {paying ? "Processing…" : freeMode ? "Activate now — FREE" : "Continue order →"}
               </button>
               {user && (
                 <button

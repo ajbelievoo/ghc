@@ -1598,6 +1598,29 @@ def admin_delete_coupon(coupon_id: str, db: Session = Depends(get_db), admin: Us
     return {"success": True}
 
 
+# ---------- Free orders mode (admin-controlled) ----------
+
+@router.get("/admin/free-orders")
+def get_free_orders_status(db: Session = Depends(get_db), _=Depends(get_current_admin)):
+    from app.services.catalog_service import is_free_mode
+    return {"enabled": is_free_mode(db)}
+
+
+@router.post("/admin/free-orders")
+def set_free_orders_status(body: dict, db: Session = Depends(get_db), _=Depends(get_current_admin)):
+    from app.services.catalog_service import set_free_mode
+    enabled = bool(body.get("enabled"))
+    set_free_mode(db, enabled)
+    return {"enabled": enabled}
+
+
+@router.get("/billing/free-orders")
+def public_free_orders_status(db: Session = Depends(get_db)):
+    """Public flag so the checkout UI can switch to a ₹0/free flow."""
+    from app.services.catalog_service import is_free_mode
+    return {"enabled": is_free_mode(db)}
+
+
 @router.post("/billing/order")
 def billing_create_order(body: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:
@@ -1620,6 +1643,7 @@ def billing_create_order(body: dict, db: Session = Depends(get_db), user: User =
             "taxRate": order.tax_rate,
             "currency": order.currency,
             "status": order.status.value,
+            "freeMode": bool((order.configuration_payload or {}).get("_free_order")),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1759,6 +1783,31 @@ def payments_checkout(body: dict, db: Session = Depends(get_db), user: User = De
         )
         order_id = order.id
         amount = float(order.customer_amount)
+        # Free orders mode: ₹0 orders must not go to a payment gateway —
+        # mark them paid and kick off provisioning right away.
+        if (order.configuration_payload or {}).get("_free_order") and amount <= 0:
+            from app.services.order_service import pay_order_with_wallet, spawn_provisioning
+            try:
+                order = pay_order_with_wallet(db, user.id, order.id)
+            except ValueError:
+                order.status = OrderStatus.PAYMENT_RECEIVED
+                db.commit()
+            try:
+                order.status = OrderStatus.PROVISIONING
+                db.commit()
+                spawn_provisioning(order.id)
+            except Exception:
+                db.rollback()
+            db.refresh(order)
+            return {
+                "id": None,
+                "free": True,
+                "checkoutUrl": "/dashboard",
+                "amount": 0,
+                "currency": order.currency,
+                "status": order.status.value,
+                "message": "Free order activated — provisioning started",
+            }
     elif tx_type == "DOMAIN_REGISTRATION" and body.get("domainId"):
         domain_reg = db.query(DomainRegistration).filter(
             DomainRegistration.id == body.get("domainId"),
@@ -2005,6 +2054,9 @@ def cart_checkout(body: dict, db: Session = Depends(get_db), user: User = Depend
         raise HTTPException(status_code=400, detail=f"Could not create any order: {errors[0]['error'] if errors else 'unknown'}")
 
     total = round(sum(float(o.customer_amount) + float(o.tax_amount or 0) for o in orders), 2)
+    # Free orders mode: a ₹0 cart never goes to a payment gateway.
+    if total <= 0:
+        gateway = "wallet"
     tx = create_payment_session(
         db,
         user_id=user.id,
@@ -2025,7 +2077,7 @@ def cart_checkout(body: dict, db: Session = Depends(get_db), user: User = Depend
         wallet = db.query(Wallet).filter(Wallet.user_id == user.id).with_for_update().first() or get_or_create_wallet(db, user.id)
         from app.services.currency_service import convert as _cv
         try:
-            wallet_amount = _cv(db, total, orders[0].currency, wallet.currency, strict=True)
+            wallet_amount = 0.0 if total <= 0 else _cv(db, total, orders[0].currency, wallet.currency, strict=True)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
         if wallet.balance < wallet_amount:

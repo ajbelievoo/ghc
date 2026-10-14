@@ -201,6 +201,16 @@ def create_customer_order(
     tax_amount = round(taxable * tax_rate, 2)
     customer_amount = round(taxable + tax_amount, 2)
 
+    # Free orders mode (admin toggle, admin_configs.free_orders_mode): the
+    # customer is billed ₹0 — the order still carries the real upstream base
+    # cost so admin can see what free activations are costing.
+    from app.services.catalog_service import is_free_mode
+    free_mode = is_free_mode(db)
+    if free_mode:
+        tax_amount = 0.0
+        customer_amount = 0.0
+        config = {**(config or {}), "_free_order": True}
+
     order = CustomerOrder(
         user_id=user_id,
         plan_code=resolved_code,
@@ -1526,7 +1536,10 @@ def pay_order_with_wallet(db: Session, user_id: str, order_id: str) -> CustomerO
 
     # Wallet is always in INR; convert order amount if needed
     order_currency = (order.currency or get_settings().currency or "USD").upper()
-    if order_currency == wallet.currency:
+    if order.customer_amount <= 0:
+        # Free orders (free_orders_mode) — nothing to deduct or convert.
+        wallet_deduction = 0.0
+    elif order_currency == wallet.currency:
         wallet_deduction = order.customer_amount
     else:
         wallet_deduction = convert(db, order.customer_amount, order_currency, wallet.currency, strict=True)
