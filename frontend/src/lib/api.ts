@@ -182,10 +182,6 @@ export const api = {
     getEssentialDedicated: () => request("/admin/essential-dedicated"),
     saveEssentialDedicated: (body: { marginPercent?: number; names?: Record<string, string> }) =>
       request("/admin/essential-dedicated", { method: "POST", body: JSON.stringify(body) }),
-    // Free orders mode — customers can activate services at ₹0 while enabled
-    getFreeOrders: () => request("/admin/free-orders"),
-    setFreeOrders: (enabled: boolean) =>
-      request("/admin/free-orders", { method: "POST", body: JSON.stringify({ enabled }) }),
     // Catalog
     getCatalog: (params?: { category?: string; search?: string }) =>
       request(`/admin/plans?${new URLSearchParams(params as any).toString()}`),
@@ -455,7 +451,6 @@ export const api = {
       request(`/billing/bulk-renew`, { method: "POST", body: JSON.stringify(body) }),
     payWithWallet: (body: { planCode: string; durationLabel: string; category: string; configuration?: object; currency?: string; couponCode?: string }) =>
       request("/billing/wallet/pay", { method: "POST", body: JSON.stringify({ ...body, currency: body.currency || selectedCurrency() }) }),
-    freeOrders: () => request("/billing/free-orders"),
   },
   public: {
     announcements: () => request("/public/announcements"),

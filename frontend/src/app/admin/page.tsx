@@ -70,8 +70,6 @@ export default function AdminPage() {
   const [essDedPlans, setEssDedPlans] = useState<any[]>([]);
   const [essDedNames, setEssDedNames] = useState<Record<string, string>>({});
   const [essDedMargin, setEssDedMargin] = useState<number>(12);
-  const [freeOrders, setFreeOrders] = useState(false);
-  const [freeOrdersBusy, setFreeOrdersBusy] = useState(false);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
   const [catalogPlans, setCatalogPlans] = useState<PlanEntry[]>([]);
@@ -151,7 +149,6 @@ export default function AdminPage() {
         try { const md = await api.admin.getMetalDedicated(); setDedPlans(md.plans || []); setDedNames(md.names || {}); setDedMargin(md.marginPercent ?? 20); } catch {}
         try { const ev = await api.admin.getEssentialVps(); setEssVpsPlans(ev.plans || []); setEssVpsNames(ev.names || {}); setEssVpsMargin(ev.marginPercent ?? 10); } catch {}
         try { const ed = await api.admin.getEssentialDedicated(); setEssDedPlans(ed.plans || []); setEssDedNames(ed.names || {}); setEssDedMargin(ed.marginPercent ?? 12); } catch {}
-        try { const fr = await api.admin.getFreeOrders(); setFreeOrders(!!fr?.enabled); } catch {}
       }
       if (t === "coupons") { const c = await api.admin.getCoupons(); setCoupons(c || []); }
       if (t === "catalog") { setCatalogLoading(true); const params: any = { search: catalogSearch || undefined }; if (catalogCategory !== "ALL") params.category = catalogCategory; const p = await api.admin.getCatalog(params); setCatalogPlans(p || []); setCatalogLoading(false); }
@@ -220,17 +217,6 @@ export default function AdminPage() {
   const saveMetalNames = async () => { try { await api.admin.saveMetalVps({ names: metalNames }); showToast("Metal plan names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveDedNames = async () => { try { await api.admin.saveMetalDedicated({ names: dedNames }); showToast("Dedicated names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveDedMargin = async () => { try { await api.admin.saveMetalDedicated({ marginPercent: dedMargin }); showToast("Metal dedicated margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
-  const toggleFreeOrders = async () => {
-    const next = !freeOrders;
-    if (next && !confirm("Enable FREE ORDERS mode?\n\nCustomers will be able to activate services at ₹0 with NO payment — upstream provider costs are still real for you. Use for traffic/promo periods only.")) return;
-    setFreeOrdersBusy(true);
-    try {
-      await api.admin.setFreeOrders(next);
-      setFreeOrders(next);
-      showToast(next ? "Free orders mode ON — customers checkout at ₹0" : "Free orders mode OFF — normal paid checkout", "success");
-    } catch (e: any) { showToast("Failed: " + e.message, "error"); }
-    finally { setFreeOrdersBusy(false); }
-  };
   const saveEssVpsMargin = async () => { try { await api.admin.saveEssentialVps({ marginPercent: essVpsMargin }); showToast("Essential VPS margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveEssVpsNames = async () => { try { await api.admin.saveEssentialVps({ names: essVpsNames }); showToast("Essential VPS names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveEssDedMargin = async () => { try { await api.admin.saveEssentialDedicated({ marginPercent: essDedMargin }); showToast("Essential dedicated margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
@@ -648,28 +634,6 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-[#0f172a]">Category Profit Margins</h2>
               <button onClick={() => loadTabData("margins")} className="flex items-center gap-2 rounded-lg bg-slate-100/50 border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100/80 transition-all"><RefreshCw className="w-4 h-4" />Refresh</button>
-            </div>
-
-            {/* ===== FREE ORDERS MODE ===== */}
-            <div className={`rounded-2xl border-2 p-6 ${freeOrders ? "border-emerald-400 bg-emerald-50/60" : "border-slate-200 bg-white/60"} backdrop-blur-xl`}>
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${freeOrders ? "bg-emerald-100 border-emerald-300" : "bg-slate-100 border-slate-200"}`}>
-                    <DollarSign className={`w-5 h-5 ${freeOrders ? "text-emerald-600" : "text-slate-400"}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#0f172a]">FREE ORDERS MODE {freeOrders ? <span className="ml-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white align-middle">ON — checkout is ₹0</span> : <span className="ml-1 rounded-full bg-slate-300 px-2 py-0.5 text-[10px] font-bold text-slate-600 align-middle">OFF — paid checkout</span>}</p>
-                    <p className="text-xs text-slate-500">Jab ON hai to saare customers services ₹0 pe activate kar sakte hain — payment step skip hota hai, order free flag ke saath provision hota hai. Upstream (OVH) cost aapka real rahega. Traffic/promo ke liye use karo.</p>
-                  </div>
-                </div>
-                <button
-                  onClick={toggleFreeOrders}
-                  disabled={freeOrdersBusy}
-                  className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${freeOrders ? "bg-emerald-500" : "bg-slate-300"}`}
-                >
-                  <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${freeOrders ? "translate-x-7" : "translate-x-1"}`} />
-                </button>
-              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {CATEGORIES.map((cat) => (
