@@ -128,3 +128,10 @@ every site offline permanently.
 - Frontend sends `configuration._options = [addonPlanCode...]`. `create_customer_order` validates codes against the plan's `addonFamilies` (excluding `os`/`storage`), prices them `sell × months × currency-rate`, adds to `taxable`, stores `_options`/`_options_price` in the payload. Bogus codes → 400.
 - License safety: `option-cpanel-*`/`option-plesk-*` require a matching OS image string containing `cpanel`/`plesk`, and a licensed VPS image without its license code is rejected — OVH bills licenses regardless of activation.
 - `_add_mandatory_options` honors `_options`: a selected addon replaces its family's mandatory default (premium backup replaces standard), non-mandatory families add only what the customer picked.
+
+## Commitment durations & unified sell pricing (added 2026-10-18)
+
+- `compute_sell_price(db, plan, duration, metal=)` in catalog_service is the SINGLE pricing path: raw → (per-plan override | channel margin | category margin) → VPS duration discount. Used by `_plan_to_frontend` (Essential + Metal listings) AND `create_customer_order` — display price always equals charged price (previously orders ignored the commitment discount baked into `final_price`).
+- Duration discounts: `admin_configs.commitment_discounts` (Essential) / `metal_commitment_discounts` (Metal), JSON `{duration_label: pct}` — defaults {6_month:5, 12_month:15}. Derived months come from `admin_configs.commitment_months` (default [6,12]; 3_month removed).
+- Per-plan margins: Essential = `plan_catalogs.override_margin` (bulk `POST /api/admin/plan-margins`); Metal VPS = `admin_configs.metal_vps_plan_margins` (via `POST /api/admin/metal-vps` `planMargins`).
+- `GET/POST /api/admin/duration-settings` — months + both discount maps; POST re-derives VPS duration rows immediately (native catalog durations like 24_month are preserved via `catalog_metadata.pricings`).

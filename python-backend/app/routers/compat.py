@@ -602,11 +602,20 @@ def admin_save_duration_settings(body: dict, db: Session = Depends(get_db), admi
             _admin_config_set(db, key, clean)
     db.commit()
     # Re-derive every VPS plan's duration rows now (no 6h sync wait).
+    # provided_labels come from the plan's synced catalog pricings so NATIVE
+    # durations (e.g. 24_month on older VPS families) are never deleted.
+    from app.services.catalog_service import _duration_label
     discounts = _commitment_discounts(db)
-    provided = {"1_month"}
     for p in db.query(PlanCatalog).filter(PlanCatalog.category == ServiceCategory.VPS).all():
         try:
-            _derive_commitment_durations(db, p.plan_code, provided | {f"{m}_month" for m in get_commitment_months(db)}, discounts)
+            meta = p.catalog_metadata or {}
+            provided = {
+                _duration_label(pr.get("interval"), pr.get("intervalUnit"))
+                for pr in (meta.get("pricings") or [])
+                if pr.get("interval")
+            }
+            provided.discard(None)
+            _derive_commitment_durations(db, p.plan_code, provided, discounts)
         except Exception as e:
             logger.warning(f"duration-settings rederive failed for {p.plan_code}: {e}")
     db.commit()
@@ -704,6 +713,7 @@ def admin_get_essential_vps(db: Session = Depends(get_db), admin: User = Depends
                 "autoName": default_essential_vps_name(p.plan_code, p.invoice_name or ""),
                 "rawPrice": p.durations[0].raw_price if p.durations else None,
                 "currency": (p.durations[0].currency if p.durations else p.currency),
+                "overrideMargin": p.override_margin,
             }
             for p in plans
         ],

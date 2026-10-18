@@ -170,7 +170,7 @@ export const api = {
       request("/admin/margins", { method: "POST", body: JSON.stringify(body) }),
     // Metal channel (Metal menu → VPS plans, separate margin + names)
     getMetalVps: () => request("/admin/metal-vps"),
-    saveMetalVps: (body: { marginPercent?: number; names?: Record<string, string> }) =>
+    saveMetalVps: (body: { marginPercent?: number; names?: Record<string, string>; planMargins?: Record<string, number | null> }) =>
       request("/admin/metal-vps", { method: "POST", body: JSON.stringify(body) }),
     getMetalDedicated: () => request("/admin/metal-dedicated"),
     saveMetalDedicated: (body: { marginPercent?: number; names?: Record<string, string> }) =>
@@ -179,6 +179,13 @@ export const api = {
     getEssentialVps: () => request("/admin/essential-vps"),
     saveEssentialVps: (body: { marginPercent?: number; names?: Record<string, string> }) =>
       request("/admin/essential-vps", { method: "POST", body: JSON.stringify(body) }),
+    // Commitment durations (derived prepay months + per-channel % off)
+    getDurationSettings: () => request("/admin/duration-settings"),
+    saveDurationSettings: (body: { months?: number[]; essential?: Record<string, number>; metal?: Record<string, number> }) =>
+      request("/admin/duration-settings", { method: "POST", body: JSON.stringify(body) }),
+    // Bulk per-plan Essential margin overrides ({planCode: pct|null})
+    savePlanMargins: (margins: Record<string, number | null>) =>
+      request("/admin/plan-margins", { method: "POST", body: JSON.stringify({ margins }) }),
     getEssentialDedicated: () => request("/admin/essential-dedicated"),
     saveEssentialDedicated: (body: { marginPercent?: number; names?: Record<string, string> }) =>
       request("/admin/essential-dedicated", { method: "POST", body: JSON.stringify(body) }),

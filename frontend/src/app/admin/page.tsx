@@ -72,6 +72,9 @@ export default function AdminPage() {
   const [essDedMargin, setEssDedMargin] = useState<number>(12);
   const [preorderSettings, setPreorderSettings] = useState<any>({ enabled: true, feeType: "percent", feeValue: 5, refundDays: 30 });
   const [preorderQueue, setPreorderQueue] = useState<any[]>([]);
+  const [durationSettings, setDurationSettings] = useState<any>({ months: [6, 12], essential: {}, metal: {} });
+  const [essVpsMargins, setEssVpsMargins] = useState<Record<string, string>>({});
+  const [metalVpsMargins, setMetalVpsMargins] = useState<Record<string, string>>({});
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
   const [catalogPlans, setCatalogPlans] = useState<PlanEntry[]>([]);
@@ -147,10 +150,11 @@ export default function AdminPage() {
       if (t === "brand") { const b = await api.admin.getBrand(); setBrand(b); }
       if (t === "margins") {
         const m = await api.admin.getMargins(); const map: Record<string, number> = {}; m.forEach((x: any) => map[x.category] = x.percent); setMargins(map);
-        try { const mv = await api.admin.getMetalVps(); setMetalMargin(mv.marginPercent ?? 20); setMetalPlans(mv.plans || []); setMetalNames(mv.names || {}); } catch {}
+        try { const mv = await api.admin.getMetalVps(); setMetalMargin(mv.marginPercent ?? 20); setMetalPlans(mv.plans || []); setMetalNames(mv.names || {}); setMetalVpsMargins(Object.fromEntries(Object.entries(mv.planMargins || {}).map(([k, v]: any) => [k, String(v)]))); } catch {}
         try { const md = await api.admin.getMetalDedicated(); setDedPlans(md.plans || []); setDedNames(md.names || {}); setDedMargin(md.marginPercent ?? 20); } catch {}
-        try { const ev = await api.admin.getEssentialVps(); setEssVpsPlans(ev.plans || []); setEssVpsNames(ev.names || {}); setEssVpsMargin(ev.marginPercent ?? 10); } catch {}
+        try { const ev = await api.admin.getEssentialVps(); setEssVpsPlans(ev.plans || []); setEssVpsNames(ev.names || {}); setEssVpsMargin(ev.marginPercent ?? 10); setEssVpsMargins(Object.fromEntries((ev.plans || []).filter((p: any) => p.overrideMargin != null).map((p: any) => [p.planCode, String(p.overrideMargin)]))); } catch {}
         try { const ed = await api.admin.getEssentialDedicated(); setEssDedPlans(ed.plans || []); setEssDedNames(ed.names || {}); setEssDedMargin(ed.marginPercent ?? 12); } catch {}
+        try { const ds = await api.admin.getDurationSettings(); setDurationSettings({ months: ds.months || [6, 12], essential: ds.essential || {}, metal: ds.metal || {} }); } catch {}
         try { const po = await api.admin.getPreorders(); setPreorderSettings(po.settings || {}); setPreorderQueue(po.queue || []); } catch {}
       }
       if (t === "coupons") { const c = await api.admin.getCoupons(); setCoupons(c || []); }
@@ -224,6 +228,9 @@ export default function AdminPage() {
   const saveEssVpsNames = async () => { try { await api.admin.saveEssentialVps({ names: essVpsNames }); showToast("Essential VPS names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveEssDedMargin = async () => { try { await api.admin.saveEssentialDedicated({ marginPercent: essDedMargin }); showToast("Essential dedicated margin saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const saveEssDedNames = async () => { try { await api.admin.saveEssentialDedicated({ names: essDedNames }); showToast("Essential dedicated names saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveDurationSettings = async () => { try { const clean = (m: Record<string, any>) => Object.fromEntries(Object.entries(m || {}).map(([k, v]: any) => [k, parseFloat(v) || 0])); await api.admin.saveDurationSettings({ months: durationSettings.months, essential: clean(durationSettings.essential), metal: clean(durationSettings.metal) }); showToast("Commitment durations & discounts saved — VPS plan rows re-derived", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveEssVpsPlanMargins = async () => { try { await api.admin.savePlanMargins(Object.fromEntries(Object.entries(essVpsMargins).map(([k, v]) => [k, v === "" ? null : parseFloat(v)]))); showToast("Per-plan Essential margins saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
+  const saveMetalVpsPlanMargins = async () => { try { await api.admin.saveMetalVps({ planMargins: Object.fromEntries(Object.entries(metalVpsMargins).map(([k, v]) => [k, v === "" ? null : parseFloat(v) as any])) }); showToast("Per-plan Metal margins saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handlePlanOverride = async (planCode: string, overridePrice: string, overrideMargin: string) => { try { await api.admin.updatePlanOverride(planCode, { overridePrice: overridePrice === "" ? null : parseFloat(overridePrice), overrideMargin: overrideMargin === "" ? null : parseFloat(overrideMargin) }); showToast("Override saved for " + planCode, "success"); loadTabData("catalog"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleFulfillPayment = async (sessionId: string) => { try { await api.payments.fulfillSession(sessionId); showToast("Payment fulfilled and service activated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
   const handleRetryProvision = async (orderId: string) => { try { await api.admin.retryProvision(orderId); showToast("Provisioning retry initiated", "success"); loadTabData("orders"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } };
@@ -654,6 +661,43 @@ export default function AdminPage() {
               ))}
             </div>
 
+            {/* ===== COMMITMENT DURATIONS & DISCOUNTS (VPS) ===== */}
+            <div className="mt-8 rounded-2xl border-2 border-emerald-400/40 bg-white/60 backdrop-blur-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-400/30 flex items-center justify-center"><Percent className="w-5 h-5 text-emerald-600" /></div>
+                <div>
+                  <p className="text-sm font-bold text-[#0f172a]">COMMITMENT PERIODS — VPS prepay durations</p>
+                  <p className="text-xs text-slate-500">Which prepay options exist (OVH VPS only exposes monthly — longer terms are synthesized and billed monthly upstream) and the % off each. Saving re-derives VPS duration rows instantly.</p>
+                </div>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-slate-200 mt-4">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
+                    <tr><th className="px-3 py-2">Months</th><th className="px-3 py-2 w-44">Essential % off</th><th className="px-3 py-2 w-44">Metal % off</th><th className="px-3 py-2 w-20"></th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(durationSettings.months || []).map((m: number) => {
+                      const key = `${m}_month`;
+                      return (
+                        <tr key={m}>
+                          <td className="px-3 py-2 font-bold">{m} months</td>
+                          <td className="px-3 py-2"><input type="number" step="0.5" value={durationSettings.essential?.[key] ?? 0} onChange={(e) => setDurationSettings((s: any) => ({ ...s, essential: { ...(s.essential || {}), [key]: e.target.value } }))} className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-emerald-400/50" /></td>
+                          <td className="px-3 py-2"><input type="number" step="0.5" value={durationSettings.metal?.[key] ?? 0} onChange={(e) => setDurationSettings((s: any) => ({ ...s, metal: { ...(s.metal || {}), [key]: e.target.value } }))} className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-emerald-400/50" /></td>
+                          <td className="px-3 py-2 text-right"><button onClick={() => setDurationSettings((s: any) => ({ ...s, months: (s.months || []).filter((x: number) => x !== m) }))} className="text-xs font-bold text-red-500 hover:underline">Remove</button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <input id="new-month" type="number" min="2" placeholder="Months e.g. 24" className="w-36 rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-emerald-400/50" />
+                <button onClick={() => { const el = document.getElementById("new-month") as HTMLInputElement; const v = parseInt(el.value); if (v > 1 && !(durationSettings.months || []).includes(v)) { setDurationSettings((s: any) => ({ ...s, months: [...(s.months || []), v].sort((a: number, b: number) => a - b) })); el.value = ""; } }} className="rounded-lg bg-slate-100 border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all">+ Add duration</button>
+                <button onClick={saveDurationSettings} className="rounded-lg bg-emerald-100 border border-emerald-300 px-5 py-2 text-sm font-bold text-emerald-700 hover:bg-emerald-200 transition-all">Save commitment settings</button>
+                <p className="text-[10px] text-slate-400">Note: removing a month deletes its derived duration rows; customers on it keep their current term.</p>
+              </div>
+            </div>
+
             {/* ===== ESSENTIAL CHANNEL (standard /vps + /dedicated-servers) ===== */}
             <div className="mt-8 rounded-2xl border-2 border-[#00b7ff]/40 bg-white/60 backdrop-blur-xl p-6">
               <div className="flex items-center gap-3 mb-2">
@@ -683,13 +727,16 @@ export default function AdminPage() {
 
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-bold text-[#0f172a]">Essential VPS display names <span className="font-normal text-slate-500">(public names on /vps — blank = auto Essential name)</span></p>
-                  <button onClick={saveEssVpsNames} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all">Save names</button>
+                  <p className="text-sm font-bold text-[#0f172a]">Essential VPS names & per-plan margins <span className="font-normal text-slate-500">(blank = default Essential name / category margin)</span></p>
+                  <div className="flex gap-2">
+                    <button onClick={saveEssVpsNames} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all">Save names</button>
+                    <button onClick={saveEssVpsPlanMargins} className="rounded-lg bg-[#00b7ff]/10 border border-[#00b7ff]/30 px-4 py-2 text-xs font-bold text-[#00b7ff] hover:bg-[#00b7ff]/20 transition-all">Save margins</button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
-                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Essential name</th></tr>
+                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Essential name</th><th className="px-3 py-2 w-28">Margin %</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {essVpsPlans.map((p: any) => (
@@ -705,9 +752,19 @@ export default function AdminPage() {
                               className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#00b7ff]/50"
                             />
                           </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={essVpsMargins[p.planCode] ?? ""}
+                              onChange={(e) => setEssVpsMargins((prev) => ({ ...prev, [p.planCode]: e.target.value }))}
+                              placeholder={String(essVpsMargin)}
+                              className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#00b7ff]/50"
+                            />
+                          </td>
                         </tr>
                       ))}
-                      {essVpsPlans.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
+                      {essVpsPlans.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -762,13 +819,16 @@ export default function AdminPage() {
 
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-bold text-[#0f172a]">Metal display names <span className="font-normal text-slate-500">(customer-facing names on /metal/vps — blank = original name)</span></p>
-                  <button onClick={saveMetalNames} className="rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 px-4 py-2 text-xs font-bold text-[#ff3d00] hover:bg-[#ff3d00]/20 transition-all">Save names</button>
+                  <p className="text-sm font-bold text-[#0f172a]">Metal display names & per-plan margins <span className="font-normal text-slate-500">(blank = original name / Metal channel margin)</span></p>
+                  <div className="flex gap-2">
+                    <button onClick={saveMetalNames} className="rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 px-4 py-2 text-xs font-bold text-[#ff3d00] hover:bg-[#ff3d00]/20 transition-all">Save names</button>
+                    <button onClick={saveMetalVpsPlanMargins} className="rounded-lg bg-[#ff3d00]/10 border border-[#ff3d00]/30 px-4 py-2 text-xs font-bold text-[#ff3d00] hover:bg-[#ff3d00]/20 transition-all">Save margins</button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
-                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Base cost</th><th className="px-3 py-2 w-56">Metal name</th></tr>
+                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Base cost</th><th className="px-3 py-2 w-56">Metal name</th><th className="px-3 py-2 w-28">Margin %</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {metalPlans.map((p: any) => (
@@ -784,9 +844,19 @@ export default function AdminPage() {
                               className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#ff3d00]/50"
                             />
                           </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={metalVpsMargins[p.planCode] ?? ""}
+                              onChange={(e) => setMetalVpsMargins((prev) => ({ ...prev, [p.planCode]: e.target.value }))}
+                              placeholder={String(metalMargin)}
+                              className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#ff3d00]/50"
+                            />
+                          </td>
                         </tr>
                       ))}
-                      {metalPlans.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
+                      {metalPlans.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
