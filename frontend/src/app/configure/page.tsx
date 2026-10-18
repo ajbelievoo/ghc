@@ -153,6 +153,8 @@ function ConfigurePageContent() {
   const [backup, setBackup] = useState(false);
   const [snapshot, setSnapshot] = useState(false);
   const [storage, setStorage] = useState(false);
+  const [storageOpt, setStorageOpt] = useState("");
+  const [licenseSel, setLicenseSel] = useState("");
   const [providerConfig, setOvhConfig] = useState<any>(null);
   const [configLoading, setConfigLoading] = useState(false);
   const [imageTab, setImageTab] = useState<"dist" | "app">("dist");
@@ -265,8 +267,25 @@ function ConfigurePageContent() {
     .filter((d: any) => ["1_month", "3_month", "6_month", "12_month"].includes(d.durationLabel))
     .map((d: any) => ({ durationLabel: d.durationLabel, finalPrice: d.finalPrice, monthlyPrice: d.monthlyPrice, originalPrice: d.rawPrice || d.finalPrice }));
   const selectedDuration = durations.find((d: any) => d.durationLabel === durationLabel) || durations[0] || { durationLabel: "1_month", finalPrice: 0, originalPrice: 0 };
-  const optionsTotal = 0;
-  const subtotal = parseFloat((((selectedDuration?.finalPrice || 0) + optionsTotal) * quantity).toFixed(2));
+  // Real paid add-ons from the OVH catalog (plan_configuration.options) —
+  // monthly sell prices already carry this channel's margin.
+  const cfgOptions: any[] = providerConfig?.options || [];
+  const optFamily = (f: string) => cfgOptions.find((o: any) => o.family === f);
+  const snapshotOpt = optFamily("snapshot")?.choices?.[0];
+  const premiumBackupOpt = (optFamily("automatedBackup")?.choices || []).find((c: any) => /-7-|premium/i.test(c.code)) || optFamily("automatedBackup")?.choices?.slice(-1)[0];
+  const diskOpts = optFamily("additionalDisk")?.choices || [];
+  const durationMonths = Math.max(1, parseInt(selectedDuration?.durationLabel) || 1);
+  // cPanel/Plesk app images require a license add-on at OVH — auto-include it.
+  const appLicenseFamily = imageTab === "app" && /cpanel|plesk/i.test(selectedApp || "") ? (selectedApp.match(/cpanel/i) ? "cpanel" : "plesk") : null;
+  const licenseOpts = appLicenseFamily ? (optFamily(appLicenseFamily)?.choices || []) : [];
+  const licenseOpt = licenseOpts.find((c: any) => c.code === licenseSel) || licenseOpts[0];
+  const optionsMonthly =
+    (snapshot && snapshotOpt ? snapshotOpt.monthlyPrice : 0) +
+    (backup && premiumBackupOpt ? premiumBackupOpt.monthlyPrice : 0) +
+    (storage && storageOpt ? (diskOpts.find((d: any) => d.code === storageOpt)?.monthlyPrice || 0) : 0) +
+    (licenseOpt?.monthlyPrice || 0);
+  const optionsTotal = parseFloat((optionsMonthly * durationMonths * quantity).toFixed(2));
+  const subtotal = parseFloat(((selectedDuration?.finalPrice || 0) * quantity + optionsTotal).toFixed(2));
   const discount = couponResult ? parseFloat((couponResult.discount || 0).toFixed(2)) : 0;
   const requiredConfigs = providerConfig?.requiredConfiguration || providerConfig?.configurations || [];
   const findConfigValues = (names: string[]) => {
@@ -476,6 +495,12 @@ function ConfigurePageContent() {
       if (datacenter) configuration.datacenter = datacenter;
       if (brand === "metal") configuration._brand = "metal";
       if (preorderSelected) configuration._preorder = true;
+      const selOpts: string[] = [];
+      if (snapshot && snapshotOpt) selOpts.push(snapshotOpt.code);
+      if (backup && premiumBackupOpt) selOpts.push(premiumBackupOpt.code);
+      if (storage && storageOpt) selOpts.push(storageOpt);
+      if (licenseOpt) selOpts.push(licenseOpt.code);
+      if (selOpts.length) configuration._options = selOpts;
 
       if (!gateway) { showToast("No payment gateway is configured. Please contact support or set up a gateway in admin.", "error"); setPaying(false); return; }
 
@@ -815,7 +840,30 @@ function ConfigurePageContent() {
                               <option key={o.value} value={o.value}>{imageTab === "app" ? o.label : `Version ${o.label}`}</option>
                             ))}
                           </select>
+                          {imageTab === "app" && /cpanel|plesk/i.test(card.family) && (() => {
+                            const licFamily = /cpanel/i.test(card.family) ? "cpanel" : "plesk";
+                            const licOpts = optFamily(licFamily)?.choices || [];
+                            if (!licOpts.length) return null;
+                            return (
+                              <select
+                                value={licOpts.some((c: any) => c.code === licenseSel) ? licenseSel : licOpts[0].code}
+                                onChange={(e) => setLicenseSel(e.target.value)}
+                                className="mt-2 w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-[#0f172a] outline-none focus:border-[#00b7ff]"
+                              >
+                                {licOpts.map((c: any) => (
+                                  <option key={c.code} value={c.code}>{c.label} — {fmtCurrency(c.monthlyPrice, c.currency)}/mo</option>
+                                ))}
+                              </select>
+                            );
+                          })()}
                           {imageTab === "dist" && <p className="mt-1.5 text-xs font-bold text-slate-400">Free</p>}
+                          {imageTab === "app" && /cpanel|plesk/i.test(card.family) && (() => {
+                            const licFamily = /cpanel/i.test(card.family) ? "cpanel" : "plesk";
+                            const licOpts = optFamily(licFamily)?.choices || [];
+                            const shown = licOpts.find((c: any) => c.code === (sel ? licenseSel : "")) || licOpts[0];
+                            return shown ? <p className="mt-1.5 text-xs font-bold text-[#e0006d]">{fmtCurrency(shown.monthlyPrice, shown.currency)}/mo license</p> : null;
+                          })()}
+                          {imageTab === "app" && !/cpanel|plesk/i.test(card.family) && <p className="mt-1.5 text-xs font-bold text-slate-400">Free</p>}
                         </div>
                       );
                     })}
@@ -846,44 +894,57 @@ function ConfigurePageContent() {
               <p className="text-xs text-slate-600">As a result, your data is effortlessly protected every day and can be readily restored should any issues occur.</p>
             </div>
             <div className="space-y-3">
-              <label className="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-200 p-4 hover:border-[#00b7ff]">
-                <input type="checkbox" checked={backup} onChange={(e) => setBackup(e.target.checked)} />
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-[#0f172a]">Premium automatic backup</p>
-                  <p className="text-xs text-slate-500">Your custom backup, with a rolling 7-day restore.</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-[#00b7ff]">{fmtCurrency(0, planCurrency)}</p>
-                  <p className="text-[10px] text-slate-400">ex. taxes/month</p>
-                </div>
-              </label>
-              <label className="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-200 p-4 hover:border-[#00b7ff]">
-                <input type="checkbox" checked={snapshot} onChange={(e) => setSnapshot(e.target.checked)} />
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-[#0f172a]">Snapshot backup</p>
-                  <p className="text-xs text-slate-500">Create an image of your server whenever you want. Easy to use, it allows you to quickly restore and secure your VPS before making any changes.</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-[#00b7ff]">{fmtCurrency(0, planCurrency)}</p>
-                  <p className="text-[10px] text-slate-400">ex. taxes/month</p>
-                </div>
-              </label>
-              <label className="flex cursor-pointer items-start gap-4 rounded-lg border border-slate-200 p-4 hover:border-[#00b7ff]">
-                <input type="checkbox" checked={storage} onChange={(e) => setStorage(e.target.checked)} className="mt-1" />
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-[#0f172a]">Additional storage</p>
-                  <p className="text-xs text-slate-500">Increase the available storage space on your VPS with our highly resilient additional disks.</p>
-                  {storage && (
-                    <select className="mt-2 w-full max-w-[120px] rounded border border-slate-200 p-1 text-xs">
-                      {["50 GB", "100 GB", "200 GB", "500 GB"].map((s) => <option key={s}>{s}</option>)}
-                    </select>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-[#00b7ff]">{fmtCurrency(0, planCurrency)}</p>
-                  <p className="text-[10px] text-slate-400">ex. taxes/month</p>
-                </div>
-              </label>
+              {premiumBackupOpt && (
+                <label className="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-200 p-4 hover:border-[#00b7ff]">
+                  <input type="checkbox" checked={backup} onChange={(e) => setBackup(e.target.checked)} />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-[#0f172a]">Premium automatic backup</p>
+                    <p className="text-xs text-slate-500">Your custom backup, with a rolling 7-day restore.</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-[#00b7ff]">{fmtCurrency(premiumBackupOpt.monthlyPrice, planCurrency)}</p>
+                    <p className="text-[10px] text-slate-400">ex. taxes/month</p>
+                  </div>
+                </label>
+              )}
+              {snapshotOpt && (
+                <label className="flex cursor-pointer items-center gap-4 rounded-lg border border-slate-200 p-4 hover:border-[#00b7ff]">
+                  <input type="checkbox" checked={snapshot} onChange={(e) => setSnapshot(e.target.checked)} />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-[#0f172a]">Snapshot backup</p>
+                    <p className="text-xs text-slate-500">Create an image of your server whenever you want. Easy to use, it allows you to quickly restore and secure your VPS before making any changes.</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-[#00b7ff]">{fmtCurrency(snapshotOpt.monthlyPrice, planCurrency)}</p>
+                    <p className="text-[10px] text-slate-400">ex. taxes/month</p>
+                  </div>
+                </label>
+              )}
+              {diskOpts.length > 0 && (
+                <label className="flex cursor-pointer items-start gap-4 rounded-lg border border-slate-200 p-4 hover:border-[#00b7ff]">
+                  <input type="checkbox" checked={storage} onChange={(e) => { setStorage(e.target.checked); if (e.target.checked && !storageOpt) setStorageOpt(diskOpts[0].code); }} className="mt-1" />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-[#0f172a]">Additional storage</p>
+                    <p className="text-xs text-slate-500">Increase the available storage space on your VPS with our highly resilient additional disks.</p>
+                    {storage && (
+                      <select
+                        value={storageOpt || diskOpts[0].code}
+                        onChange={(e) => setStorageOpt(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-2 w-full max-w-[260px] rounded border border-slate-200 p-1 text-xs"
+                      >
+                        {diskOpts.map((d: any) => (
+                          <option key={d.code} value={d.code}>{d.label} — {fmtCurrency(d.monthlyPrice, planCurrency)}/mo</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-[#00b7ff]">{fmtCurrency((diskOpts.find((d: any) => d.code === (storageOpt || diskOpts[0].code))?.monthlyPrice) || 0, planCurrency)}</p>
+                    <p className="text-[10px] text-slate-400">ex. taxes/month</p>
+                  </div>
+                </label>
+              )}
             </div>
           </section>
 
@@ -920,11 +981,12 @@ function ConfigurePageContent() {
               {plan.bandwidthMbps && <div className="flex items-center justify-between"><span className="text-slate-600">Public bandwidth</span><b className="text-[#0f172a]">{plan.bandwidthMbps} Mbps unlimited</b></div>}
               <div className="flex items-center justify-between"><span className="text-slate-600">Commitment</span><div className="text-right"><b className="text-[#0f172a]">{durationText}</b>{commitmentDiscount && <p className="text-[10px] font-bold text-[#e0006d]">{commitmentDiscount}</p>}</div></div>
               <div className="flex items-center justify-between"><span className="text-slate-600">Datacenter location</span><div className="text-right"><b className="text-[#0f172a]">{quantity}× {datacenter || "Select"}</b>{preorderSelected && <p className="text-[10px] font-bold text-amber-600">⏳ PRE-BOOKING — activates on restock</p>}</div></div>
-              <div className="flex items-center justify-between"><span className="text-slate-600">Image</span><div className="text-right"><b className="text-[#0f172a]">{image} {imageVersion}</b><p className="text-[10px] font-bold text-[#0f172a]">Free</p></div></div>
+              <div className="flex items-center justify-between"><span className="text-slate-600">Image</span><div className="text-right"><b className="text-[#0f172a]">{image} {imageVersion}</b><p className="text-[10px] font-bold text-[#0f172a]">{licenseOpt ? "License billed below" : "Free"}</p></div></div>
               <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><b className="text-[#0f172a]">Local Storage - {plan.invoiceName || plan.planCode}</b></div>
-              {backup && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Premium automatic backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(1.24, planCurrency)}</p></div></div>}
-              {snapshot && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Snapshot backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(0.34, planCurrency)}</p></div></div>}
-              {storage && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Additional storage - 50 GB</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(2.42, planCurrency)}</p></div></div>}
+              {backup && premiumBackupOpt && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Premium automatic backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(premiumBackupOpt.monthlyPrice, planCurrency)}/mo</p></div></div>}
+              {snapshot && snapshotOpt && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Snapshot backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(snapshotOpt.monthlyPrice, planCurrency)}/mo</p></div></div>}
+              {storage && storageOpt && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">{diskOpts.find((d: any) => d.code === storageOpt)?.label || "Additional storage"}</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(diskOpts.find((d: any) => d.code === storageOpt)?.monthlyPrice || 0, planCurrency)}/mo</p></div></div>}
+              {licenseOpt && <div className="flex items-center justify-between"><span className="text-slate-600">License</span><div className="text-right"><b className="text-[#0f172a]">{licenseOpt.label}</b><p className="text-[10px] font-bold text-[#e0006d]">{fmtCurrency(licenseOpt.monthlyPrice, planCurrency)}/mo</p></div></div>}
             </div>
             {/* Total */}
             <div className="border-t border-slate-200 p-4">
@@ -991,6 +1053,12 @@ function ConfigurePageContent() {
                     if (osValue) configuration.os = osValue;
                     if (datacenter) configuration.datacenter = datacenter;
                     if (preorderSelected) configuration._preorder = true;
+                    const selOpts: string[] = [];
+                    if (snapshot && snapshotOpt) selOpts.push(snapshotOpt.code);
+                    if (backup && premiumBackupOpt) selOpts.push(premiumBackupOpt.code);
+                    if (storage && storageOpt) selOpts.push(storageOpt);
+                    if (licenseOpt) selOpts.push(licenseOpt.code);
+                    if (selOpts.length) configuration._options = selOpts;
                     try {
                       await api.cart.add({
                         planCode: plan.planCode,

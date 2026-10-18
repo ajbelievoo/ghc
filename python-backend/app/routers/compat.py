@@ -782,10 +782,10 @@ def _vps_addon_prices() -> Dict[str, Dict[str, Any]]:
             if not code:
                 continue
             price = None
-            for p in a.get("pricings") or []:
-                if int(p.get("interval") or 0) >= 1 and p.get("price") is not None:
-                    price = float(p["price"]) / 1e8
-                    break
+            cands = [p for p in (a.get("pricings") or []) if p.get("price") is not None and int(p.get("interval") or 0) >= 1]
+            if cands:
+                best = min(cands, key=lambda p: int(p.get("interval") or 1))
+                price = float(best["price"]) / 1e8 / max(1, int(best.get("interval") or 1))
             if price is None:
                 continue
             result[code] = {
@@ -799,12 +799,14 @@ def _vps_addon_prices() -> Dict[str, Dict[str, Any]]:
     return result
 
 
-def _vps_options_for_plan(db, plan, is_metal: bool) -> List[Dict[str, Any]]:
+def _vps_options_for_plan(db, plan, is_metal: bool, target_currency: str = "INR") -> List[Dict[str, Any]]:
     """Selectable paid add-ons for the configure page (snapshot, premium backup,
-    extra disk, cpanel/plesk licenses) with channel-margin pricing."""
+    extra disk, cpanel/plesk licenses) with channel-margin pricing, converted
+    to the requested currency."""
     from decimal import Decimal
     from app.services.catalog_service import get_margin_for_category, get_metal_vps_margin
     from app.services.ovh_client import apply_margin
+    from app.services.currency_service import get_rate
 
     meta = plan.catalog_metadata or {}
     families = meta.get("addonFamilies") or []
@@ -823,10 +825,17 @@ def _vps_options_for_plan(db, plan, is_metal: bool) -> List[Dict[str, Any]]:
             if not p:
                 continue
             sell = float(apply_margin(Decimal(str(p["monthlyPrice"])), margin))
+            src_ccy = p["currency"]
+            if target_currency and target_currency != src_ccy:
+                try:
+                    sell = round(sell * get_rate(db, src_ccy, target_currency), 2)
+                    src_ccy = target_currency
+                except Exception:
+                    pass
             label = (p["invoiceName"] or code)
             label = _re.sub(r"^Option\s+", "", label)
             label = _re.sub(r"\s*-\s*VPS-\d.*$", "", label).strip() or code
-            choices.append({"code": code, "label": label, "monthlyPrice": round(sell, 2), "currency": p["currency"]})
+            choices.append({"code": code, "label": label, "monthlyPrice": round(sell, 2), "currency": src_ccy})
         if choices:
             out.append({
                 "family": name,
@@ -881,6 +890,7 @@ def plan_configuration(
     planCode: str,
     category: Optional[str] = None,
     durationLabel: Optional[str] = None,
+    brand: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     plan = _resolve_plan_code(db, planCode)
@@ -933,6 +943,9 @@ def plan_configuration(
         # {planCode: {linux: bool, windows: bool}} — which sibling VPS plans are
         # actually orderable right now; powers the "available plans" suggestions.
         "siblingsAvailability": siblings,
+        # Paid add-ons (snapshot / premium backup / extra disk / licenses) with
+        # real OVH catalog prices + this channel's margin applied.
+        "options": _vps_options_for_plan(db, plan, str(brand or "").lower() == "metal") if plan.category == ServiceCategory.VPS else [],
         # Stock waitlist: {enabled, feeType, feeValue, refundDays} — the frontend
         # turns "out of stock" cards into payable pre-bookings when enabled.
         "preorder": get_preorder_settings(db),

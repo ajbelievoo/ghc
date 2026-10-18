@@ -207,6 +207,31 @@ def create_customer_order(
             raise ValueError(reason)
         discount_amount = compute_discount(coupon_obj, final_price_converted)
 
+    # Paid add-ons chosen on the configure page (snapshot / premium backup /
+    # extra disk / cpanel-plesk licenses). Codes must belong to the plan's
+    # addonFamilies and are priced from the live OVH catalog + channel margin,
+    # per month of the selected duration.
+    sel_options = [str(c) for c in (config or {}).get("_options") or [] if c]
+    options_total = 0.0
+    if sel_options:
+        from app.routers.compat import _vps_addon_prices
+        prices = _vps_addon_prices()
+        fams = (plan.catalog_metadata or {}).get("addonFamilies") or []
+        allowed = {a for f in fams for a in (f.get("addons") or []) if f.get("name") not in ("os", "storage")}
+        _unit = str(duration.interval_unit or "month").lower()
+        months = max(1, int(duration.interval or 1)) * (12 if _unit.startswith("y") else 1)
+        for code in sel_options:
+            if code not in allowed:
+                raise ValueError(f"Invalid option '{code}' for plan {plan.plan_code}")
+            p = prices.get(code)
+            if not p:
+                raise ValueError(f"Option '{code}' has no catalog pricing")
+            opt_margin = get_metal_vps_margin(db) if (is_metal and plan.category == ServiceCategory.VPS) else get_margin_for_category(db, plan.category)
+            sell = float(apply_margin(Decimal(str(p["monthlyPrice"])), opt_margin))
+            options_total += sell * months
+        options_total = round(options_total * rate, 2)
+        config = {**(config or {}), "_options": sel_options, "_options_price": options_total}
+
     # Pre-order (stock waitlist): customer pays now for an out-of-stock DC;
     # an extra admin-set fee applies on top of the plan price (before tax).
     is_preorder = bool((config or {}).get("_preorder"))
@@ -219,7 +244,7 @@ def create_customer_order(
         preorder_fee = compute_preorder_fee(db, final_price_converted, target_currency)
         config = {**(config or {}), "_preorder": True, "_preorder_fee": preorder_fee}
 
-    taxable = max(0.0, final_price_converted - discount_amount) + preorder_fee
+    taxable = max(0.0, final_price_converted - discount_amount) + preorder_fee + options_total
     tax_rate = get_settings().tax_rate_percent / 100.0
     tax_amount = round(taxable * tax_rate, 2)
     customer_amount = round(taxable + tax_amount, 2)
@@ -360,54 +385,64 @@ def _build_required_configurations(plan: PlanCatalog, config: Dict[str, Any]) ->
 
 
 def _add_mandatory_options(db, ovh, order, parent_item_id, service, plan, duration, config) -> List[Any]:
-    """Add OVH mandatory addon families (OS, backup, storage) as child items."""
+    """Add OVH mandatory addon families (OS, backup, storage) + any paid
+    add-ons the customer selected (snapshot, premium backup, extra disk,
+    cpanel/plesk license) as child items. A selected code overrides the
+    family's mandatory default (e.g. premium backup replaces standard)."""
     all_item_ids = [parent_item_id]
     metadata = plan.catalog_metadata or {}
     addon_families = metadata.get("addonFamilies", [])
     if not addon_families:
         return all_item_ids
 
+    selected = {str(c) for c in (config or {}).get("_options") or []}
+
     duration_str = f"P{duration.interval}{duration.interval_unit[0].upper()}"
 
     for family in addon_families:
-        if not family.get("mandatory"):
-            continue
         addons = family.get("addons") or []
         if not addons:
             continue
 
-        # Prefer Linux OS when available, otherwise use first option
+        chosen_list: List[str] = []
+        picked = [c for c in addons if c in selected]
         if family.get("name") == "os":
+            # Prefer Linux OS when available, otherwise use first option
             preferred = next((a for a in addons if "linux" in a.lower()), None)
-            chosen = preferred or addons[0]
+            chosen_list = [preferred or addons[0]]
+        elif picked:
+            chosen_list = picked
+        elif family.get("mandatory"):
+            chosen_list = [addons[0]]
         else:
-            chosen = addons[0]
+            continue
 
-        try:
-            option = ovh.add_item_option(
-                order.ovh_cart_id,
-                service,
-                parent_item_id,
-                {
-                    "planCode": chosen,
-                    "duration": duration_str,
-                    "pricingMode": "default",
-                    "quantity": 1,
-                },
-            )
-            option_id = option.get("itemId")
-            all_item_ids.append(option_id)
-            log_ovh_step(
-                db,
-                order.id,
-                "ADD_OPTION",
-                f"/order/cart/{order.ovh_cart_id}/{service}",
-                {"parentItemId": parent_item_id, "planCode": chosen},
-                option,
-            )
-        except Exception as e:
-            logger.warning(f"Could not add option {chosen} for plan {plan.plan_code}: {e}")
-            # Non-fatal: OVH may allow checkout without optional/recommended addons
+        for chosen in chosen_list:
+            try:
+                option = ovh.add_item_option(
+                    order.ovh_cart_id,
+                    service,
+                    parent_item_id,
+                    {
+                        "planCode": chosen,
+                        "duration": duration_str,
+                        "pricingMode": "default",
+                        "quantity": 1,
+                    },
+                )
+                option_id = option.get("itemId")
+                all_item_ids.append(option_id)
+                log_ovh_step(
+                    db,
+                    order.id,
+                    "ADD_OPTION",
+                    f"/order/cart/{order.ovh_cart_id}/{service}",
+                    {"parentItemId": parent_item_id, "planCode": chosen},
+                    option,
+                )
+            except Exception as e:
+                logger.warning(f"Could not add option {chosen} for plan {plan.plan_code}: {e}")
+                # Non-fatal: OVH may allow checkout without optional/recommended addons
 
     return all_item_ids
 
