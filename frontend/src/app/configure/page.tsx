@@ -338,7 +338,15 @@ function ConfigurePageContent() {
       seenAllDcCities.add(dcCityKey(dc));
       return true;
     });
-  const renderedLocations = showUnavailable ? allCatalogLocations : displayedLocations;
+  // Tabs always come from the full DC universe so every region stays clickable.
+  // Card list per region: available DCs normally; unavailable grayed when the
+  // toggle is ON — or whenever the region has zero in-stock DCs anyway.
+  const tabSourceLocations = allCatalogLocations.length ? allCatalogLocations : displayedLocations;
+  const regionHasAvail = (r: string) => displayedLocations.some((dc) => getDcRegion(dc) === r);
+  const cardsForRegion = (r: string) =>
+    (showUnavailable || !regionHasAvail(r) ? allCatalogLocations : displayedLocations).filter(
+      (dc) => getDcRegion(dc) === r
+    );
   // Sibling plans actually orderable right now (per selected OS family) —
   // shown on every plan's configure page as quick-switch chips.
   const siblingStock = providerConfig?.siblingsAvailability || {};
@@ -588,7 +596,7 @@ function ConfigurePageContent() {
             </div>
             <p className="mb-3 text-xs text-slate-600">You can host your VPS in one of our datacenters in our worldwide network.</p>
             <div className="mb-4 flex gap-1 border-b border-slate-200">
-              {(Object.keys(regionLocations) as (keyof typeof regionLocations)[]).filter((r) => renderedLocations.some((dc) => getDcRegion(dc) === r)).map((r) => (
+              {(Object.keys(regionLocations) as (keyof typeof regionLocations)[]).filter((r) => tabSourceLocations.some((dc) => getDcRegion(dc) === r)).map((r) => (
                 <button key={r} onClick={() => setRegion(r)} className={`px-4 py-2 text-xs font-bold transition ${region === r ? "border-b-2 border-[#00b7ff] text-[#00b7ff]" : "text-slate-500 hover:text-[#0f172a]"}`}>{r}</button>
               ))}
             </div>
@@ -599,9 +607,9 @@ function ConfigurePageContent() {
                 <p className="font-black text-[#0f172a]">This plan is temporarily unavailable.</p>
                 <p className="mt-1 text-sm text-slate-600">{providerConfig?.reason || "Configuration not available."}</p>
               </div>
-            ) : renderedLocations.length > 0 ? (
+            ) : cardsForRegion(region).length > 0 ? (
               <div className="space-y-2">
-                {renderedLocations.filter((dc) => getDcRegion(dc) === region).map((dc: string) => {
+                {cardsForRegion(region).map((dc: string) => {
                   const name = getDcName(dc);
                   const dcAvail = displayedLocations.includes(dc);
                   if (!dcAvail) {
