@@ -130,6 +130,13 @@ every site offline permanently.
 - Admin APIs: `GET /api/admin/preorders` (settings + queue), `POST /api/admin/preorder-settings`, `POST /api/admin/preorders/{id}/refund` (manual early refund). Public settings exposed at `plan_configuration.preorder`.
 - Caveat: OVH does NOT reserve stock — fulfillment rechecks live stock and can still lose the race; attempts are recorded in `configuration_payload._preorder_attempts`.
 
+## Dedicated regional variants + configurable hardware (added 2026-10-18)
+
+- One OVH dedicated model = several planCodes: base plan serves EU/NA DCs; `-mum`/`-sgp`/`-syd` siblings serve Mumbai (`ynm`)/Singapore/Sydney with their own prices. `_ded_family_plans()` groups them by stripping `_DED_REGION_SUFFIX`.
+- `GET /api/server/plans/configuration` (dedicated) returns `dcVariants[dc]` = `{planCode, prices, totals, setupPrices, pricingModes, options, stock, spec, osValues}`. `stock` is a per-hardware-combo map `"<memory>|<storage>" -> {status, availability, deliveryHours}` from the PUBLIC no-auth feed `/dedicated/server/datacenter/availabilities` (addon codes carry the base-plan suffix — `_ded_stock_code()` strips it to match feed fqns). `_ded_dc_availability(plan, memory=, storage=)` checks the EXACT combo — never treat plan-level availability as combo stock.
+- Order flow: `create_customer_order` swaps the plan to the DC's regional sibling BEFORE `_validate_configuration`/duration fetch (so `order.plan_code` is the real cart planCode), validates `_options` against that variant's `addonFamilies`, prices upgrades via `_ded_addon_prices()` (public `baremetalServers` catalog addons; family-default codes are free; upfront12/24 durations use the addon's native mode totals), and the availability check + `preorder_tick` probe use the ordered RAM/storage combo via `_ded_hw_from_config()`.
+- Configure page: "Configure your server" radios (Memory/Storage/Public+Private bandwidth) + license checkboxes come from `cfgOptions` = `dcVariants[dc].options || options`; `activeLocations` recomputes in-stock DCs from `dedStockFor(dc)` per selected combo; subtotal adds `dedOptionsTotal` (mode-aware: `choices[].modes[pricingMode]` else monthly×months).
+
 ## Paid VPS add-ons / real option pricing (added 2026-10-18)
 
 - `GET /api/server/plans/configuration` now returns `options`: per-family (`snapshot`, `automatedBackup`, `additionalDisk`, `cpanel`, `plesk`) choices with real OVH catalog prices + channel margin, converted to `?currency=`. `_vps_addon_prices()` reads the public catalog `/order/catalog/public/vps` (microcents ÷1e8, 30-min cache); `_vps_options_for_plan` applies Metal (`metal_vps_margin`) vs category margin via `brand=metal`.
