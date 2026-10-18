@@ -130,6 +130,22 @@ SERVICE_RESOURCE_FAMILY = {
 }
 
 
+def _ded_hw_from_config(plan, config: Dict[str, Any]) -> Dict[str, str]:
+    """Selected memory/storage addon codes → bare stock keys matching the
+    availability feed's memory/storage fields (planCode suffix stripped)."""
+    from app.routers.compat import _ded_stock_code
+    hw: Dict[str, str] = {}
+    sel = [str(c) for c in (config or {}).get("_options") or [] if c]
+    if not sel:
+        return hw
+    for f in (plan.catalog_metadata or {}).get("addonFamilies") or []:
+        if f.get("name") in ("memory", "storage"):
+            picked = next((c for c in sel if c in (f.get("addons") or [])), None)
+            if picked:
+                hw[f["name"]] = _ded_stock_code(plan.plan_code, picked)
+    return hw
+
+
 from app.services.tax_service import generate_invoice_number, gst_fields_for_user
 
 
@@ -149,6 +165,20 @@ def create_customer_order(
 
     resolved_code = plan.plan_code
 
+    # Dedicated: each datacenter belongs to a regional sibling planCode
+    # (-mum/-sgp/-syd). Swap to that variant BEFORE validating the DC or
+    # fetching durations — validation, pricing and the upstream cart must
+    # all use the regional plan, not the base one.
+    if plan.category == ServiceCategory.DEDICATED:
+        dc0 = str((config or {}).get("datacenter") or (config or {}).get("dedicated_datacenter") or "")
+        if dc0:
+            from app.routers.compat import _ded_family_plans
+            for fp in _ded_family_plans(db, plan):
+                fp_cfg = next((c for c in (fp.catalog_metadata or {}).get("configurations") or [] if c.get("name") == "dedicated_datacenter"), None)
+                if dc0 in [str(v) for v in (fp_cfg.get("values") or [])]:
+                    plan, resolved_code = fp, fp.plan_code
+                    break
+
     # Validate configuration values against the live OVH catalog metadata
     _validate_configuration(plan, config or {})
 
@@ -159,22 +189,39 @@ def create_customer_order(
     if not duration:
         raise ValueError(f"Duration {duration_label} not available for plan {plan_code}")
 
+    ded_mode = "default"
     if plan.category == ServiceCategory.DEDICATED:
-        from app.routers.compat import _ded_dc_availability
+        from app.routers.compat import _ded_dc_availability, _ded_stock_code
         from app.services.catalog_service import dedicated_pricing
-        dedicated_pricing(plan, duration)
+        ded_mode, _ = dedicated_pricing(plan, duration)
         config = dict(config or {})
         dc = config.get("datacenter") or config.get("dedicated_datacenter")
-        info = _ded_dc_availability(plan, fresh=True).get(str(dc), {})
+        ded_opts = [str(c) for c in config.get("_options") or [] if c]
+        ded_hw: Dict[str, str] = {}
+        if ded_opts:
+            fams0 = (plan.catalog_metadata or {}).get("addonFamilies") or []
+            allowed0 = {a for f in fams0 for a in (f.get("addons") or [])}
+            bad = [c for c in ded_opts if c not in allowed0]
+            if bad:
+                raise ValueError(f"Invalid option '{bad[0]}' for plan {plan.plan_code}")
+            for f in fams0:
+                if f.get("name") in ("memory", "storage"):
+                    picked = next((c for c in ded_opts if c in (f.get("addons") or [])), None)
+                    if picked:
+                        ded_hw[f["name"]] = _ded_stock_code(plan.plan_code, picked)
+        info = _ded_dc_availability(
+            plan,
+            memory=ded_hw.get("memory"),
+            storage=ded_hw.get("storage"),
+            fresh=True,
+        ).get(str(dc), {})
         status = info.get("status")
         if status not in ("available", "unavailable"):
             raise ValueError("Could not verify this location's stock. Please refresh and try again.")
         if status == "unavailable" and not config.get("_preorder"):
-            raise ValueError("This location is out of stock. Please select pre-booking.")
+            raise ValueError("This location is out of stock for the selected hardware. Please select pre-booking.")
         if status == "available":
             config.pop("_preorder", None)
-        if config.get("_options"):
-            raise ValueError("Please use the included dedicated hardware configuration")
         if not (config.get("os") or config.get("dedicated_os")):
             raise ValueError("Please select an operating system")
 
@@ -187,9 +234,13 @@ def create_customer_order(
             margin = get_metal_ded_margin(db)
             ded_names = get_metal_ded_names(db)
             ded_names_norm = {_normalize_public_plan_code(k): v for k, v in ded_names.items()}
+            import re as _re0
+            base_pub = _re0.sub(r"-(mum|sgp|syd)$", "", resolved_code)
             metal_name = (
                 ded_names.get(resolved_code)
+                or ded_names.get(base_pub)
                 or ded_names_norm.get(_normalize_public_plan_code(resolved_code))
+                or ded_names_norm.get(_normalize_public_plan_code(base_pub))
                 or default_dedicated_display_name(plan.invoice_name or "", resolved_code)
             )
         else:
@@ -241,21 +292,41 @@ def create_customer_order(
     sel_options = [str(c) for c in (config or {}).get("_options") or [] if c]
     options_total = 0.0
     if sel_options:
-        from app.routers.compat import _vps_addon_prices
-        prices = _vps_addon_prices()
         fams = (plan.catalog_metadata or {}).get("addonFamilies") or []
-        allowed = {a for f in fams for a in (f.get("addons") or []) if f.get("name") not in ("os", "storage")}
         _unit = str(duration.interval_unit or "month").lower()
         months = max(1, int(duration.interval or 1)) * (12 if _unit.startswith("y") else 1)
-        for code in sel_options:
-            if code not in allowed:
-                raise ValueError(f"Invalid option '{code}' for plan {plan.plan_code}")
-            p = prices.get(code)
-            if not p:
-                raise ValueError(f"Option '{code}' has no catalog pricing")
-            opt_margin = get_metal_vps_margin(db) if (is_metal and plan.category == ServiceCategory.VPS) else get_margin_for_category(db, plan.category)
-            sell = float(apply_margin(Decimal(str(p["monthlyPrice"])), opt_margin))
-            options_total += sell * months
+        if plan.category == ServiceCategory.DEDICATED:
+            from app.routers.compat import _ded_addon_prices
+            from app.services.catalog_service import get_metal_ded_margin, dedicated_pricing
+            prices = _ded_addon_prices()
+            defaults = {f.get("name"): f.get("default") or (f.get("addons") or [None])[0] for f in fams}
+            allowed = {a for f in fams for a in (f.get("addons") or [])}
+            opt_margin = get_metal_ded_margin(db) if is_metal else get_margin_for_category(db, plan.category)
+            for code in sel_options:
+                if code not in allowed:
+                    raise ValueError(f"Invalid option '{code}' for plan {plan.plan_code}")
+                if code in defaults.values():
+                    continue  # included hardware choice — bundled in the plan price
+                p = prices.get(code)
+                if not p:
+                    raise ValueError(f"Option '{code}' has no catalog pricing")
+                total = (p.get("modes") or {}).get(ded_mode)
+                if ded_mode == "default" or total is None:
+                    total = p["monthly"] * months
+                options_total += float(apply_margin(Decimal(str(total)), opt_margin))
+        else:
+            from app.routers.compat import _vps_addon_prices
+            prices = _vps_addon_prices()
+            allowed = {a for f in fams for a in (f.get("addons") or []) if f.get("name") not in ("os", "storage")}
+            for code in sel_options:
+                if code not in allowed:
+                    raise ValueError(f"Invalid option '{code}' for plan {plan.plan_code}")
+                p = prices.get(code)
+                if not p:
+                    raise ValueError(f"Option '{code}' has no catalog pricing")
+                opt_margin = get_metal_vps_margin(db) if (is_metal and plan.category == ServiceCategory.VPS) else get_margin_for_category(db, plan.category)
+                sell = float(apply_margin(Decimal(str(p["monthlyPrice"])), opt_margin))
+                options_total += sell * months
         options_total = round(options_total * rate, 2)
 
     # License add-ons must pair with a matching licensed OS image — OVH bills
@@ -1536,7 +1607,10 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         if plan.category == ServiceCategory.DEDICATED:
             from app.routers.compat import _ded_dc_availability
             dc = config.get("datacenter") or config.get("dedicated_datacenter")
-            if _ded_dc_availability(plan, fresh=True).get(str(dc), {}).get("status") != "available":
+            hw = _ded_hw_from_config(plan, config)
+            if _ded_dc_availability(
+                plan, memory=hw.get("memory"), storage=hw.get("storage"), fresh=True
+            ).get(str(dc), {}).get("status") != "available":
                 raise ValueError("Dedicated stock changed; awaiting availability for this hardware configuration")
         # 1. Create cart
         cart = ovh.create_cart(description=f"BelieVoo order {order.id}")
@@ -1861,10 +1935,23 @@ def preorder_tick(db: Session) -> Dict[str, int]:
         plan_row = db.query(PlanCatalog).filter(PlanCatalog.plan_code == plan_code).first()
         is_ded = bool(plan_row and plan_row.category == ServiceCategory.DEDICATED)
         # Dedicated stock comes from the public datacenter-availabilities feed
-        # (status=available for any delivery time); VPS uses the order-rule API.
-        avail = _ded_dc_availability(plan_row, fresh=True) if is_ded else _vps_dc_availability(plan_code)
-        if not avail:
-            continue
+        # and depends on the ordered RAM/storage combo — probe per order;
+        # VPS uses the order-rule API (OS-family aware).
+        avail: Dict[str, Any] = {}
+        ded_avail_cache: Dict[Any, Dict[str, Any]] = {}
+        if is_ded:
+            def _avail_for(o: CustomerOrder) -> Dict[str, Any]:
+                hw = _ded_hw_from_config(plan_row, o.configuration_payload or {})
+                key = (hw.get("memory"), hw.get("storage"))
+                if key not in ded_avail_cache:
+                    ded_avail_cache[key] = _ded_dc_availability(
+                        plan_row, memory=hw.get("memory"), storage=hw.get("storage"), fresh=True
+                    )
+                return ded_avail_cache[key]
+        else:
+            avail = _vps_dc_availability(plan_code)
+            if not avail:
+                continue
         kicked_dc = set()
         for order in orders:
             fam = "dedicated" if is_ded else _preorder_os_family(order)
@@ -1872,7 +1959,7 @@ def preorder_tick(db: Session) -> Dict[str, int]:
             if not dc or dc in kicked_dc:
                 continue
             if is_ded:
-                info = avail.get(str(dc)) or avail.get(str(dc).lower())
+                info = _avail_for(order).get(str(dc)) or _avail_for(order).get(str(dc).lower())
                 st = "available" if (info or {}).get("status") == "available" else None
             else:
                 fam = _preorder_os_family(order)

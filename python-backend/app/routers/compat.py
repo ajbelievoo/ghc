@@ -895,34 +895,29 @@ def _vps_dc_availability(plan_code: str) -> Dict[str, Any]:
 _DED_REGION_SUFFIX = _re.compile(r"-(mum|sgp|syd)$")
 
 
-def _ded_dc_availability(plan, fresh: bool = False) -> Dict[str, Any]:
-    """Per-DC orderability for a dedicated planCode from OVH's PUBLIC no-auth
-    endpoint /dedicated/server/datacenter/availabilities (the same feed the
-    ovhcloud.com order page uses). Returns {dc: {status, availability,
-    deliveryHours}} for the catalog's default memory/storage configuration.
-    Availability values look like '1H-high', '24H', '72H', '480H'
-    (delivery delay in hours — still orderable), 'comingSoon', 'unavailable'."""
+def _ded_stock_code(plan_code: str, addon_code: Optional[str]) -> str:
+    """Addon planCodes carry the base plan suffix (ram-32g-...-24adv01-v3);
+    the availability feed uses the bare value (ram-32g-on-die-ecc-5200)."""
+    base = _DED_REGION_SUFFIX.sub("", plan_code)
+    return _re.sub(r"-" + _re.escape(base) + r"$", "", str(addon_code or ""))
+
+
+def _ded_dc_rows(plan_code: str, fresh: bool = False) -> List[Dict[str, Any]]:
+    """Raw per-config availability rows from OVH's PUBLIC no-auth feed
+    /dedicated/server/datacenter/availabilities (same data ovhcloud.com uses).
+    Each row: {fqn, planCode, memory, storage, datacenters: [{datacenter,
+    availability}]}. Values like '1H-high'/'72H'/'480H' are orderable with a
+    delivery delay; 'comingSoon'/'unavailable' are not."""
     import time as _time
     import json as _json
     import urllib.request as _urlreq
 
-    plan_code = plan.plan_code
-    defaults = {f["name"]: f.get("default") or (f.get("addons") or [None])[0]
-                for f in (plan.catalog_metadata or {}).get("addonFamilies") or []}
-    base_code = _DED_REGION_SUFFIX.sub("", plan_code)
-    def stock_code(value):
-        return _re.sub(r"-" + _re.escape(base_code) + r"$", "", value or "")
-    memory, storage = stock_code(defaults.get("memory")), stock_code(defaults.get("storage"))
-    if not memory or not storage:
-        return {}
-    key = f"ded:{plan_code}:{memory}:{storage}"
+    key = "dedrows:" + str(plan_code)
     now = _time.time()
     cached = _DC_AVAIL_CACHE.get(key)
-    if cached and not fresh:
-        ttl = 60
-        if now - cached[0] < ttl:
-            return cached[1]
-    best: Dict[str, Any] = {}
+    if cached and not fresh and now - cached[0] < 60:
+        return cached[1]
+    rows: List[Dict[str, Any]] = []
     try:
         import ovh as _ovhlib
 
@@ -931,28 +926,48 @@ def _ded_dc_availability(plan, fresh: bool = False) -> Dict[str, Any]:
         url = f"{base}/dedicated/server/datacenter/availabilities?planCode={plan_code}"
         req = _urlreq.Request(url, headers={"Accept": "application/json"})
         with _urlreq.urlopen(req, timeout=10) as resp:
-            data = _json.loads(resp.read().decode())
-        for row in data or []:
-            if row.get("planCode") != plan_code or row.get("memory") != memory or row.get("storage") != storage:
-                continue
-            for d in row.get("datacenters") or []:
-                dc = d.get("datacenter")
-                av = str(d.get("availability") or "")
-                if not dc:
-                    continue
-                m = _re.match(r"^(\d+)H", av)
-                hrs = int(m.group(1)) if m else None
-                cur = best.get(dc)
-                # Keep the fastest availability across all fqn config rows.
-                if cur is None or (hrs is not None and (cur["deliveryHours"] is None or hrs < cur["deliveryHours"])):
-                    best[dc] = {
-                        "status": "available" if hrs is not None else ("unavailable" if av in ("unavailable", "comingSoon") else "unknown"),
-                        "availability": av,
-                        "deliveryHours": hrs,
-                    }
+            rows = _json.loads(resp.read().decode()) or []
     except Exception as e:
         logger.warning(f"Dedicated datacenter availability probe failed for {plan_code}: {e}")
-    _DC_AVAIL_CACHE[key] = (now, best)
+    _DC_AVAIL_CACHE[key] = (now, rows)
+    return rows
+
+
+def _ded_availability_entry(av: str) -> Dict[str, Any]:
+    m = _re.match(r"^(\d+)H", str(av or ""))
+    hrs = int(m.group(1)) if m else None
+    return {
+        "status": "available" if hrs is not None else ("unavailable" if av in ("unavailable", "comingSoon") else "unknown"),
+        "availability": av,
+        "deliveryHours": hrs,
+    }
+
+
+def _ded_dc_availability(plan, memory: Optional[str] = None, storage: Optional[str] = None, fresh: bool = False) -> Dict[str, Any]:
+    """{dc: {status, availability, deliveryHours}} for ONE memory/storage
+    combo of a dedicated plan. Defaults to the catalog's included config —
+    availability must match the actual hardware being ordered, not just the
+    fastest configuration the feed reports."""
+    plan_code = plan.plan_code
+    if not memory or not storage:
+        defaults = {f["name"]: f.get("default") or (f.get("addons") or [None])[0]
+                    for f in (plan.catalog_metadata or {}).get("addonFamilies") or []}
+        memory = memory or _ded_stock_code(plan_code, defaults.get("memory"))
+        storage = storage or _ded_stock_code(plan_code, defaults.get("storage"))
+    if not memory or not storage:
+        return {}
+    best: Dict[str, Any] = {}
+    for row in _ded_dc_rows(plan_code, fresh=fresh):
+        if row.get("planCode") != plan_code or row.get("memory") != memory or row.get("storage") != storage:
+            continue
+        for d in row.get("datacenters") or []:
+            dc = d.get("datacenter")
+            if not dc:
+                continue
+            info = _ded_availability_entry(d.get("availability"))
+            cur = best.get(dc)
+            if cur is None or (info["deliveryHours"] is not None and (cur["deliveryHours"] is None or info["deliveryHours"] < cur["deliveryHours"])):
+                best[dc] = info
     return best
 
 
@@ -967,6 +982,122 @@ def _ded_family_plans(db: Session, plan) -> List[Any]:
         ).all()
         if p.plan_code and _DED_REGION_SUFFIX.sub("", p.plan_code) == base
     ]
+
+
+def _ded_addon_prices() -> Dict[str, Dict[str, Any]]:
+    """{addonPlanCode: {invoiceName, currency, monthly, modes:{mode: intervalTotal}}}
+    from the public baremetalServers catalog — RAM/storage/bandwidth upgrades,
+    license addons. Includes every pricing mode so 12/24-month commitments get
+    OVH's native upfront totals instead of derived monthly×N."""
+    import time as _time
+    import json as _json
+    import urllib.request as _urlreq
+
+    key = "__dedaddons__"
+    now = _time.time()
+    cached = _VPS_ADDON_CACHE.get(key)
+    if cached and now - cached[0] < (1800 if cached[1] else 120):
+        return cached[1]
+    result: Dict[str, Dict[str, Any]] = {}
+    try:
+        import ovh as _ovhlib
+
+        settings = get_settings()
+        base = (_ovhlib.client.ENDPOINTS.get(settings.ovh_endpoint) or "https://ca.api.ovh.com/1.0").rstrip("/")
+        sub = settings.ovh_subsidiary or "IN"
+        url = f"{base}/order/catalog/public/baremetalServers?ovhSubsidiary={sub}"
+        req = _urlreq.Request(url, headers={"Accept": "application/json"})
+        with _urlreq.urlopen(req, timeout=15) as resp:
+            data = _json.loads(resp.read().decode())
+        for a in data.get("addons") or []:
+            code = a.get("planCode")
+            if not code:
+                continue
+            monthly = None
+            modes: Dict[str, float] = {}
+            for p in a.get("pricings") or []:
+                price = p.get("price")
+                if price is None:
+                    continue
+                val = float(price) / 1e8
+                mode = p.get("mode") or "default"
+                interval = int(p.get("interval") or 0)
+                unit = str(p.get("intervalUnit") or "")
+                if mode == "default" and interval == 1:
+                    monthly = val
+                if interval >= 1 and unit != "none":
+                    modes[mode] = val
+            if monthly is None:
+                continue
+            result[code] = {
+                "invoiceName": a.get("invoiceName") or code,
+                "currency": "INR" if sub == "IN" else "USD",
+                "monthly": monthly,
+                "modes": modes,
+            }
+    except Exception as e:
+        logger.warning(f"Dedicated addon price probe failed: {e}")
+    _VPS_ADDON_CACHE[key] = (now, result)
+    return result
+
+
+def _ded_options_for_plan(db, plan, is_metal: bool, target_currency: str = "INR") -> List[Dict[str, Any]]:
+    """Configurable hardware/license options for the dedicated configure page:
+    memory / storage / public+private bandwidth upgrades and paid licenses,
+    priced with the channel margin. The catalog `default` addon is the
+    included choice (free) — upgrades show their incremental OVH price."""
+    from decimal import Decimal
+    from app.services.catalog_service import get_margin_for_category, get_metal_ded_margin
+    from app.services.ovh_client import apply_margin
+    from app.services.currency_service import get_rate
+
+    families = (plan.catalog_metadata or {}).get("addonFamilies") or []
+    prices = _ded_addon_prices()
+    if not families or not prices:
+        return []
+    margin = get_metal_ded_margin(db) if is_metal else (plan.override_margin if getattr(plan, "override_margin", None) is not None else get_margin_for_category(db, ServiceCategory.DEDICATED))
+    margin = Decimal(str(margin))
+    src_ccy0 = "INR"
+
+    def _sell(v):
+        s = float(apply_margin(Decimal(str(v)), margin))
+        if target_currency and target_currency != src_ccy0:
+            try:
+                s = round(s * get_rate(db, src_ccy0, target_currency), 2)
+            except Exception:
+                pass
+        return round(s, 2)
+
+    out = []
+    for fam in families:
+        name = fam.get("name")
+        addons = fam.get("addons") or []
+        default = fam.get("default") or (addons[0] if addons else None)
+        choices = []
+        for code in addons:
+            p = prices.get(code)
+            if not p:
+                continue
+            src_ccy0 = p["currency"]
+            modes = {m: _sell(t) for m, t in (p.get("modes") or {}).items()}
+            choices.append({
+                "code": code,
+                "label": p["invoiceName"] or code,
+                "monthlyPrice": _sell(p["monthly"]),
+                "modes": modes,
+                "included": code == default,
+                "currency": target_currency or p["currency"],
+                "stockKey": _ded_stock_code(plan.plan_code, code),
+            })
+        if len(choices) > 1 or (choices and not choices[0]["included"]):
+            out.append({
+                "family": name,
+                "mandatory": bool(fam.get("mandatory")),
+                "exclusive": bool(fam.get("exclusive", True)),
+                "includedCode": default,
+                "choices": sorted(choices, key=lambda c: c["monthlyPrice"]),
+            })
+    return out
 
 
 _VPS_ADDON_CACHE: Dict[str, Any] = {}
@@ -1140,7 +1271,7 @@ def plan_configuration(
         # plus -mum/-sgp/-syd APAC variants with their own price + single DC.
         # Merge them so the page can offer every location OVH's configurator
         # shows, and remember which planCode each DC must be ordered as.
-        from app.services.catalog_service import compute_sell_price, dedicated_setup_price
+        from app.services.catalog_service import compute_sell_price, dedicated_pricing, dedicated_setup_price
 
         variant_plans: Dict[str, Any] = {}
         for fp in _ded_family_plans(db, plan):
@@ -1165,9 +1296,10 @@ def plan_configuration(
         target = str(currency or "INR").upper()
         for dc, fp in variant_plans.items():
             prices: Dict[str, float] = {}
-            totals, setup_prices = {}, {}
+            totals, setup_prices, pricing_modes = {}, {}, {}
             for dur in fp.durations or []:
                 try:
+                    mode, _raw = dedicated_pricing(fp, dur)
                     setup, _ = dedicated_setup_price(db, fp, dur, is_metal)
                 except ValueError:
                     continue
@@ -1178,8 +1310,18 @@ def plan_configuration(
                 totals[dur.duration_label] = round(sell * rate, 2)
                 setup_prices[dur.duration_label] = round(setup * rate, 2)
                 prices[dur.duration_label] = round(sell * rate / months, 2)
+                pricing_modes[dur.duration_label] = mode
+            # Per-hardware-combo stock for this DC's plan: "mem|stor" -> info.
+            # The page rechecks availability when the customer upgrades RAM/disk.
+            stock_map: Dict[str, Any] = {}
+            for row in _ded_dc_rows(fp.plan_code):
+                hit = next((d for d in row.get("datacenters") or [] if d.get("datacenter") == dc), None)
+                if hit is not None:
+                    stock_map[f"{row.get('memory')}|{row.get('storage')}"] = _ded_availability_entry(hit.get("availability"))
             dc_variants[dc] = {"planCode": fp.plan_code, "prices": prices,
                                "totals": totals, "setupPrices": setup_prices,
+                               "pricingModes": pricing_modes, "stock": stock_map,
+                               "options": _ded_options_for_plan(db, fp, is_metal, target),
                                "spec": _ded_spec_display(fp),
                                "osValues": next((c.get("values") or [] for c in (fp.catalog_metadata or {}).get("configurations", []) if c.get("name") == "dedicated_os"), [])}
     for cfg in catalog_configs:
@@ -1226,7 +1368,11 @@ def plan_configuration(
         "siblingsAvailability": siblings,
         # Paid add-ons (snapshot / premium backup / extra disk / licenses) with
         # real OVH catalog prices + this channel's margin applied.
-        "options": _vps_options_for_plan(db, plan, str(brand or "").lower() == "metal", currency or "INR") if plan.category == ServiceCategory.VPS else [],
+        "options": (
+            _vps_options_for_plan(db, plan, str(brand or "").lower() == "metal", currency or "INR")
+            if plan.category == ServiceCategory.VPS
+            else _ded_options_for_plan(db, plan, str(brand or "").lower() == "metal", currency or "INR")
+        ),
         # Dedicated only: {dc: {planCode, prices:{durationLabel: monthlySell}}}
         # — which sibling planCode to order for each location (OVH sells APAC
         # dedicated DCs as separate planCodes with their own price).

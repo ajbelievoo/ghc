@@ -185,6 +185,8 @@ function ConfigurePageContent() {
   const [storage, setStorage] = useState(false);
   const [storageOpt, setStorageOpt] = useState("");
   const [licenseSel, setLicenseSel] = useState("");
+  const [dedHw, setDedHw] = useState<Record<string, string>>({});
+  const [dedLic, setDedLic] = useState<string[]>([]);
   const [providerConfig, setOvhConfig] = useState<any>(null);
   const [configLoading, setConfigLoading] = useState(false);
   const [imageTab, setImageTab] = useState<"dist" | "app">("dist");
@@ -302,8 +304,11 @@ function ConfigurePageContent() {
   const selectedDuration = durations.find((d: any) => d.durationLabel === durationLabel) || durations[0] || { durationLabel: "1_month", finalPrice: 0, originalPrice: 0 };
   const isDed = (plan?.category || category) === "DEDICATED";
   // Real paid add-ons from the OVH catalog (plan_configuration.options) —
-  // monthly sell prices already carry this channel's margin.
-  const cfgOptions: any[] = providerConfig?.options || [];
+  // monthly sell prices already carry this channel's margin. For dedicated,
+  // the selected DC's regional variant supplies the option set (APAC sibling
+  // plans can offer different RAM/disk upgrades than the base plan).
+  const dcVariants: Record<string, any> = providerConfig?.dcVariants || {};
+  const cfgOptions: any[] = (isDed && dcVariants[datacenter]?.options) || providerConfig?.options || [];
   const optFamily = (f: string) => cfgOptions.find((o: any) => o.family === f);
   const snapshotOpt = optFamily("snapshot")?.choices?.[0];
   const premiumBackupOpt = (optFamily("automatedBackup")?.choices || []).find((c: any) => /-7-|premium/i.test(c.code)) || optFamily("automatedBackup")?.choices?.slice(-1)[0];
@@ -322,13 +327,37 @@ function ConfigurePageContent() {
   // Dedicated: OVH sells APAC locations as sibling planCodes (-mum/-sgp/-syd)
   // with their own price. dcVariants[dc] = {planCode, prices:{label: monthly}}
   // — selecting such a DC swaps the order to that planCode and reprices it.
-  const dcVariants: Record<string, { planCode?: string; prices?: Record<string, number>; totals?: Record<string, number>; setupPrices?: Record<string, number>; spec?: any; osValues?: string[] }> = providerConfig?.dcVariants || {};
   const dcMonthlyPrice = (dc: string) => dcVariants[dc]?.prices?.[selectedDuration?.durationLabel] ?? selectedDuration?.monthlyPrice;
   const effectivePlanCode = (datacenter && dcVariants[datacenter]?.planCode) || plan?.planCode;
   const planPeriodTotal = dcVariants[datacenter]?.totals?.[selectedDuration.durationLabel] ?? selectedDuration.finalPrice ?? 0;
   const setupPrice = dcVariants[datacenter]?.setupPrices?.[selectedDuration.durationLabel] || 0;
   const dedicatedSpec = dcVariants[datacenter]?.spec || plan?.spec || {};
-  const subtotal = parseFloat(((planPeriodTotal + setupPrice) * quantity + optionsTotal).toFixed(2));
+  // Dedicated hardware upgrades (OVH parity): every addonFamily with >1 choice
+  // is selectable — memory/storage/bandwidth/vrack. RAM+storage also drive the
+  // live per-combo stock check, so an upgrade can change DC availability.
+  const dedHwFams = isDed ? cfgOptions.filter((o: any) => !/license/i.test(o.family || "")) : [];
+  const dedLicFams = isDed ? cfgOptions.filter((o: any) => /license/i.test(o.family || "")) : [];
+  const dedSelCode = (fam: string) => {
+    const f = dedHwFams.find((o: any) => o.family === fam);
+    if (!f) return "";
+    const code = dedHw[fam];
+    return f.choices?.some((c: any) => c.code === code) ? code : (f.includedCode || f.choices?.[0]?.code || "");
+  };
+  const dedSelKey = (fam: string) => {
+    const f = dedHwFams.find((o: any) => o.family === fam);
+    return f?.choices?.find((x: any) => x.code === dedSelCode(fam))?.stockKey || "";
+  };
+  const dedPricingMode = dcVariants[datacenter]?.pricingModes?.[selectedDuration.durationLabel] || "default";
+  const dedChoiceTotal = (c: any) => (!c || c.included ? 0 :
+    (dedPricingMode !== "default" && c.modes?.[dedPricingMode] != null ? c.modes[dedPricingMode] : (c.monthlyPrice || 0) * durationMonths));
+  const dedHwRows = dedHwFams.map((f: any) => {
+    const c = f.choices?.find((x: any) => x.code === dedSelCode(f.family));
+    return { family: f.family, label: c?.label || "", code: c?.code || "", monthly: c?.monthlyPrice || 0, included: !!c?.included, total: dedChoiceTotal(c) };
+  });
+  const dedLicRows = dedLicFams.flatMap((f: any) =>
+    (f.choices || []).filter((c: any) => dedLic.includes(c.code)).map((c: any) => ({ family: f.family, label: c.label, code: c.code, monthly: c.monthlyPrice || 0, included: !!c.included, total: dedChoiceTotal(c) })));
+  const dedOptionsTotal = dedHwRows.reduce((t: number, r: any) => t + r.total, 0) + dedLicRows.reduce((t: number, r: any) => t + r.total, 0);
+  const subtotal = parseFloat(((planPeriodTotal + setupPrice) * quantity + optionsTotal + dedOptionsTotal).toFixed(2));
   const discount = couponResult ? parseFloat((couponResult.discount || 0).toFixed(2)) : 0;
   const requiredConfigs = providerConfig?.requiredConfiguration || providerConfig?.configurations || [];
   const findConfigValues = (names: string[]) => {
@@ -433,13 +462,24 @@ function ConfigurePageContent() {
       seenAllDcCities.add(dcCityKey(dc));
       return true;
     });
+  // Dedicated: the in-stock list depends on the selected RAM+storage combo —
+  // dcVariants[dc].stock["ram-..|softraid-.."] is this DC's regional plan
+  // checked against the exact hardware being ordered.
+  const dedStockFor = (dc: string) => {
+    const m = dedSelKey("memory"), s = dedSelKey("storage");
+    return ((m && s) ? dcVariants[dc]?.stock?.[`${m}|${s}`] : undefined)
+      || dcConfigEntry?.availability?.[dc] || null;
+  };
+  const activeLocations = isDed && Object.keys(dcVariants).length
+    ? allCatalogLocations.filter((dc) => dedStockFor(dc)?.status === "available")
+    : displayedLocations;
   // Tabs always come from the full DC universe so every region stays clickable.
   // Card list per region: available DCs normally; unavailable grayed when the
   // toggle is ON — or whenever the region has zero in-stock DCs anyway.
-  const tabSourceLocations = allCatalogLocations.length ? allCatalogLocations : displayedLocations;
-  const regionHasAvail = (r: string) => displayedLocations.some((dc) => getDcRegion(dc) === r);
+  const tabSourceLocations = allCatalogLocations.length ? allCatalogLocations : activeLocations;
+  const regionHasAvail = (r: string) => activeLocations.some((dc) => getDcRegion(dc) === r);
   const cardsForRegion = (r: string) =>
-    (showUnavailable ? allCatalogLocations : displayedLocations).filter(
+    (showUnavailable ? allCatalogLocations : activeLocations).filter(
       (dc) => getDcRegion(dc) === r
     );
   // Sibling plans actually orderable right now (per selected OS family) —
@@ -454,13 +494,13 @@ function ConfigurePageContent() {
   // live in-stock list for the selected OS family.
   const preorderCfg = providerConfig?.preorder;
   const preorderEnabled = !!preorderCfg?.enabled && dcStockKnown;
-  const canPrebookDc = (dc: string) => preorderEnabled && (!isDed || dcConfigEntry?.availability?.[dc]?.status === "unavailable");
+  const canPrebookDc = (dc: string) => preorderEnabled && (!isDed || dedStockFor(dc)?.status === "unavailable");
   const preorderSelected = !!(
-    datacenter && canPrebookDc(datacenter) && !displayedLocations.includes(datacenter)
+    datacenter && canPrebookDc(datacenter) && !activeLocations.includes(datacenter)
   );
   const canOrder = !configLoading && providerConfig?.available && (!isDed || (
     !!dcVariants[datacenter]?.totals?.[selectedDuration.durationLabel] &&
-    (displayedLocations.includes(datacenter) || preorderSelected) &&
+    (activeLocations.includes(datacenter) || preorderSelected) &&
     providerImages.includes(imageTab === "app" ? selectedApp : image)
   ));
   // Same math as backend: flat fee is stored in INR, % applies to the
@@ -509,21 +549,28 @@ function ConfigurePageContent() {
 
   // Stable signature — displayedLocations is a fresh array every render, so a
   // raw array dep would refire on EVERY render and undo manual region clicks.
-  const displayedSig = displayedLocations.join(",");
+  const displayedSig = activeLocations.join(",");
   useEffect(() => {
     // Only re-evaluate when the available set itself changes (config load / OS
     // switch) — NOT on manual region-tab clicks, otherwise a click on a region
     // with zero available DCs instantly snaps back to the first stocked region.
-    if (displayedLocations.length > 0) {
-      setDatacenter((dc) => dc || displayedLocations[0]);
+    if (activeLocations.length > 0) {
+      setDatacenter((dc) => dc || activeLocations[0]);
       setRegion((r) =>
-        !r || !displayedLocations.some((dc) => getDcRegion(dc) === r)
-          ? getDcRegion(displayedLocations[0])
+        !r || !activeLocations.some((dc) => getDcRegion(dc) === r)
+          ? getDcRegion(activeLocations[0])
           : r
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedSig]);
+
+  useEffect(() => {
+    // Hardware selections belong to the plan — reset when the product (or its
+    // regional variant) changes so stale addon codes can't leak across plans.
+    setDedHw({});
+    setDedLic([]);
+  }, [effectivePlanCode]);
 
   useEffect(() => {
     // Default to Ubuntu's newest version (like OVH), else first distro card.
@@ -557,6 +604,13 @@ function ConfigurePageContent() {
       if (backup && premiumBackupOpt) selOpts.push(premiumBackupOpt.code);
       if (storage && storageOpt) selOpts.push(storageOpt);
       if (licenseOpt) selOpts.push(licenseOpt.code);
+      if (isDed) {
+        for (const f of dedHwFams) {
+          const c = dedSelCode(f.family);
+          if (c && c !== f.includedCode) selOpts.push(c);
+        }
+        selOpts.push(...dedLic);
+      }
       if (selOpts.length) configuration._options = selOpts;
 
       if (!gateway) { showToast("No payment gateway is configured. Please contact support or set up a gateway in admin.", "error"); setPaying(false); return; }
@@ -755,7 +809,7 @@ function ConfigurePageContent() {
               <div className="space-y-2">
                 {cardsForRegion(region).map((dc: string) => {
                   const name = getDcName(dc);
-                  const dcAvail = displayedLocations.includes(dc);
+                  const dcAvail = activeLocations.includes(dc);
                   if (!dcAvail) {
                     // Pre-booking enabled → the card stays selectable and flips
                     // the checkout into "reserve now, activate on restock" mode.
@@ -790,7 +844,7 @@ function ConfigurePageContent() {
                     );
                   }
                   const sel = datacenter === dc;
-                  const dcInfo = dcConfigEntry?.availability?.[dc] || {};
+                  const dcInfo = (isDed ? dedStockFor(dc) : dcConfigEntry?.availability?.[dc]) || {};
                   return (
                     <label key={dc} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
                       <input type="radio" name="dc" checked={sel} onChange={() => setDatacenter(dc)} className="h-4 w-4 accent-[#00b7ff]" />
@@ -819,7 +873,7 @@ function ConfigurePageContent() {
             ) : (
               <div className="rounded border border-slate-200 p-5 text-sm text-slate-600">No datacenter selection required.</div>
             )}
-            {dcConfigEntry && !displayedLocations.some((dc) => getDcRegion(dc) === region) && (
+            {dcConfigEntry && !activeLocations.some((dc) => getDcRegion(dc) === region) && (
               <div className="mt-4 rounded-lg border border-[#00b7ff]/30 bg-[#00b7ff]/10 p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-lg">ℹ️</span>
@@ -865,6 +919,51 @@ function ConfigurePageContent() {
               </div>
             </div>
           </section>
+
+          {isDed && dedHwFams.length > 0 && (
+            <section className="mt-8">
+              <h2 className="mb-1 text-lg font-black">Configure your server</h2>
+              <p className="mb-4 text-xs text-slate-600">Upgrade the included hardware — prices follow the selected location and commitment. Stock is re-checked per configuration.</p>
+              {dedHwFams.map((f: any) => {
+                const title = { memory: "Memory", storage: "Storage", bandwidth: "Public bandwidth", vrack: "Private bandwidth", "system-storage": "System storage" }[f.family as string] || f.family;
+                const selCode = dedSelCode(f.family);
+                return (
+                  <div key={f.family} className="mb-5">
+                    <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-700">{title}</h3>
+                    <div className="space-y-2">
+                      {f.choices.map((c: any) => {
+                        const sel = selCode === c.code;
+                        return (
+                          <label key={c.code} onClick={() => setDedHw({ ...dedHw, [f.family]: c.code })} className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3.5 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
+                            <input type="radio" name={`ded-${f.family}`} checked={sel} readOnly className="h-4 w-4 accent-[#00b7ff]" />
+                            <span className="flex-1 text-sm font-bold text-[#0f172a]">{c.label}</span>
+                            <span className={`text-sm font-black ${c.included ? "text-slate-500" : "text-[#00b7ff]"}`}>{c.included ? "Included" : `+${fmtCurrency(c.monthlyPrice, planCurrency)}/mo`}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              {dedLicFams.map((f: any) => (
+                <div key={f.family} className="mb-5">
+                  <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-700">{f.family === "application-license" ? "Application licenses (optional)" : "Distribution licenses (optional)"}</h3>
+                  <div className="space-y-2">
+                    {f.choices.map((c: any) => {
+                      const sel = dedLic.includes(c.code);
+                      return (
+                        <label key={c.code} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
+                          <input type="checkbox" checked={sel} onChange={(e) => setDedLic(e.target.checked ? [...dedLic, c.code] : dedLic.filter((x) => x !== c.code))} className="h-4 w-4 accent-[#00b7ff]" />
+                          <span className="flex-1 text-sm font-bold text-[#0f172a]">{c.label}</span>
+                          <span className="text-sm font-black text-[#00b7ff]">+{fmtCurrency(c.monthlyPrice, planCurrency)}/mo</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
 
           <section className="mt-8">
             <h2 className="mb-3 text-lg font-black">Choose your image</h2>
@@ -1043,15 +1142,21 @@ function ConfigurePageContent() {
             {/* Specs */}
             <div className="space-y-3 p-4 text-xs">
               {isDed ? <div className="flex items-center justify-between gap-3"><span className="text-slate-600">Processor</span><b className="text-right text-[#0f172a]">{dedicatedSpec.cpu}</b></div> : plan.cpuCores && <div className="flex items-center justify-between"><span className="text-slate-600">Processor</span><b className="text-[#0f172a]">{plan.cpuCores} vCore{plan.cpuCores > 1 ? "s" : ""}</b></div>}
-              {plan.ramGb && <div className="flex items-center justify-between"><span className="text-slate-600">Memory</span><b className="text-[#0f172a]">{isDed ? dedicatedSpec.ram : `${plan.ramGb} GB RAM`}</b></div>}
-              {plan.diskGb && <div className="flex items-center justify-between"><span className="text-slate-600">Storage</span><b className="text-[#0f172a]">{isDed ? dedicatedSpec.storage : `${plan.diskGb} GB ${plan.diskType || "SSD NVMe"}`}</b></div>}
-              {plan.bandwidthMbps && <div className="flex items-center justify-between"><span className="text-slate-600">Public bandwidth</span><b className="text-[#0f172a]">{isDed ? dedicatedSpec.bandwidth : `${plan.bandwidthMbps} Mbps unlimited`}</b></div>}
+              {plan.ramGb && <div className="flex items-center justify-between"><span className="text-slate-600">Memory</span><b className="text-[#0f172a]">{isDed ? (dedHwRows.find((r: any) => r.family === "memory")?.label || dedicatedSpec.ram) : `${plan.ramGb} GB RAM`}</b></div>}
+              {plan.diskGb && <div className="flex items-center justify-between"><span className="text-slate-600">Storage</span><b className="text-[#0f172a]">{isDed ? (dedHwRows.find((r: any) => r.family === "storage")?.label || dedicatedSpec.storage) : `${plan.diskGb} GB ${plan.diskType || "SSD NVMe"}`}</b></div>}
+              {plan.bandwidthMbps && <div className="flex items-center justify-between"><span className="text-slate-600">Public bandwidth</span><b className="text-[#0f172a]">{isDed ? (dedHwRows.find((r: any) => r.family === "bandwidth")?.label || dedicatedSpec.bandwidth) : `${plan.bandwidthMbps} Mbps unlimited`}</b></div>}
               {isDed && dedicatedSpec.privBw && <div className="flex items-center justify-between"><span className="text-slate-600">Private bandwidth</span><b>{dedicatedSpec.privBw / 1000} Gbps</b></div>}
               <div className="flex items-center justify-between"><span className="text-slate-600">Commitment</span><div className="text-right"><b className="text-[#0f172a]">{durationText}</b>{commitmentDiscount && <p className="text-[10px] font-bold text-[#e0006d]">{commitmentDiscount}</p>}</div></div>
               <div className="flex items-center justify-between"><span className="text-slate-600">Datacenter location</span><div className="text-right"><b className="text-[#0f172a]">{quantity}× {datacenter ? getDcName(datacenter) : "Select"}</b>{preorderSelected && <p className="text-[10px] font-bold text-amber-600">⏳ PRE-BOOKING — activates on restock</p>}</div></div>
               <div className="flex items-center justify-between"><span className="text-slate-600">Image</span><div className="text-right"><b className="text-[#0f172a]">{imageTab === "app" ? selectedApp : image === "none_64.en" ? "No preinstalled OS" : image}</b><p className="text-[10px] font-bold text-[#0f172a]">{licenseOpt ? "License billed below" : "Included"}</p></div></div>
               {isDed && <div className="flex items-center justify-between"><span className="text-slate-600">Installation fee (once)</span><b>{fmtCurrency(setupPrice, planCurrency)}</b></div>}
-              <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><b className="text-[#0f172a]">Local Storage - {plan.invoiceName || plan.planCode}</b></div>
+              {isDed && dedHwRows.filter((r: any) => !r.included && r.total > 0).map((r: any) => (
+                <div key={r.family} className="flex items-center justify-between"><span className="text-slate-600">Upgrade</span><div className="text-right"><b className="text-[#0f172a]">{r.label}</b><p className="text-[10px] font-bold text-[#00b7ff]">+{fmtCurrency(r.monthly, planCurrency)}/mo</p></div></div>
+              ))}
+              {isDed && dedLicRows.map((r: any) => (
+                <div key={r.code} className="flex items-center justify-between"><span className="text-slate-600">License</span><div className="text-right"><b className="text-[#0f172a]">{r.label}</b><p className="text-[10px] font-bold text-[#e0006d]">{fmtCurrency(r.monthly, planCurrency)}/mo</p></div></div>
+              ))}
+              {!isDed && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><b className="text-[#0f172a]">Local Storage - {plan.invoiceName || plan.planCode}</b></div>}
               {backup && premiumBackupOpt && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Premium automatic backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(premiumBackupOpt.monthlyPrice, planCurrency)}/mo</p></div></div>}
               {snapshot && snapshotOpt && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Snapshot backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(snapshotOpt.monthlyPrice, planCurrency)}/mo</p></div></div>}
               {storage && storageOpt && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">{diskOpts.find((d: any) => d.code === storageOpt)?.label || "Additional storage"}</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(diskOpts.find((d: any) => d.code === storageOpt)?.monthlyPrice || 0, planCurrency)}/mo</p></div></div>}
@@ -1128,6 +1233,13 @@ function ConfigurePageContent() {
                     if (backup && premiumBackupOpt) selOpts.push(premiumBackupOpt.code);
                     if (storage && storageOpt) selOpts.push(storageOpt);
                     if (licenseOpt) selOpts.push(licenseOpt.code);
+                    if (isDed) {
+                      for (const f of dedHwFams) {
+                        const c = dedSelCode(f.family);
+                        if (c && c !== f.includedCode) selOpts.push(c);
+                      }
+                      selOpts.push(...dedLic);
+                    }
                     if (selOpts.length) configuration._options = selOpts;
                     try {
                       await api.cart.add({
