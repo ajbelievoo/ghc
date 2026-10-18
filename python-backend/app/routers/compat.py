@@ -642,6 +642,11 @@ def admin_save_essential_dedicated(body: dict, db: Session = Depends(get_db), ad
 # hammer the endpoint on every configure-page load.
 _DC_AVAIL_CACHE: Dict[str, Any] = {}
 
+# DCs the OVH configurator shows but which never appear in catalog values or
+# the order-rule API (e.g. Mumbai exists on OVH's UI for this subsidiary).
+# Unioned into allDatacenters so the page can render them as out-of-stock.
+_VPS_EXTRA_DCS = {"BOM"}
+
 
 def _vps_dc_availability(plan_code: str) -> Dict[str, Any]:
     """Return {DC_CODE: {status, linuxStatus, windowsStatus}} for a VPS planCode.
@@ -765,6 +770,11 @@ def plan_configuration(
                 win_vals = [v for v in values if (availability.get(str(v)) or {}).get("windowsStatus") == "available"]
                 entry["availableValues"] = linux_vals
                 entry["availableWindowsValues"] = win_vals
+                # Full DC universe: catalog ∪ rule-endpoint DCs (auto-includes
+                # new OVH locations) ∪ extras OVH shows but never orders (BOM).
+                entry["allDatacenters"] = sorted(
+                    {str(v) for v in values} | set(availability.keys()) | _VPS_EXTRA_DCS
+                )
             configs.append(entry)
     # Also expose common frontend keys
     return {
