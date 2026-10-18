@@ -106,7 +106,7 @@ const FEATURE_TABS: { id: string; label: string; items: { t: string; d: string }
     id: "vrack", label: "vRack",
     items: [
       { t: "vRack private network", d: "Connect your servers across datacentres on an isolated layer-2 network." },
-      { t: "Private bandwidth", d: "Unmetered private traffic between your servers — build clusters freely." },
+      { t: "Private bandwidth", d: "Unlimited private traffic between your servers — build clusters freely." },
       { t: "Load balancing", d: "Combine with Load Balancer and Floating IPs for HA architectures." },
     ],
   },

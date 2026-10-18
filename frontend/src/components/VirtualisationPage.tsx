@@ -154,7 +154,7 @@ export default function VirtualisationPage({ plans }: { plans: any[] }) {
               <ul className="mt-2.5 space-y-1.5">
                 {[
                   "Up to 500 GB storage space on backup storage",
-                  "500 Mbps public bandwidth, guaranteed and unmetered",
+                  "500 Mbps public bandwidth, guaranteed and unlimited",
                   "Private bandwidth on vRack — up to 25 Gbps on high-end servers",
                   "Anti-DDoS protection on all servers",
                 ].map((o) => (

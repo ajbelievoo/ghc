@@ -52,7 +52,7 @@ const subCategoryHero: Record<string, { title: string; subtitle: string; bullets
   "rise": { title: "Base Dedicated Servers", subtitle: "Entry-level enterprise bare metal — modern platforms, predictable pricing and instant deployment for growing businesses.", bullets: ["Latest-gen AMD/Intel platforms","500 Mbps+ public bandwidth","Deploy in minutes with anti-DDoS"] },
   // Domain / Hosting sub-pages
   "wordpress-hosting": { title: "Managed hosting for WordPress", subtitle: "Spend less time managing your WordPress sites — shared hosting optimised for WordPress with one-click install, free SSL and daily backups.", bullets: ["WordPress pre-installed in one click","Free SSL certificate included","Automatic updates and daily backups"] },
-  "video": { title: "Video hosting for your websites", subtitle: "Stream videos without slowing down your websites — host video content on fast, bandwidth-friendly shared hosting.", bullets: ["Unmetered bandwidth for media","Host video libraries alongside your site","CDN-ready with Anti-DDoS protection"] },
+  "video": { title: "Video hosting for your websites", subtitle: "Stream videos without slowing down your websites — host video content on fast, bandwidth-friendly shared hosting.", bullets: ["Unlimited bandwidth for media","Host video libraries alongside your site","CDN-ready with Anti-DDoS protection"] },
   "email": { title: "Professional email hosting", subtitle: "Professional mailboxes on your own domain — included with every GHC web hosting plan, with webmail and IMAP/SMTP access.", bullets: ["Mailboxes on your own domain","Webmail + IMAP/SMTP/POP3 access","Anti-spam and Anti-DDoS included"] },
   // Speed up your websites and applications
   "drupal": { title: "Drupal VPS Hosting", subtitle: "High-performance VPS pre-configured for Drupal. Launch content-rich sites with full root access.", bullets: ["Drupal-ready stack (PHP, MariaDB, Composer)","NVMe SSD storage and unlimited traffic","Anti-DDoS protection included"] },
@@ -239,7 +239,7 @@ function getStorageInfo(plan: Plan) {
 }
 
 function getBandwidthInfo(plan: Plan) {
-  const suffix = plan.category === "VPS" ? " unmetered" : "";
+  const suffix = plan.category === "VPS" ? " · unlimited traffic" : "";
   const fmt = (mbps: number) => mbps >= 1000 ? `${mbps % 1000 === 0 ? mbps / 1000 : (mbps / 1000).toFixed(1)} Gbps` : `${mbps} Mbps`;
   if (plan.bandwidthMbps) return `${fmt(plan.bandwidthMbps)}${suffix}`;
   const meta = plan.metadata || {};
@@ -248,7 +248,7 @@ function getBandwidthInfo(plan: Plan) {
   if (pub) return `${fmt(Number(pub) || 0)}${suffix}`;
   const db = getSpecsFromDb(plan.invoiceName);
   if (db) return db.bandwidth + suffix;
-  return plan.category === "VPS" ? "Unmetered" : "-";
+  return plan.category === "VPS" ? "Unlimited traffic" : "-";
 }
 
 function getTechBlob(plan: Plan) {
@@ -586,28 +586,34 @@ export default function CategoryPage({ categoryKey, subCategory, subTabs, onSubT
             <td colSpan={9} className="px-6 py-5">
               <div className="grid gap-4 md:grid-cols-3 text-sm">
                 <div className="rounded border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Processor</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">CPU — processor power</p>
                   <p className="font-semibold text-[#0f172a]">{getCpuInfo(plan.invoiceName, plan.cpuCores)}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Virtual CPU cores for running your apps</p>
                 </div>
                 <div className="rounded border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Memory</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">RAM — memory</p>
                   <p className="font-semibold text-[#0f172a]">{getRamInfo(plan)}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">How much your server can handle at once</p>
                 </div>
                 <div className="rounded border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Storage</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Disk space</p>
                   <p className="font-semibold text-[#0f172a]">{getStorageInfo(plan)}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Space for your files, sites and databases</p>
                 </div>
                 <div className="rounded border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Network</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Internet speed</p>
                   <p className="font-semibold text-[#0f172a]">{getBandwidthInfo(plan)}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">{plan.category === "VPS" ? "Use as much data as you want — no extra charge" : "Guaranteed port speed"}</p>
                 </div>
                 <div className="rounded border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Plan Code</p>
-                  <p className="font-semibold text-[#0f172a]">{plan.planCode}</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Locations</p>
+                  <p className="font-semibold text-[#0f172a]">{regions.length ? `${regions.length} datacentre${regions.length > 1 ? "s" : ""} worldwide` : "-"}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Pick the city closest to your users</p>
                 </div>
                 <div className="rounded border border-slate-200 bg-white p-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Family</p>
-                  <p className="font-semibold text-[#0f172a]">{plan.family || cat.label}</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-2">Protection</p>
+                  <p className="font-semibold text-[#0f172a]">Anti-DDoS included</p>
+                  <p className="mt-1 text-[11px] text-slate-400">Always-on attack protection, free</p>
                 </div>
                 {regions.length > 0 && (
                   <div className="rounded border border-slate-200 bg-white p-4 md:col-span-3">

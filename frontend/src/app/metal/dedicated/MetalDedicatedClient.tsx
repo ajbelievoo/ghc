@@ -152,7 +152,7 @@ export default function MetalDedicatedClient({ initialPlans }: { initialPlans: a
               </p>
               <ul className="mt-6 space-y-2.5 text-sm text-white/85">
                 {["Root access — full control over hardware, OS and network",
-                  "Unmetered bandwidth with anti-DDoS included on every server",
+                  "Unlimited bandwidth with anti-DDoS included on every server",
                   "Deploy in minutes across worldwide datacentres"].map((b, i) => (
                   <li key={b} className="ghc-metal-fade flex items-center gap-2.5" style={{ ["--d" as any]: `${120 + i * 90}ms` }}>
                     <Check className="h-4 w-4 shrink-0 text-[#ffb347]" /> {b}
@@ -190,7 +190,7 @@ export default function MetalDedicatedClient({ initialPlans }: { initialPlans: a
           Every Metal dedicated range, sorted by price — premium bare metal with Metal-only perks on every server.
         </p>
         <div className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
-          {["Priority deployment", "Daily backup included", "Anti-DDoS protection", "Unmetered bandwidth", "Metal care support"].map((perk) => (
+          {["Priority deployment", "Daily backup included", "Anti-DDoS protection", "Unlimited bandwidth", "Metal care support"].map((perk) => (
             <span key={perk} className="ghc-metal-chip inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#ffb347]">
               <Check className="h-3 w-3" /> {perk}
             </span>

@@ -369,12 +369,12 @@ function ConfigurePageContent() {
     if (tm) {
       const mbps = parseInt(tm[2]);
       const unl = tm[1].toLowerCase() === "unlimited";
-      return { speed: mbps >= 1000 ? `${mbps / 1000} Gbit/s` : `${mbps} Mbit/s`, speedMbps: mbps, traffic: unl ? "unmetered" : `${parseInt(tm[1])} TB`, trafficRank: unl ? 1e9 : parseInt(tm[1]) };
+      return { speed: mbps >= 1000 ? `${mbps / 1000} Gbit/s` : `${mbps} Mbit/s`, speedMbps: mbps, traffic: unl ? "unlimited" : `${parseInt(tm[1])} TB`, trafficRank: unl ? 1e9 : parseInt(tm[1]) };
     }
     const bm = String(code).match(/bandwidth-(\d+)/i);
     if (bm) {
       const mbps = parseInt(bm[1]);
-      return { speed: mbps >= 1000 ? `${mbps / 1000} Gbit/s` : `${mbps} Mbit/s`, speedMbps: mbps, traffic: "unmetered", trafficRank: 1e9 };
+      return { speed: mbps >= 1000 ? `${mbps / 1000} Gbit/s` : `${mbps} Mbit/s`, speedMbps: mbps, traffic: "unlimited", trafficRank: 1e9 };
     }
     return { speed: label || code, speedMbps: 0, traffic: label || code, trafficRank: 0 };
   };
@@ -1022,7 +1022,7 @@ function ConfigurePageContent() {
                                     </select>
                                   </>
                                 ) : (
-                                  <p className="text-[10px] text-slate-400">{g.items[0].traffic === "unmetered" ? "Unmetered guaranteed bandwidth" : `Traffic: ${g.items[0].traffic}`}</p>
+                                  <p className="text-[10px] text-slate-400">{g.items[0].traffic === "unlimited" ? "Unlimited traffic, guaranteed speed" : `Traffic: ${g.items[0].traffic}`}</p>
                                 )}
                               </div>
                               <span className={`text-sm font-black ${tChoice?.included ? "text-slate-500" : "text-[#00b7ff]"}`}>{tChoice?.included ? "Included" : `+${fmtCurrency(tChoice?.monthlyPrice || 0, planCurrency)}/mo`}</span>

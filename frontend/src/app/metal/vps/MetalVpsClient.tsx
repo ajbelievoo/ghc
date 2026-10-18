@@ -129,7 +129,7 @@ const METAL_FAMILIES: Record<string, {
       { t: "Unmatched power and flexibility", d: "Metal's Plesk VPS options are built for speed and reliability. Our servers, assembled and configured in-house, give you the latest architecture, NVMe SSD storage, and a highly resilient infrastructure. Enjoy optimal speeds and resource efficiency, empowering you to focus on scaling your projects." },
       { t: "Your dedicated virtual space", d: "With GHC, you get a fully isolated Plesk environment dedicated to your web projects and business applications. Enjoy full admin access and complete control over your virtual server, tailoring it to your specific needs. Scale resources effortlessly as your projects grow without hardware constraints holding you back." },
       { t: "Simplicity meets control", d: "Say goodbye to hardware worries. Our server solution eliminates concerns about component upgrades and technical faults while still granting you full administrative control over your Plesk VPS solution." },
-      { t: "Unlimited possibilities with unlimited traffic", d: "Host bandwidth-intensive services and applications without worry. Our VPS solutions offer unlimited traffic with a maximum bandwidth of 3 Gbps unmetered, ensuring optimal user experiences and eliminating surprise costs." },
+      { t: "Unlimited possibilities with unlimited traffic", d: "Host bandwidth-intensive services and applications without worry. Our VPS solutions offer unlimited traffic with a maximum bandwidth of 3 Gbps unlimited, ensuring optimal user experiences and eliminating surprise costs." },
       { t: "Safeguard your valuable data with backup options", d: "Protect your valuable data with our robust backup solutions. Choose automated, scheduled backups for peace of mind or take snapshot backups on demand via the GHC Control Panel. Your data's safety is our priority." },
       { t: "Always-on availability", d: "GHC's infrastructure guarantees minimal latency and hardware availability backed by an 99.9% SLA. Deploy your business applications confidently, knowing they'll benefit from constant, stable service, even in demanding production environments." },
     ],
@@ -341,7 +341,7 @@ export default function MetalVpsClient({ initialPlans }: { initialPlans: any[] }
                 p.cpuCores ? `${p.cpuCores} vCores` : "",
                 p.ramGb ? `${p.ramGb} GB RAM` : "",
                 p.diskGb ? `${p.diskGb} GB ${p.diskType || "NVMe SSD"}` : "",
-                p.bandwidthMbps ? `${p.bandwidthMbps >= 1000 ? `${(p.bandwidthMbps / 1000).toFixed(1)} Gbps` : `${p.bandwidthMbps} Mbps`} unmetered` : "Unmetered bandwidth",
+                p.bandwidthMbps ? `${p.bandwidthMbps >= 1000 ? `${(p.bandwidthMbps / 1000).toFixed(1)} Gbps` : `${p.bandwidthMbps} Mbps`} unlimited` : "Unlimited bandwidth",
                 "Anti-DDoS protection",
               ].filter(Boolean);
               return (

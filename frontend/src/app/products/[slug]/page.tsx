@@ -9,7 +9,7 @@ const PRODUCTS: Record<string, ProductInfo> = {
     features: [
       { title: "Always-on detection", desc: "Traffic is analysed in real time. Mitigation kicks in automatically — no manual activation needed." },
       { title: "Multi-layer filtering", desc: "L3/L4 volumetric attacks plus L7 application attacks handled at the edge, upstream of your server." },
-      { title: "Unmetered mitigation", desc: "Attack traffic is absorbed on the backbone — you never pay for malicious bandwidth." },
+      { title: "Unlimited mitigation", desc: "Attack traffic is absorbed on the backbone — you never pay for malicious bandwidth." },
     ],
     highlights: [
       "Included free on every VPS and dedicated server",
@@ -53,7 +53,7 @@ const PRODUCTS: Record<string, ProductInfo> = {
     ],
     highlights: [
       "Up to 4000 VLANs per vRack",
-      "Private bandwidth unmetered",
+      "Private bandwidth unlimited",
       "Attach/detach services from the dashboard",
       "Works with managed Kubernetes node pools",
       "Ideal for DB replication and internal APIs",
