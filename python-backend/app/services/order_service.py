@@ -173,20 +173,17 @@ def create_customer_order(
                 or default_dedicated_display_name(plan.invoice_name or "", resolved_code)
             )
         else:
-            margin = get_metal_vps_margin(db)
             metal_names = get_metal_vps_names(db)
             metal_names_norm = {_normalize_public_plan_code(k): v for k, v in metal_names.items()}
             metal_name = metal_names.get(resolved_code) or metal_names_norm.get(_normalize_public_plan_code(resolved_code))
-        final_price = float(apply_margin(Decimal(str(duration.raw_price)), margin))
         if metal_name:
             config = {**(config or {}), "display_name": metal_name}
-    elif plan.override_price is not None:
-        final_price = float(plan.override_price)
-    elif plan.override_margin is not None:
-        final_price = float(apply_margin(Decimal(str(duration.raw_price)), Decimal(str(plan.override_margin))))
-    else:
-        # Apply category margin
-        final_price = float(apply_margin(Decimal(str(duration.raw_price)), get_margin_for_category(db, plan.category)))
+
+    # One pricing path for listings AND orders: upstream raw -> channel/plan
+    # margin -> commitment-duration discount. Guarantees the charged amount
+    # always equals the price shown on the storefront.
+    from app.services.catalog_service import compute_sell_price
+    final_price, _disc_pct = compute_sell_price(db, plan, duration, metal=is_metal)
 
     # Convert final price and base cost into the customer's selected currency
     target_currency = (currency or duration.currency or get_settings().currency or "USD").upper()

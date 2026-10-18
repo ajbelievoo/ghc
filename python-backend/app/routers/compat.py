@@ -4,7 +4,7 @@ import re as _re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -178,23 +178,47 @@ def _resolve_domain_plan(domain: str, plans: list):
     return candidates[0][2], candidates[0][1]
 
 
-def _plan_to_frontend(p: PlanCatalog, currency: Optional[str] = None, db: Session = None) -> dict:
+def _plan_to_frontend(p: PlanCatalog, currency: Optional[str] = None, db: Session = None, metal: bool = False) -> dict:
     target = (currency or get_settings().currency or "USD").upper()
     plan_currency = (p.currency or target).upper()
+
+    # Live price recompute (margin + commitment discount + per-plan overrides)
+    # for VPS plans when a session is available — keeps storefront price equal
+    # to the charged amount, and drops de-configured derived durations.
+    vps_price_map: Dict[str, Tuple[float, float]] = {}
+    allowed_vps_labels: Optional[set] = None
+    if db is not None and p.category == ServiceCategory.VPS:
+        from app.services.catalog_service import compute_sell_price, get_commitment_months
+        allowed_vps_labels = {"1_month"} | {f"{m}_month" for m in get_commitment_months(db)}
+        for d in p.durations:
+            try:
+                price, disc = compute_sell_price(db, p, d, metal=metal)
+                vps_price_map[d.duration_label] = (price, disc)
+            except Exception:
+                pass
+
+    def _dur_rows():
+        for d in p.durations:
+            if allowed_vps_labels is not None and (d.interval_unit or "month").startswith("month") and d.duration_label not in allowed_vps_labels:
+                continue
+            sell, disc = vps_price_map.get(d.duration_label, (d.final_price, 0.0))
+            yield d, sell, disc
+
     if db and plan_currency != target:
         from app.services.currency_service import convert
         # one rate lookup per plan, not per duration
         rate = convert(db, 1.0, plan_currency, target)
         converted_durations = []
-        for d in p.durations:
+        for d, sell, disc in _dur_rows():
             converted_durations.append({
                 "durationLabel": d.duration_label,
                 "interval": d.interval,
                 "intervalUnit": d.interval_unit,
                 "rawPrice": round(d.raw_price * rate, 2),
-                "finalPrice": round(d.final_price * rate, 2),
-                "monthlyPrice": round(_monthly_price(d.final_price, d.interval, d.interval_unit) * rate, 2),
+                "finalPrice": round(sell * rate, 2),
+                "monthlyPrice": round(_monthly_price(sell, d.interval, d.interval_unit) * rate, 2),
                 "currency": target,
+                "discountPercent": disc,
             })
         durations = converted_durations
     else:
@@ -204,11 +228,12 @@ def _plan_to_frontend(p: PlanCatalog, currency: Optional[str] = None, db: Sessio
                 "interval": d.interval,
                 "intervalUnit": d.interval_unit,
                 "rawPrice": d.raw_price,
-                "finalPrice": d.final_price,
-                "monthlyPrice": _monthly_price(d.final_price, d.interval, d.interval_unit),
+                "finalPrice": round(sell, 2),
+                "monthlyPrice": _monthly_price(sell, d.interval, d.interval_unit),
                 "currency": d.currency,
+                "discountPercent": disc,
             }
-            for d in p.durations
+            for d, sell, disc in _dur_rows()
         ]
     regions, os_options, windows = _plan_region_os(p)
     features = _plan_features(p)
@@ -435,18 +460,15 @@ def _storage_label_to_human(code: str) -> Optional[str]:
 def metal_vps_plans(currency: Optional[str] = None, db: Session = Depends(get_db)):
     """VPS plans sold under the Metal menu — same upstream catalog, but priced
     with the Metal margin and custom display names (both set in admin)."""
-    from app.services.catalog_service import get_metal_vps_margin, get_metal_vps_names
-    margin_pct = float(get_metal_vps_margin(db))
+    from app.services.catalog_service import get_metal_vps_names
     names = get_metal_vps_names(db)
     names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
     plans = get_active_plans(db, ServiceCategory.VPS)
     out = []
     for p in plans:
-        d = _plan_to_frontend(p, currency, db)
-        for dur in d.get("durations") or []:
-            raw = dur.get("rawPrice") or 0
-            dur["finalPrice"] = round(raw * (1 + margin_pct / 100.0), 2)
-            dur["monthlyPrice"] = round(_monthly_price(dur["finalPrice"], dur.get("interval") or 1, dur.get("intervalUnit") or "month"), 2)
+        # metal=True: channel margin (or per-plan Metal margin) + metal
+        # commitment discounts + same duration filtering as Essential.
+        d = _plan_to_frontend(p, currency, db, metal=True)
         custom = names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code))
         if custom:
             d["invoiceName"] = custom
@@ -484,13 +506,15 @@ def metal_dedicated_plans(currency: Optional[str] = None, db: Session = Depends(
 
 @router.get("/admin/metal-vps")
 def admin_get_metal_vps(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    from app.services.catalog_service import get_metal_vps_margin, get_metal_vps_names
+    from app.services.catalog_service import get_metal_vps_margin, get_metal_vps_names, get_metal_vps_plan_margins
     names = get_metal_vps_names(db)
     names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
+    plan_margins = get_metal_vps_plan_margins(db)
     plans = get_active_plans(db, ServiceCategory.VPS)
     return {
         "marginPercent": float(get_metal_vps_margin(db)),
         "names": names,
+        "planMargins": plan_margins,
         "plans": [
             {
                 "planCode": p.plan_code,
@@ -502,6 +526,15 @@ def admin_get_metal_vps(db: Session = Depends(get_db), admin: User = Depends(get
             for p in plans
         ],
     }
+
+
+def _admin_config_set(db: Session, key: str, value: Any) -> None:
+    import json as _json
+    row = db.query(AdminConfig).filter(AdminConfig.key == key).first()
+    if not row:
+        row = AdminConfig(key=key)
+        db.add(row)
+    row.value = _json.dumps(value)
 
 
 @router.post("/admin/metal-vps")
@@ -516,7 +549,92 @@ def admin_save_metal_vps(body: dict, db: Session = Depends(get_db), admin: User 
         if not isinstance(body["names"], dict):
             raise HTTPException(status_code=400, detail="names must be an object {planCode: name}")
         set_metal_vps_names(db, body["names"])
+    if "planMargins" in body and body["planMargins"] is not None:
+        if not isinstance(body["planMargins"], dict):
+            raise HTTPException(status_code=400, detail="planMargins must be an object {planCode: percent}")
+        clean = {}
+        for k, v in body["planMargins"].items():
+            if v in (None, ""):
+                continue
+            pct = float(v)
+            if pct < 0 or pct > 1000:
+                raise HTTPException(status_code=400, detail=f"Margin {pct} out of range for {k}")
+            clean[str(k)] = pct
+        _admin_config_set(db, "metal_vps_plan_margins", clean)
+        db.commit()
     return {"success": True}
+
+
+@router.get("/admin/duration-settings")
+def admin_get_duration_settings(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import _commitment_discounts, get_commitment_months
+    return {
+        "months": get_commitment_months(db),
+        "essential": _commitment_discounts(db, metal=False),
+        "metal": _commitment_discounts(db, metal=True),
+    }
+
+
+@router.post("/admin/duration-settings")
+def admin_save_duration_settings(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Commitment pricing: which derived durations exist (months) and the % off
+    each, per channel. Re-derives all VPS duration rows immediately."""
+    from app.services.catalog_service import _commitment_discounts, _derive_commitment_durations, get_commitment_months
+    months = body.get("months")
+    if months is not None:
+        if not isinstance(months, list) or not months:
+            raise HTTPException(status_code=400, detail="months must be a non-empty list of ints > 1")
+        months = sorted({int(m) for m in months if int(m) > 1})
+        if not months:
+            raise HTTPException(status_code=400, detail="At least one month > 1 required")
+        _admin_config_set(db, "commitment_months", months)
+    for channel, key in (("essential", "commitment_discounts"), ("metal", "metal_commitment_discounts")):
+        if channel in body and body[channel] is not None:
+            if not isinstance(body[channel], dict):
+                raise HTTPException(status_code=400, detail=f"{channel} must be an object {{duration_label: pct}}")
+            clean = {}
+            for k, v in body[channel].items():
+                pct = float(v)
+                if pct < 0 or pct >= 100:
+                    raise HTTPException(status_code=400, detail=f"Discount {pct} out of range for {k}")
+                if pct:
+                    clean[str(k)] = pct
+            _admin_config_set(db, key, clean)
+    db.commit()
+    # Re-derive every VPS plan's duration rows now (no 6h sync wait).
+    discounts = _commitment_discounts(db)
+    provided = {"1_month"}
+    for p in db.query(PlanCatalog).filter(PlanCatalog.category == ServiceCategory.VPS).all():
+        try:
+            _derive_commitment_durations(db, p.plan_code, provided | {f"{m}_month" for m in get_commitment_months(db)}, discounts)
+        except Exception as e:
+            logger.warning(f"duration-settings rederive failed for {p.plan_code}: {e}")
+    db.commit()
+    return {"success": True}
+
+
+@router.post("/admin/plan-margins")
+def admin_plan_margins(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Bulk per-plan Essential margin overrides: {margins: {planCode: pct|null}}
+    — null/empty clears the override (falls back to category margin)."""
+    margins = body.get("margins")
+    if not isinstance(margins, dict):
+        raise HTTPException(status_code=400, detail="margins must be an object {planCode: percent|null}")
+    updated = 0
+    for code, val in margins.items():
+        plan = db.query(PlanCatalog).filter(PlanCatalog.plan_code == str(code)).first()
+        if not plan:
+            continue
+        if val in (None, ""):
+            plan.override_margin = None
+        else:
+            pct = float(val)
+            if pct < 0 or pct > 1000:
+                raise HTTPException(status_code=400, detail=f"Margin {pct} out of range for {code}")
+            plan.override_margin = pct
+        updated += 1
+    db.commit()
+    return {"success": True, "updated": updated}
 
 
 @router.get("/admin/metal-dedicated")

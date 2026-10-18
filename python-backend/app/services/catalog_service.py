@@ -515,17 +515,35 @@ def default_essential_vps_name(plan_code: str, invoice_name: str) -> str:
     return base or f"Essential {plan_code}"
 
 
-COMMITMENT_MONTHS = (3, 6, 12)
-DEFAULT_COMMITMENT_DISCOUNTS = {"3_month": 0.0, "6_month": 5.0, "12_month": 10.0}
+COMMITMENT_MONTHS = (6, 12)
+DEFAULT_COMMITMENT_DISCOUNTS = {"6_month": 5.0, "12_month": 15.0}
 
 
-def _commitment_discounts(db: Session) -> Dict[str, float]:
+def get_commitment_months(db: Session) -> List[int]:
+    """Derived prepay durations (months) to synthesize — admin key
+    `commitment_months` (JSON array, e.g. [6, 12]). Default (6, 12): OVH's
+    VPS-2027 range offers no-commitment + 6m + 12m only."""
+    try:
+        row = db.query(AdminConfig).filter(AdminConfig.key == "commitment_months").first()
+        if row and row.value:
+            months = sorted({int(m) for m in json.loads(row.value) if int(m) > 1})
+            if months:
+                return months
+    except Exception:
+        pass
+    return list(COMMITMENT_MONTHS)
+
+
+def _commitment_discounts(db: Session, metal: bool = False) -> Dict[str, float]:
     """Commitment discounts (% off the monthly rate) per duration label.
 
-    Overridable via admin_configs key `commitment_discounts` (JSON object).
+    Essential channel: admin_configs `commitment_discounts`.
+    Metal channel:   admin_configs `metal_commitment_discounts`.
+    Both JSON objects like {"6_month": 5, "12_month": 15}.
     """
+    key = "metal_commitment_discounts" if metal else "commitment_discounts"
     try:
-        row = db.query(AdminConfig).filter(AdminConfig.key == "commitment_discounts").first()
+        row = db.query(AdminConfig).filter(AdminConfig.key == key).first()
         if row and row.value:
             data = json.loads(row.value)
             return {**DEFAULT_COMMITMENT_DISCOUNTS, **{k: float(v) for k, v in data.items()}}
@@ -534,12 +552,63 @@ def _commitment_discounts(db: Session) -> Dict[str, float]:
     return dict(DEFAULT_COMMITMENT_DISCOUNTS)
 
 
+def get_duration_discount_pct(db: Session, duration_label: str, metal: bool = False) -> float:
+    """% off the sell price for a duration label on the given channel."""
+    return float(_commitment_discounts(db, metal).get(duration_label or "", 0.0))
+
+
+def get_metal_vps_plan_margins(db: Session) -> Dict[str, float]:
+    """Per-plan Metal margin overrides: admin_configs `metal_vps_plan_margins`
+    (JSON {plan_code: percent}). Blank/absent = channel metal_vps_margin."""
+    try:
+        row = db.query(AdminConfig).filter(AdminConfig.key == "metal_vps_plan_margins").first()
+        if row and row.value:
+            return {str(k): float(v) for k, v in json.loads(row.value).items() if v not in (None, "")}
+    except Exception:
+        pass
+    return {}
+
+
+def compute_sell_price(db: Session, plan, duration, metal: bool = False) -> Tuple[float, float]:
+    """Customer sell price for one plan duration: upstream raw -> channel/plan
+    margin -> duration commitment discount. Returns (price, discount_pct).
+    Used by EVERY pricing path (plan listings, metal endpoints, order create)
+    so display price == charged price."""
+    from app.services.ovh_client import apply_margin
+
+    raw = Decimal(str(duration.raw_price or 0))
+    base: Optional[Decimal] = None
+    if not metal and plan.override_price is not None:
+        base = Decimal(str(plan.override_price))
+    else:
+        if metal and plan.category == ServiceCategory.VPS:
+            plan_margins = get_metal_vps_plan_margins(db)
+            if plan.plan_code in plan_margins:
+                margin = Decimal(str(plan_margins[plan.plan_code]))
+            else:
+                margin = Decimal(str(get_metal_vps_margin(db)))
+        elif metal and plan.category == ServiceCategory.DEDICATED:
+            margin = Decimal(str(get_metal_ded_margin(db)))
+        elif not metal and plan.override_margin is not None:
+            margin = Decimal(str(plan.override_margin))
+        else:
+            margin = Decimal(str(get_margin_for_category(db, plan.category)))
+        base = apply_margin(raw, margin)
+    disc_pct = 0.0
+    if plan.category == ServiceCategory.VPS:
+        disc_pct = get_duration_discount_pct(db, duration.duration_label or "", metal)
+        if disc_pct:
+            base = base * (Decimal("1") - Decimal(str(disc_pct)) / Decimal("100"))
+    return float(base), disc_pct
+
+
 def _derive_commitment_durations(db: Session, plan_code: str, provided_labels: set, discounts: Dict[str, float]) -> None:
     """Create/update multi-month commitment durations OVH doesn't offer natively.
 
     Several catalog plans (e.g. the VPS 2027 range) only expose P1M pricing
-    upstream. Customers can still prepay for 3/6/12 months — OVH is billed
+    upstream. Customers can still prepay for 6/12 months — OVH is billed
     monthly upstream — so these rows are derived from the monthly price.
+    Derived rows whose label is no longer configured are deleted.
     """
     monthly = db.query(PlanDuration).filter(
         PlanDuration.plan_code == plan_code,
@@ -547,7 +616,23 @@ def _derive_commitment_durations(db: Session, plan_code: str, provided_labels: s
     ).first()
     if not monthly or not monthly.final_price:
         return
-    for months in COMMITMENT_MONTHS:
+    months_set = set(get_commitment_months(db))
+    wanted = {f"{m}_month" for m in months_set}
+    # Drop previously-derived rows that are no longer wanted (e.g. 3_month).
+    stale = (
+        db.query(PlanDuration)
+        .filter(PlanDuration.plan_code == plan_code)
+        .all()
+    )
+    for d in stale:
+        if (
+            d.duration_label not in provided_labels
+            and d.interval_unit in ("month", "months")
+            and (d.interval or 1) > 1
+            and d.duration_label not in wanted
+        ):
+            db.delete(d)
+    for months in months_set:
         label = f"{months}_month"
         if label in provided_labels:
             continue
