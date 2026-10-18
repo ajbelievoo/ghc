@@ -70,6 +70,8 @@ export default function AdminPage() {
   const [essDedPlans, setEssDedPlans] = useState<any[]>([]);
   const [essDedNames, setEssDedNames] = useState<Record<string, string>>({});
   const [essDedMargin, setEssDedMargin] = useState<number>(12);
+  const [preorderSettings, setPreorderSettings] = useState<any>({ enabled: true, feeType: "percent", feeValue: 5, refundDays: 30 });
+  const [preorderQueue, setPreorderQueue] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponForm, setCouponForm] = useState({ code: "", discountType: "percent", value: "", maxUses: "", perUserLimit: "1", minOrderAmount: "", appliesToCategory: "", expiresAt: "", isActive: true });
   const [catalogPlans, setCatalogPlans] = useState<PlanEntry[]>([]);
@@ -149,6 +151,7 @@ export default function AdminPage() {
         try { const md = await api.admin.getMetalDedicated(); setDedPlans(md.plans || []); setDedNames(md.names || {}); setDedMargin(md.marginPercent ?? 20); } catch {}
         try { const ev = await api.admin.getEssentialVps(); setEssVpsPlans(ev.plans || []); setEssVpsNames(ev.names || {}); setEssVpsMargin(ev.marginPercent ?? 10); } catch {}
         try { const ed = await api.admin.getEssentialDedicated(); setEssDedPlans(ed.plans || []); setEssDedNames(ed.names || {}); setEssDedMargin(ed.marginPercent ?? 12); } catch {}
+        try { const po = await api.admin.getPreorders(); setPreorderSettings(po.settings || {}); setPreorderQueue(po.queue || []); } catch {}
       }
       if (t === "coupons") { const c = await api.admin.getCoupons(); setCoupons(c || []); }
       if (t === "catalog") { setCatalogLoading(true); const params: any = { search: catalogSearch || undefined }; if (catalogCategory !== "ALL") params.category = catalogCategory; const p = await api.admin.getCatalog(params); setCatalogPlans(p || []); setCatalogLoading(false); }

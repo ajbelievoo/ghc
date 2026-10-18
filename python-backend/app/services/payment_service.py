@@ -200,12 +200,11 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 logger.exception("Order payment email failed")
             order_label = (order.configuration_payload or {}).get("display_name") or order.plan_code or "order"
             create_notification(db, order.user, "Payment received", f"Payment for {order_label} confirmed.", "success", "/dashboard")
-            # Provision in background — OVH delivery polling outlives request timeouts
+            # Provision in background — OVH delivery polling outlives request timeouts.
+            # Pre-orders queue as WAITING_STOCK instead.
             try:
-                from app.services.order_service import spawn_provisioning
-                order.status = OrderStatus.PROVISIONING
-                db.commit()
-                spawn_provisioning(tx.order_id)
+                from app.services.order_service import kickoff_after_payment
+                kickoff_after_payment(db, order)
             except Exception as e:
                 logger.exception(f"Auto-provision kickoff failed for order {tx.order_id}: {e}")
     elif meta.get("type") == "CART":
@@ -225,10 +224,8 @@ def fulfill_payment(db: Session, gateway: str, gateway_ref: str, amount: float, 
                 except Exception:
                     pass
                 try:
-                    from app.services.order_service import spawn_provisioning
-                    order.status = OrderStatus.PROVISIONING
-                    db.commit()
-                    spawn_provisioning(order.id)
+                    from app.services.order_service import kickoff_after_payment
+                    kickoff_after_payment(db, order)
                 except Exception:
                     logger.exception(f"Cart order {oid} provisioning kickoff failed")
     elif meta.get("type") == "INVOICE_PAYMENT" or meta.get("invoice_id") or meta.get("invoice_ids"):

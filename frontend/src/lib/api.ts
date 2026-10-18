@@ -182,6 +182,12 @@ export const api = {
     getEssentialDedicated: () => request("/admin/essential-dedicated"),
     saveEssentialDedicated: (body: { marginPercent?: number; names?: Record<string, string> }) =>
       request("/admin/essential-dedicated", { method: "POST", body: JSON.stringify(body) }),
+    // Pre-booking (stock waitlist) — settings + live FIFO queue
+    getPreorders: () => request("/admin/preorders"),
+    savePreorderSettings: (body: { enabled?: boolean; feeType?: "percent" | "flat"; feeValue?: number; refundDays?: number }) =>
+      request("/admin/preorder-settings", { method: "POST", body: JSON.stringify(body) }),
+    refundPreorder: (orderId: string) =>
+      request(`/admin/preorders/${orderId}/refund`, { method: "POST" }),
     // Catalog
     getCatalog: (params?: { category?: string; search?: string }) =>
       request(`/admin/plans?${new URLSearchParams(params as any).toString()}`),

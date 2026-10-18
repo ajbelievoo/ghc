@@ -773,3 +773,66 @@ def get_active_plans(db: Session, category: Optional[ServiceCategory] = None) ->
 
 def get_plan_with_durations(db: Session, plan_code: str) -> Optional[PlanCatalog]:
     return db.query(PlanCatalog).filter(PlanCatalog.plan_code == plan_code, PlanCatalog.is_active == True).first()
+
+
+# ---------- Pre-order / stock waitlist settings ----------
+# Customers can pay up-front for an out-of-stock plan+DC; a watcher fulfills
+# FIFO when the OVH order-rule endpoint reports stock again.
+# Admin-config keys:
+#   preorder_enabled        "true"/"false" (default true)
+#   preorder_fee_type       "percent" | "flat"
+#   preorder_fee_value      number (percent of plan price, or flat in INR)
+#   preorder_refund_days    days after which an unfulfilled pre-order auto-refunds (default 30)
+
+PREORDER_ENABLED_KEY = "preorder_enabled"
+PREORDER_FEE_TYPE_KEY = "preorder_fee_type"
+PREORDER_FEE_VALUE_KEY = "preorder_fee_value"
+PREORDER_REFUND_DAYS_KEY = "preorder_refund_days"
+
+
+def _get_admin_value(db: Session, key: str, default: Optional[str] = None) -> Optional[str]:
+    row = db.query(AdminConfig).filter(AdminConfig.key == key).first()
+    return row.value if row and row.value is not None else default
+
+
+def _set_admin_value(db: Session, key: str, value: str) -> None:
+    row = db.query(AdminConfig).filter(AdminConfig.key == key).first()
+    if not row:
+        db.add(AdminConfig(key=key, value=str(value)))
+    else:
+        row.value = str(value)
+    db.commit()
+
+
+def get_preorder_settings(db: Session) -> Dict[str, Any]:
+    return {
+        "enabled": str(_get_admin_value(db, PREORDER_ENABLED_KEY, "true")).lower() != "false",
+        "feeType": (_get_admin_value(db, PREORDER_FEE_TYPE_KEY, "percent") or "percent"),
+        "feeValue": float(_get_admin_value(db, PREORDER_FEE_VALUE_KEY, "5") or 0),
+        "refundDays": int(_get_admin_value(db, PREORDER_REFUND_DAYS_KEY, "30") or 30),
+    }
+
+
+def save_preorder_settings(db: Session, body: Dict[str, Any]) -> None:
+    if "enabled" in body:
+        _set_admin_value(db, PREORDER_ENABLED_KEY, "true" if body["enabled"] else "false")
+    if body.get("feeType") in ("percent", "flat"):
+        _set_admin_value(db, PREORDER_FEE_TYPE_KEY, body["feeType"])
+    if body.get("feeValue") is not None:
+        _set_admin_value(db, PREORDER_FEE_VALUE_KEY, str(float(body["feeValue"])))
+    if body.get("refundDays") is not None:
+        _set_admin_value(db, PREORDER_REFUND_DAYS_KEY, str(int(body["refundDays"])))
+
+
+def compute_preorder_fee(db: Session, base_price: float, target_currency: str) -> float:
+    """Preorder surcharge in the order's currency. Flat values are stored in INR
+    (admin's home currency) and converted; percent applies to the plan price."""
+    s = get_preorder_settings(db)
+    if not s["enabled"]:
+        return 0.0
+    if s["feeType"] == "flat":
+        if target_currency == "INR":
+            return round(s["feeValue"], 2)
+        from app.services.currency_service import convert
+        return round(float(convert(db, s["feeValue"], "INR", target_currency)), 2)
+    return round(base_price * s["feeValue"] / 100.0, 2)

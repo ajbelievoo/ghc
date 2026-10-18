@@ -266,7 +266,7 @@ function ConfigurePageContent() {
   const optionsTotal = 0;
   const subtotal = parseFloat((((selectedDuration?.finalPrice || 0) + optionsTotal) * quantity).toFixed(2));
   const discount = couponResult ? parseFloat((couponResult.discount || 0).toFixed(2)) : 0;
-  const taxable = Math.max(0, subtotal - discount);
+  const taxable = Math.max(0, subtotal - discount) + (preorderFee || 0);
   const taxRate = 0.18;
   const tax = parseFloat((taxable * taxRate).toFixed(2));
   const total = parseFloat((taxable + tax).toFixed(2));
@@ -354,6 +354,21 @@ function ConfigurePageContent() {
   const inStockSiblingPlans = (plans || []).filter(
     (p: any) => p.planCode && p.planCode !== plan?.planCode && siblingStock[p.planCode]?.[stockKeyForOs]
   );
+  // Pre-booking (stock waitlist): out-of-stock DCs become payable reservations.
+  // preorderSelected = the chosen DC exists in the DC universe but isn't in the
+  // live in-stock list for the selected OS family.
+  const preorderCfg = providerConfig?.preorder;
+  const preorderEnabled = !!preorderCfg?.enabled && dcStockKnown;
+  const preorderSelected = !!(
+    preorderEnabled && datacenter && !displayedLocations.includes(datacenter)
+  );
+  // Same math as backend: flat fee is stored in INR, % applies to the
+  // discounted plan price, and the fee is taxed like any other charge.
+  const preorderFee = preorderSelected
+    ? preorderCfg?.feeType === "flat"
+      ? (planCurrency === "INR" ? Number(preorderCfg?.feeValue || 0) : Number(preorderCfg?.feeValue || 0))
+      : parseFloat((((subtotal - discount) * (Number(preorderCfg?.feeValue || 0) / 100)) || 0).toFixed(2))
+    : 0;
 
   useEffect(() => {
     if (durations[0] && !durations.find((d: any) => d.durationLabel === durationLabel)) {
@@ -418,6 +433,7 @@ function ConfigurePageContent() {
       if (osValue) configuration.os = osValue;
       if (datacenter) configuration.datacenter = datacenter;
       if (brand === "metal") configuration._brand = "metal";
+      if (preorderSelected) configuration._preorder = true;
 
       if (!gateway) { showToast("No payment gateway is configured. Please contact support or set up a gateway in admin.", "error"); setPaying(false); return; }
 
@@ -613,6 +629,25 @@ function ConfigurePageContent() {
                   const name = getDcName(dc);
                   const dcAvail = displayedLocations.includes(dc);
                   if (!dcAvail) {
+                    // Pre-booking enabled → the card stays selectable and flips
+                    // the checkout into "reserve now, activate on restock" mode.
+                    if (preorderEnabled) {
+                      const sel = datacenter === dc;
+                      return (
+                        <label key={dc} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${sel ? "border-amber-400 bg-amber-50" : "border-slate-200 bg-slate-50 opacity-70 hover:border-amber-300 hover:opacity-100"}`}>
+                          <input type="radio" name="dc" checked={sel} onChange={() => setDatacenter(dc)} className="h-4 w-4 accent-amber-500" />
+                          <span className="text-lg grayscale">{getFlag(name)}</span>
+                          <div className="flex-1">
+                            <p className="text-xs font-bold text-slate-600">{name}</p>
+                            <p className="text-[10px] text-slate-400">⊘ Out of stock</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">⏳ Pre-book</span>
+                            <p className="mt-0.5 text-[9px] text-slate-400">activates on restock</p>
+                          </div>
+                        </label>
+                      );
+                    }
                     return (
                       <div key={dc} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 opacity-60">
                         <input type="radio" name="dc" disabled className="h-4 w-4" />
@@ -822,7 +857,7 @@ function ConfigurePageContent() {
               {plan.diskGb && <div className="flex items-center justify-between"><span className="text-slate-600">Storage</span><b className="text-[#0f172a]">{plan.diskGb} GB {plan.diskType || "SSD NVMe"}</b></div>}
               {plan.bandwidthMbps && <div className="flex items-center justify-between"><span className="text-slate-600">Public bandwidth</span><b className="text-[#0f172a]">{plan.bandwidthMbps} Mbps unlimited</b></div>}
               <div className="flex items-center justify-between"><span className="text-slate-600">Commitment</span><div className="text-right"><b className="text-[#0f172a]">{durationText}</b>{commitmentDiscount && <p className="text-[10px] font-bold text-[#e0006d]">{commitmentDiscount}</p>}</div></div>
-              <div className="flex items-center justify-between"><span className="text-slate-600">Datacenter location</span><div className="text-right"><b className="text-[#0f172a]">{quantity}× {datacenter || "Select"}</b></div></div>
+              <div className="flex items-center justify-between"><span className="text-slate-600">Datacenter location</span><div className="text-right"><b className="text-[#0f172a]">{quantity}× {datacenter || "Select"}</b>{preorderSelected && <p className="text-[10px] font-bold text-amber-600">⏳ PRE-BOOKING — activates on restock</p>}</div></div>
               <div className="flex items-center justify-between"><span className="text-slate-600">Image</span><div className="text-right"><b className="text-[#0f172a]">{image} {imageVersion}</b><p className="text-[10px] font-bold text-[#0f172a]">Free</p></div></div>
               <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><b className="text-[#0f172a]">Local Storage - {plan.invoiceName || plan.planCode}</b></div>
               {backup && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Premium automatic backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(1.24, planCurrency)}</p></div></div>}
@@ -842,6 +877,9 @@ function ConfigurePageContent() {
                 <div className="flex justify-between"><span>Subtotal</span><span>{fmtCurrency(subtotal, planCurrency)}</span></div>
                 {discount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-semibold"><span>Coupon {couponResult?.code} ({couponResult?.discountType === "percent" ? `${couponResult?.discountValue}%` : "fixed"} off)</span><span>-{fmtCurrency(discount, planCurrency)}</span></div>
+                )}
+                {preorderSelected && preorderFee > 0 && (
+                  <div className="flex justify-between text-amber-700 font-semibold"><span>Priority booking fee{preorderCfg?.feeType === "percent" ? ` (${preorderCfg?.feeValue}%)` : ""}</span><span>{fmtCurrency(preorderFee, planCurrency)}</span></div>
                 )}
                 <div className="flex justify-between"><span>GST ({(taxRate*100).toFixed(0)}%)</span><span>{fmtCurrency(tax, planCurrency)}</span></div>
                 <div className="mt-2 flex gap-2">
@@ -874,8 +912,14 @@ function ConfigurePageContent() {
                 {couponError && <p className="text-[11px] font-semibold text-red-500">{couponError}</p>}
               </div>
               {!user && <p className="mt-3 rounded bg-[#fff4ef] p-2 text-[10px] font-bold text-[#ff3d00]">Sign in or create account before payment.</p>}
-              <button onClick={startPayment} disabled={paying || !providerConfig?.available || (providerDatacenters.length > 0 && !datacenter)} className="mt-4 flex w-full items-center justify-center gap-2 rounded bg-[#0f0c29] px-5 py-3 text-sm font-bold text-white hover:bg-[#302b63] disabled:opacity-50">
-                Continue order →
+              {preorderSelected && (
+                <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-800">
+                  <p className="font-bold">⏳ Pre-booking — {getDcName(datacenter)}</p>
+                  <p className="mt-0.5">This location is out of stock. Pay now to reserve your slot — your VPS provisions <b>automatically</b> the moment it restocks (first-come priority). Full wallet refund if unavailable for {preorderCfg?.refundDays || 30} days.</p>
+                </div>
+              )}
+              <button onClick={startPayment} disabled={paying || !providerConfig?.available || ((providerDatacenters.length > 0 || (preorderEnabled && allCatalogLocations.length > 0)) && !datacenter)} className="mt-4 flex w-full items-center justify-center gap-2 rounded bg-[#0f0c29] px-5 py-3 text-sm font-bold text-white hover:bg-[#302b63] disabled:opacity-50">
+                {preorderSelected ? "Pre-book now →" : "Continue order →"}
               </button>
               {user && (
                 <button
@@ -884,6 +928,7 @@ function ConfigurePageContent() {
                     const configuration: any = {};
                     if (osValue) configuration.os = osValue;
                     if (datacenter) configuration.datacenter = datacenter;
+                    if (preorderSelected) configuration._preorder = true;
                     try {
                       await api.cart.add({
                         planCode: plan.planCode,

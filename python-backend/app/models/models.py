@@ -52,6 +52,8 @@ class OrderStatus(str, PyEnum):
     ACTIVE = "ACTIVE"
     FAILED = "FAILED"
     REFUNDED = "REFUNDED"
+    # Customer paid for an out-of-stock plan/DC; queued until OVH stock returns.
+    WAITING_STOCK = "WAITING_STOCK"
 
 
 class PaymentStatus(str, PyEnum):

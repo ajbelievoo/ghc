@@ -682,6 +682,26 @@ async def cloud_billing_loop():
         await asyncio.sleep(600)  # every 10 minutes
 
 
+async def preorder_watcher_loop():
+    """Stock waitlist: every 5 min, refund expired pre-orders and fulfill the
+    earliest booking for any plan+DC that just came back in stock at OVH."""
+    from app.services.order_service import preorder_tick
+    await asyncio.sleep(90)
+    while True:
+        db = None
+        try:
+            db = SessionLocal()
+            stats = await asyncio.to_thread(preorder_tick, db)
+            if any(stats.get(k) for k in ("refunded", "kicked", "requeued")):
+                logger.info(f"Preorder watcher: {stats}")
+        except Exception as e:
+            logger.error(f"Preorder watcher failed: {e}")
+        finally:
+            if db:
+                db.close()
+        await asyncio.sleep(300)  # every 5 minutes
+
+
 async def catalog_sync_loop():
     """Keep the OVH product catalog fresh — full sync every 6 hours."""
     from app.services.catalog_service import sync_all_catalogs
@@ -744,6 +764,7 @@ async def lifespan(app: FastAPI):
     marketplace_task = asyncio.create_task(marketplace_worker())
     cloud_billing_task = asyncio.create_task(cloud_billing_loop())
     catalog_task = asyncio.create_task(catalog_sync_loop())
+    preorder_task = asyncio.create_task(preorder_watcher_loop())
     yield
     task.cancel()
     ping_task.cancel()
@@ -752,6 +773,7 @@ async def lifespan(app: FastAPI):
     auto_scaling_task.cancel()
     marketplace_task.cancel()
     cloud_billing_task.cancel()
+    preorder_task.cancel()
 
 
 app = FastAPI(

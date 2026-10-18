@@ -604,6 +604,65 @@ def admin_save_essential_vps(body: dict, db: Session = Depends(get_db), admin: U
     return {"success": True}
 
 
+# ---------- Pre-order (stock waitlist) admin ----------
+
+@router.get("/admin/preorders")
+def admin_list_preorders(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Waitlist queue (FIFO) + current settings."""
+    from app.services.catalog_service import get_preorder_settings
+    from app.services.order_service import _preorder_dc, _preorder_os_family
+    ps = get_preorder_settings(db)
+    orders = db.query(CustomerOrder).filter(
+        CustomerOrder.status == OrderStatus.WAITING_STOCK
+    ).order_by(CustomerOrder.created_at.asc()).all()
+    refund_cut = timedelta(days=int(ps.get("refundDays") or 30))
+    queue = []
+    for i, o in enumerate(orders, 1):
+        cfg = o.configuration_payload or {}
+        queue.append({
+            "position": i,
+            "orderId": o.id,
+            "user": (o.user.email if o.user else o.user_id),
+            "planCode": o.plan_code,
+            "displayName": cfg.get("display_name") or o.plan_code,
+            "datacenter": _preorder_dc(o),
+            "osFamily": _preorder_os_family(o),
+            "amount": o.customer_amount,
+            "currency": o.currency,
+            "fee": cfg.get("_preorder_fee") or 0,
+            "attempts": cfg.get("_preorder_attempts") or 0,
+            "createdAt": o.created_at.isoformat() if o.created_at else None,
+            "refundBy": (o.created_at + refund_cut).isoformat() if o.created_at else None,
+        })
+    return {"settings": ps, "queue": queue}
+
+
+@router.post("/admin/preorder-settings")
+def admin_save_preorder_settings(body: dict, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    from app.services.catalog_service import save_preorder_settings, get_preorder_settings
+    if body.get("feeType") not in (None, "percent", "flat"):
+        raise HTTPException(status_code=400, detail="feeType must be 'percent' or 'flat'")
+    if body.get("feeValue") is not None and float(body["feeValue"]) < 0:
+        raise HTTPException(status_code=400, detail="feeValue must be >= 0")
+    if body.get("refundDays") is not None and int(body["refundDays"]) < 1:
+        raise HTTPException(status_code=400, detail="refundDays must be >= 1")
+    save_preorder_settings(db, body)
+    return {"success": True, "settings": get_preorder_settings(db)}
+
+
+@router.post("/admin/preorders/{order_id}/refund")
+def admin_refund_preorder(order_id: str, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Manual early refund for a queued pre-order."""
+    from app.services.order_service import _refund_preorder
+    order = db.query(CustomerOrder).filter(CustomerOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status != OrderStatus.WAITING_STOCK:
+        raise HTTPException(status_code=400, detail=f"Order is {order.status.value}, not waiting for stock")
+    _refund_preorder(db, order)
+    return {"success": True, "status": order.status.value}
+
+
 @router.get("/admin/essential-dedicated")
 def admin_get_essential_dedicated(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     from app.services.catalog_service import get_essential_ded_names, default_dedicated_display_name, get_margin_for_category
@@ -777,6 +836,7 @@ def plan_configuration(
                 )
             configs.append(entry)
     # Also expose common frontend keys
+    from app.services.catalog_service import get_preorder_settings
     return {
         "planCode": planCode,
         "category": plan.category.value,
@@ -786,6 +846,9 @@ def plan_configuration(
         # {planCode: {linux: bool, windows: bool}} — which sibling VPS plans are
         # actually orderable right now; powers the "available plans" suggestions.
         "siblingsAvailability": siblings,
+        # Stock waitlist: {enabled, feeType, feeValue, refundDays} — the frontend
+        # turns "out of stock" cards into payable pre-bookings when enabled.
+        "preorder": get_preorder_settings(db),
     }
 
 
@@ -1761,12 +1824,11 @@ def billing_wallet_pay(body: dict, db: Session = Depends(get_db), user: User = D
             coupon_code=body.get("couponCode") or body.get("coupon_code"),
         )
         order = pay_order_with_wallet(db, user.id, order.id)
-        # Auto-provision in background — delivery polling outlives request timeouts
+        # Auto-provision in background — delivery polling outlives request timeouts.
+        # Pre-orders queue as WAITING_STOCK instead.
         try:
-            from app.services.order_service import spawn_provisioning
-            order.status = OrderStatus.PROVISIONING
-            db.commit()
-            spawn_provisioning(order.id)
+            from app.services.order_service import kickoff_after_payment
+            kickoff_after_payment(db, order)
         except Exception as e:
             return {
                 "order": {"id": order.id, "status": order.status.value},
@@ -1988,10 +2050,8 @@ def payments_checkout(body: dict, db: Session = Depends(get_db), user: User = De
             order.status = OrderStatus.PAYMENT_RECEIVED
             db.commit()
             try:
-                from app.services.order_service import spawn_provisioning
-                order.status = OrderStatus.PROVISIONING
-                db.commit()
-                spawn_provisioning(order.id)
+                from app.services.order_service import kickoff_after_payment
+                kickoff_after_payment(db, order)
             except Exception as e:
                 return {"id": tx.id, "amount": tx.amount, "currency": tx.currency, "gateway": tx.gateway, "status": tx.status.value, "paid": True, "message": f"Paid — provisioning pending: {e}"}
         return {"id": tx.id, "amount": tx.amount, "currency": tx.currency, "gateway": tx.gateway, "status": tx.status.value, "paid": True}

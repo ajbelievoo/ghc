@@ -196,7 +196,19 @@ def create_customer_order(
             raise ValueError(reason)
         discount_amount = compute_discount(coupon_obj, final_price_converted)
 
-    taxable = max(0.0, final_price_converted - discount_amount)
+    # Pre-order (stock waitlist): customer pays now for an out-of-stock DC;
+    # an extra admin-set fee applies on top of the plan price (before tax).
+    is_preorder = bool((config or {}).get("_preorder"))
+    preorder_fee = 0.0
+    if is_preorder:
+        from app.services.catalog_service import compute_preorder_fee, get_preorder_settings
+        ps = get_preorder_settings(db)
+        if not ps["enabled"]:
+            raise ValueError("Pre-booking is currently disabled")
+        preorder_fee = compute_preorder_fee(db, final_price_converted, target_currency)
+        config = {**(config or {}), "_preorder": True, "_preorder_fee": preorder_fee}
+
+    taxable = max(0.0, final_price_converted - discount_amount) + preorder_fee
     tax_rate = get_settings().tax_rate_percent / 100.0
     tax_amount = round(taxable * tax_rate, 2)
     customer_amount = round(taxable + tax_amount, 2)
@@ -1263,6 +1275,64 @@ def reconcile_provider_order(db: Session, ovh: OvhClient, order: CustomerOrder) 
         return "failed-upstream-gone"
 
 
+def kickoff_after_payment(db: Session, order: CustomerOrder) -> None:
+    """Route a paid order: pre-orders join the stock waitlist (WAITING_STOCK),
+    normal orders go straight to background provisioning."""
+    cfg = order.configuration_payload or {}
+    if cfg.get("_preorder"):
+        order.status = OrderStatus.WAITING_STOCK
+        db.commit()
+        try:
+            from app.services.notification_service import create_notification
+            dc = cfg.get("datacenter") or cfg.get("vps_datacenter") or "the selected location"
+            label = cfg.get("display_name") or order.plan_code or "your plan"
+            create_notification(db, order.user, "Pre-booking confirmed",
+                f"{label} is booked for {dc}. It will activate automatically when stock returns.", "info", "/dashboard")
+        except Exception:
+            pass
+        try:
+            send_preorder_received_email(db, order)
+        except Exception:
+            logger.exception(f"Preorder received email failed for {order.id}")
+        return
+    order.status = OrderStatus.PROVISIONING
+    db.commit()
+    spawn_provisioning(order.id)
+
+
+def send_preorder_received_email(db: Session, order: CustomerOrder) -> None:
+    from app.services.email_service import send_email, render_email, _fmt_money, _safe_subject
+    cfg = order.configuration_payload or {}
+    dc = cfg.get("datacenter") or cfg.get("vps_datacenter") or "-"
+    label = cfg.get("display_name") or order.plan_code or "VPS"
+    fee = cfg.get("_preorder_fee") or 0
+    user = order.user
+    if not user or not getattr(user, "email", None):
+        return
+    html = render_email(
+        preheader=f"Pre-booking received for order #{order.id[:8]}",
+        heading="Pre-booking confirmed",
+        paragraphs=[
+            f"Hi {_safe_subject(user.name)},",
+            f"Your <strong>{label}</strong> is reserved for datacenter <strong>{dc}</strong>. "
+            "That location is out of stock right now — your server will be provisioned "
+            "automatically as soon as stock opens, and you hold first priority in the queue.",
+            "If it does not become available within 30 days, the full amount is refunded "
+            "to your GHC wallet automatically.",
+        ],
+        details=[
+            ("Order #", order.id[:8]),
+            ("Plan", label),
+            ("Location", dc),
+            ("Paid", _fmt_money(order.customer_amount, order.currency)),
+            ("Priority fee", _fmt_money(fee, order.currency)),
+        ],
+        cta_label="View Order",
+        cta_url=f"{get_settings().site_url}/dashboard/orders/{order.id}",
+    )
+    send_email(db, user.email, f"Pre-booking confirmed — {label} @ {dc}", html)
+
+
 def spawn_provisioning(order_id: str) -> None:
     """Run execute_checkout in a daemon thread with its own DB session.
 
@@ -1311,6 +1381,7 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
         OrderStatus.PROVISIONING,
         OrderStatus.PROVISIONING_FAILED,
         OrderStatus.FAILED,
+        OrderStatus.WAITING_STOCK,
     ):
         raise ValueError(f"Order is in status {order.status.value}, cannot checkout")
 
@@ -1503,9 +1574,7 @@ def fulfill_cart_orders(db: Session, tx) -> None:
         except Exception:
             pass
         try:
-            order.status = OrderStatus.PROVISIONING
-            db.commit()
-            spawn_provisioning(order.id)
+            kickoff_after_payment(db, order)
         except Exception:
             logger.exception(f"Cart order {order.id} provisioning kickoff failed")
 
@@ -1552,3 +1621,153 @@ def pay_order_with_wallet(db: Session, user_id: str, order_id: str) -> CustomerO
     except Exception:
         logger.exception("Order payment email failed")
     return order
+
+
+# ---------- Pre-order / stock waitlist ----------
+
+def _preorder_dc(order: CustomerOrder) -> Optional[str]:
+    cfg = order.configuration_payload or {}
+    dc = cfg.get("datacenter") or cfg.get("vps_datacenter")
+    return str(dc).upper() if dc else None
+
+
+def _preorder_os_family(order: CustomerOrder) -> str:
+    cfg = order.configuration_payload or {}
+    img = str(cfg.get("os") or cfg.get("vps_os") or cfg.get("image") or "")
+    return "windows" if "windows" in img.lower() else "linux"
+
+
+def _refund_preorder(db: Session, order: CustomerOrder) -> None:
+    """Full wallet refund for an expired/failed pre-order."""
+    from app.services.wallet_service import credit_wallet
+    from app.services.email_service import render_email, send_email, _fmt_money, _safe_subject
+    cfg = order.configuration_payload or {}
+    label = cfg.get("display_name") or order.plan_code or "VPS"
+    credit_wallet(
+        db, order.user_id, order.customer_amount,
+        description=f"Auto-refund: pre-order {order.id[:8]} — {label} never came back in stock",
+        metadata={"type": "PREORDER_REFUND", "order_id": order.id, "order_currency": order.currency},
+        currency=order.currency,
+    )
+    order.status = OrderStatus.REFUNDED
+    db.commit()
+    try:
+        from app.services.notification_service import create_notification
+        create_notification(db, order.user, "Pre-booking refunded",
+            f"Your {label} pre-booking expired — {_fmt_money(order.customer_amount, order.currency)} was refunded to your wallet.",
+            "info", "/dashboard/wallet")
+    except Exception:
+        pass
+    try:
+        user = order.user
+        if user and getattr(user, "email", None):
+            html = render_email(
+                preheader=f"Refund for pre-order #{order.id[:8]}",
+                heading="Pre-booking refunded",
+                paragraphs=[
+                    f"Hi {_safe_subject(user.name)},",
+                    f"Your <strong>{label}</strong> pre-booking at <strong>{_preorder_dc(order) or '-'}</strong> "
+                    "did not come back in stock within the waiting period. The full amount has been "
+                    "refunded to your GHC wallet.",
+                    "You can re-book whenever the location opens again — availability changes daily.",
+                ],
+                details=[
+                    ("Order #", order.id[:8]),
+                    ("Plan", label),
+                    ("Refunded", _fmt_money(order.customer_amount, order.currency)),
+                ],
+                cta_label="View Wallet",
+                cta_url=f"{get_settings().site_url}/dashboard/wallet",
+            )
+            send_email(db, user.email, f"Refund issued — pre-order #{order.id[:8]}", html)
+    except Exception:
+        logger.exception(f"Preorder refund email failed for {order.id}")
+
+
+def preorder_tick(db: Session) -> Dict[str, int]:
+    """One watcher cycle: refund expired pre-orders, then fulfill the earliest
+    eligible order per plan whose DC+OS family is back in stock at OVH.
+
+    Fulfillment spawns the normal provisioning thread — OVH stock is NOT
+    reserved for us, so execute_checkout can still lose the race; failed
+    attempts roll back into the queue (max 3 attempts before admin review).
+    """
+    from app.services.catalog_service import get_preorder_settings
+    from app.routers.compat import _vps_dc_availability
+
+    stats = {"refunded": 0, "queued": 0, "kicked": 0, "requeued": 0}
+    ps = get_preorder_settings(db)
+
+    waiting = db.query(CustomerOrder).filter(
+        CustomerOrder.status == OrderStatus.WAITING_STOCK,
+    ).order_by(CustomerOrder.created_at.asc()).all()
+    stats["queued"] = len(waiting)
+
+    # 1) Expiry refunds — even if preorders are disabled, existing ones must refund.
+    cutoff = datetime.utcnow() - timedelta(days=int(ps.get("refundDays") or 30))
+    for order in list(waiting):
+        if order.created_at and order.created_at < cutoff:
+            try:
+                _refund_preorder(db, order)
+                stats["refunded"] += 1
+            except Exception:
+                logger.exception(f"Preorder refund failed for {order.id}")
+    waiting = [o for o in waiting if o.status == OrderStatus.WAITING_STOCK]
+
+    if not ps.get("enabled", True) or not waiting:
+        return stats
+
+    # 2) Retry failed attempts (OVH lost the stock race) — up to 3 tries.
+    failed = db.query(CustomerOrder).filter(
+        CustomerOrder.status == OrderStatus.PROVISIONING_FAILED,
+    ).order_by(CustomerOrder.created_at.asc()).all()
+    for order in failed:
+        cfg = dict(order.configuration_payload or {})
+        if not cfg.get("_preorder"):
+            continue
+        attempts = int(cfg.get("_preorder_attempts") or 0)
+        if attempts < 3:
+            cfg["_preorder_attempts"] = attempts
+            order.configuration_payload = cfg
+            order.status = OrderStatus.WAITING_STOCK
+            db.commit()
+            waiting.append(order)
+            stats["requeued"] += 1
+
+    # 3) Per-plan stock probe; fulfill at most ONE order per plan+cycle — the
+    # next cycle re-probes, so we never race ourselves for a single unit.
+    by_plan: Dict[str, List[CustomerOrder]] = {}
+    for order in sorted(waiting, key=lambda o: o.created_at or datetime.utcnow()):
+        by_plan.setdefault(order.plan_code or "", []).append(order)
+
+    for plan_code, orders in by_plan.items():
+        avail = _vps_dc_availability(plan_code)
+        if not avail:
+            continue
+        kicked_dc = set()
+        for order in orders:
+            dc = _preorder_dc(order)
+            if not dc or dc in kicked_dc:
+                continue
+            fam = _preorder_os_family(order)
+            st = (avail.get(dc) or {}).get("linuxStatus" if fam == "linux" else "windowsStatus")
+            if st != "available":
+                continue
+            cfg = dict(order.configuration_payload or {})
+            cfg["_preorder_attempts"] = int(cfg.get("_preorder_attempts") or 0) + 1
+            cfg["_preorder_stock_detected_at"] = datetime.utcnow().isoformat()
+            order.configuration_payload = cfg
+            order.status = OrderStatus.PROVISIONING
+            db.commit()
+            logger.info(f"Preorder stock detected: order {order.id} plan {plan_code} dc {dc} ({fam}) — provisioning")
+            try:
+                spawn_provisioning(order.id)
+                stats["kicked"] += 1
+                kicked_dc.add(dc)
+            except Exception:
+                logger.exception(f"Preorder provisioning kickoff failed for {order.id}")
+                order.status = OrderStatus.WAITING_STOCK
+                cfg["_preorder_attempts"] -= 1
+                order.configuration_payload = cfg
+                db.commit()
+    return stats
