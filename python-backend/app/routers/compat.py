@@ -637,6 +637,45 @@ def admin_save_essential_dedicated(body: dict, db: Session = Depends(get_db), ad
     return {"success": True}
 
 
+# Live datacenter stock from OVH's public no-auth order-rule endpoint
+# (/vps/order/rule/datacenter). Small in-memory TTL cache so we don't
+# hammer the endpoint on every configure-page load.
+_DC_AVAIL_CACHE: Dict[str, Any] = {}
+
+
+def _vps_dc_availability(plan_code: str) -> Dict[str, str]:
+    """Return {DC_CODE: status} ('available' | 'out-of-stock' | ...) for a VPS planCode."""
+    import time as _time
+    import json as _json
+    import urllib.request as _urlreq
+
+    now = _time.time()
+    cached = _DC_AVAIL_CACHE.get(plan_code)
+    if cached:
+        ttl = 600 if cached[1] else 60  # retry failures quickly
+        if now - cached[0] < ttl:
+            return cached[1]
+    result: Dict[str, str] = {}
+    try:
+        import ovh as _ovhlib
+
+        settings = get_settings()
+        base = (_ovhlib.client.ENDPOINTS.get(settings.ovh_endpoint) or "https://ca.api.ovh.com/1.0").rstrip("/")
+        sub = settings.ovh_subsidiary or "IN"
+        url = f"{base}/vps/order/rule/datacenter?planCode={plan_code}&ovhSubsidiary={sub}"
+        req = _urlreq.Request(url, headers={"Accept": "application/json"})
+        with _urlreq.urlopen(req, timeout=8) as resp:
+            data = _json.loads(resp.read().decode())
+        for d in data.get("datacenters") or []:
+            dc = d.get("datacenter")
+            if dc:
+                result[dc] = d.get("status") or "unknown"
+    except Exception as e:
+        logger.warning(f"VPS datacenter availability probe failed for {plan_code}: {e}")
+    _DC_AVAIL_CACHE[plan_code] = (now, result)
+    return result
+
+
 @router.get("/server/plans/configuration")
 def plan_configuration(
     planCode: str,
@@ -651,11 +690,24 @@ def plan_configuration(
     configs = []
     metadata = plan.catalog_metadata or {}
     catalog_configs = metadata.get("configurations", [])
+    # Live stock for *_datacenter configs (VPS plans) — lets the frontend hide
+    # out-of-stock locations exactly like the OVH configurator does.
+    availability: Dict[str, str] = {}
+    if plan.category == ServiceCategory.VPS:
+        availability = _vps_dc_availability(plan.plan_code)
     for cfg in catalog_configs:
         name = cfg.get("name")
         values = cfg.get("values", [])
         if name and values:
-            configs.append({"label": name, "values": values})
+            entry = {"label": name, "values": values}
+            if availability and "datacenter" in str(name).lower():
+                avail_vals = [v for v in values if availability.get(str(v)) == "available"]
+                entry["availability"] = availability
+                # Only restrict when at least one DC is actually in stock —
+                # a probe failure returning {} already leaves values untouched.
+                if avail_vals:
+                    entry["availableValues"] = avail_vals
+            configs.append(entry)
     # Also expose common frontend keys
     return {
         "planCode": planCode,

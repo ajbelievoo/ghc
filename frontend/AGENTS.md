@@ -42,6 +42,13 @@ get explicit user approval first. See python-backend/AGENTS.md for details.
 - `DedicatedRangeList.tsx` reads `?use_cases=` (+`?usecase=`) query param to pre-select use-case chips.
 - ⚠️ Next 16 export quirk: a parent `page.tsx` beside child dirs (use-cases/) emits `.next/server/app/.../index.html` but does NOT copy it to `dist2/`. After build, manually: `cp .next/server/app/dedicated-servers/use-cases/index.html dist2/dedicated-servers/use-cases/index.html` before rsync to dist/.
 
+## Live VPS datacenter stock (added 2026-10-18)
+
+- OVH catalog `vps_datacenter` values = **allowed** codes, NOT stock. Real per-DC stock comes from the **no-auth public endpoint** `GET {endpoint}/vps/order/rule/datacenter?planCode=X&ovhSubsidiary=IN` (returns `status`/`linuxStatus`/`windowsStatus`/`daysBeforeDelivery` per DC). No cart needed — `noAuthentication: true`.
+- `GET /api/server/plans/configuration` (`plan_configuration` in compat.py) merges this: the `vps_datacenter` config entry gets `availability` (map) + `availableValues` (in-stock only). `_vps_dc_availability` caches 10 min (60s on failure).
+- `configure/page.tsx` shows ONLY `availableValues` when present; same-city dupes collapse (BHS+YNM → one Beauharnois card); if stock known but all OOS → "temporarily out of stock" notice instead of selectable cards.
+- ⚠️ Catalog values say e.g. SYD is a valid input but it can be out-of-stock — without this filter, orders fail AFTER payment. Keep this filtering in place.
+
 ## Two storefront channels — Essential vs Metal (added 2026-10-13)
 
 - **Essential** = the standard storefront (`/vps`, `/dedicated-servers` etc., `GET /api/server/plans`). Display names come from `admin_configs.essential_vps_names` / `essential_ded_names` (admin-overridable); auto-fallbacks are `Essential VPS-N` (`default_essential_vps_name`) and `Essential <Range> <n> (<year>)` (`default_dedicated_display_name(prefix="Essential")`). Its margin IS the category margin in `margin_settings` — currently VPS 10%, DEDICATED 12% (kept low on purpose).

@@ -280,9 +280,26 @@ function ConfigurePageContent() {
   };
   // Prefer the fine-grained *_datacenter config (real DC codes: GRA, SGP, SYD…)
   // over the coarse "region" config (canada/europe) — OVH lists actual DCs.
-  const providerDatacenters = findConfigValues(["datacenter", "location", "zone", "district"]).length
-    ? findConfigValues(["datacenter", "location", "zone", "district"])
-    : findConfigValues(["region", "country"]);
+  const dcConfigEntry =
+    requiredConfigs.find((cfg: any) =>
+      ["datacenter", "location", "zone", "district"].some((n) =>
+        `${cfg.name || cfg.label || cfg.type || cfg.key || ""}`.toLowerCase().includes(n))
+    ) ||
+    requiredConfigs.find((cfg: any) =>
+      ["region", "country"].some((n) =>
+        `${cfg.name || cfg.label || cfg.type || cfg.key || ""}`.toLowerCase().includes(n))
+    );
+  // Live stock: backend attaches availability + availableValues (in-stock DCs) when
+  // the OVH order-rule probe succeeds — show only those, like OVH's configurator.
+  // If the probe ran but every DC is out-of-stock, the plan is not orderable now.
+  const dcStockKnown = !!dcConfigEntry?.availability;
+  const dcAllOutOfStock = dcStockKnown && !(Array.isArray(dcConfigEntry?.availableValues) && dcConfigEntry.availableValues.length);
+  const dcRawValues = (dcStockKnown
+    ? (dcConfigEntry?.availableValues || [])
+    : dcConfigEntry?.values || dcConfigEntry?.allowedValues || dcConfigEntry?.enum || dcConfigEntry?.choices || []) as any[];
+  const providerDatacenters: string[] = Array.isArray(dcRawValues)
+    ? dcRawValues.map((v: any) => (typeof v === "string" ? v : v.value || v.name || v.label)).filter(Boolean)
+    : [];
   const providerImages = findConfigValues(["image", "os", "template", "distribution"]);
   const durationTitle = (l: string) => l === "1_month" ? "No commitment" : `${parseInt(l)} months`;
   const durationText = durationLabel === "1_month" ? "1 month" : `${parseInt(durationLabel)} months`;
@@ -555,6 +572,11 @@ function ConfigurePageContent() {
                     </label>
                   );
                 })}
+              </div>
+            ) : dcAllOutOfStock ? (
+              <div className="rounded border border-amber-200 bg-amber-50 p-5">
+                <p className="font-black text-[#0f172a]">This plan is temporarily out of stock.</p>
+                <p className="mt-1 text-sm text-slate-600">All datacenter locations are currently unavailable for this plan. Please check back later or choose a different plan.</p>
               </div>
             ) : (
               <div className="rounded border border-slate-200 p-5 text-sm text-slate-600">No datacenter selection required.</div>
