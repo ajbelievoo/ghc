@@ -750,6 +750,93 @@ def _vps_dc_availability(plan_code: str) -> Dict[str, Any]:
     return result
 
 
+_VPS_ADDON_CACHE: Dict[str, Any] = {}
+
+
+def _vps_addon_prices() -> Dict[str, Dict[str, Any]]:
+    """{addonPlanCode: {monthlyPrice, currency, invoiceName}} from the public VPS
+    catalog. Prices arrive in microcents (34.00 -> 3400000000); we keep the
+    monthly (interval=1) pricing. 30-min cache — prices rarely change."""
+    import time as _time
+    import json as _json
+    import urllib.request as _urlreq
+
+    key = "__addons__"
+    now = _time.time()
+    cached = _VPS_ADDON_CACHE.get(key)
+    if cached and now - cached[0] < (1800 if cached[1] else 120):
+        return cached[1]
+    result: Dict[str, Dict[str, Any]] = {}
+    try:
+        import ovh as _ovhlib
+
+        settings = get_settings()
+        base = (_ovhlib.client.ENDPOINTS.get(settings.ovh_endpoint) or "https://ca.api.ovh.com/1.0").rstrip("/")
+        sub = settings.ovh_subsidiary or "IN"
+        url = f"{base}/order/catalog/public/vps?ovhSubsidiary={sub}"
+        req = _urlreq.Request(url, headers={"Accept": "application/json"})
+        with _urlreq.urlopen(req, timeout=15) as resp:
+            data = _json.loads(resp.read().decode())
+        for a in data.get("addons") or []:
+            code = a.get("planCode")
+            if not code:
+                continue
+            price = None
+            for p in a.get("pricings") or []:
+                if int(p.get("interval") or 0) >= 1 and p.get("price") is not None:
+                    price = float(p["price"]) / 1e8
+                    break
+            if price is None:
+                continue
+            result[code] = {
+                "monthlyPrice": round(price, 2),
+                "currency": "INR" if sub == "IN" else "USD",
+                "invoiceName": a.get("invoiceName") or code,
+            }
+    except Exception as e:
+        logger.warning(f"VPS addon price probe failed: {e}")
+    _VPS_ADDON_CACHE[key] = (now, result)
+    return result
+
+
+def _vps_options_for_plan(db, plan, is_metal: bool) -> List[Dict[str, Any]]:
+    """Selectable paid add-ons for the configure page (snapshot, premium backup,
+    extra disk, cpanel/plesk licenses) with channel-margin pricing."""
+    from decimal import Decimal
+    from app.services.catalog_service import get_margin_for_category, get_metal_vps_margin
+    from app.services.ovh_client import apply_margin
+
+    meta = plan.catalog_metadata or {}
+    families = meta.get("addonFamilies") or []
+    prices = _vps_addon_prices()
+    if not families or not prices:
+        return []
+    margin = get_metal_vps_margin(db) if is_metal else get_margin_for_category(db, ServiceCategory.VPS)
+    out = []
+    for fam in families:
+        name = fam.get("name")
+        if name in ("os", "storage"):  # mandatory included — not customer add-ons
+            continue
+        choices = []
+        for code in fam.get("addons") or []:
+            p = prices.get(code)
+            if not p:
+                continue
+            sell = float(apply_margin(Decimal(str(p["monthlyPrice"])), margin))
+            label = (p["invoiceName"] or code)
+            label = _re.sub(r"^Option\s+", "", label)
+            label = _re.sub(r"\s*-\s*VPS-\d.*$", "", label).strip() or code
+            choices.append({"code": code, "label": label, "monthlyPrice": round(sell, 2), "currency": p["currency"]})
+        if choices:
+            out.append({
+                "family": name,
+                "mandatory": bool(fam.get("mandatory")),
+                "exclusive": bool(fam.get("exclusive")),
+                "choices": sorted(choices, key=lambda c: c["monthlyPrice"]),
+            })
+    return out
+
+
 def _vps_plans_availability(plan_codes: List[str]) -> Dict[str, Any]:
     """Batch stock check: {planCode: {"linux": bool, "windows": bool}} — one call
     to OVH's aggregated order-rule endpoint. Used to suggest alternative plans
