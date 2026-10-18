@@ -471,7 +471,7 @@ def _storage_label_to_human(code: str) -> Optional[str]:
 def metal_vps_plans(currency: Optional[str] = None, db: Session = Depends(get_db)):
     """VPS plans sold under the Metal menu — same upstream catalog, but priced
     with the Metal margin and custom display names (both set in admin)."""
-    from app.services.catalog_service import get_metal_vps_names
+    from app.services.catalog_service import get_metal_vps_names, default_metal_vps_name
     names = get_metal_vps_names(db)
     names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
     plans = get_active_plans(db, ServiceCategory.VPS)
@@ -481,8 +481,7 @@ def metal_vps_plans(currency: Optional[str] = None, db: Session = Depends(get_db
         # commitment discounts + same duration filtering as Essential.
         d = _plan_to_frontend(p, currency, db, metal=True)
         custom = names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code))
-        if custom:
-            d["invoiceName"] = custom
+        d["invoiceName"] = custom or default_metal_vps_name(p.plan_code)
         d["brand"] = "metal"
         out.append(d)
     return out
@@ -492,11 +491,12 @@ def metal_vps_plans(currency: Optional[str] = None, db: Session = Depends(get_db
 def metal_dedicated_plans(currency: Optional[str] = None, db: Session = Depends(get_db)):
     """Dedicated plans sold under the Metal menu — same upstream bare-metal
     catalog, priced with the Metal dedicated margin + Metal display names."""
-    from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, default_dedicated_display_name
+    from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, metal_ded_auto_names, _ded_base_code
     margin_pct = float(get_metal_ded_margin(db))
     names = get_metal_ded_names(db)
     names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
     plans = get_active_plans(db, ServiceCategory.DEDICATED)
+    auto_names = metal_ded_auto_names(plans)
     out = []
     for p in plans:
         d = _plan_to_frontend(p, currency, db)
@@ -507,7 +507,9 @@ def metal_dedicated_plans(currency: Optional[str] = None, db: Session = Depends(
         d["displayName"] = (
             names.get(p.plan_code)
             or names_norm.get(_normalize_public_plan_code(p.plan_code))
-            or default_dedicated_display_name(p.invoice_name or "", p.plan_code)
+            or names.get(_ded_base_code(p.plan_code))
+            or auto_names.get(_ded_base_code(p.plan_code))
+            or f"Metal {p.plan_code}"
         )
         d["spec"] = _ded_spec_display(p)
         d["brand"] = "metal"
@@ -517,7 +519,7 @@ def metal_dedicated_plans(currency: Optional[str] = None, db: Session = Depends(
 
 @router.get("/admin/metal-vps")
 def admin_get_metal_vps(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    from app.services.catalog_service import get_metal_vps_margin, get_metal_vps_names, get_metal_vps_plan_margins
+    from app.services.catalog_service import get_metal_vps_margin, get_metal_vps_names, get_metal_vps_plan_margins, default_metal_vps_name
     names = get_metal_vps_names(db)
     names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
     plan_margins = get_metal_vps_plan_margins(db)
@@ -531,6 +533,7 @@ def admin_get_metal_vps(db: Session = Depends(get_db), admin: User = Depends(get
                 "planCode": p.plan_code,
                 "invoiceName": p.invoice_name,
                 "metalName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or "",
+                "autoName": default_metal_vps_name(p.plan_code),
                 "rawPrice": p.durations[0].raw_price if p.durations else None,
                 "currency": (p.durations[0].currency if p.durations else p.currency),
             }
@@ -659,10 +662,11 @@ def admin_plan_margins(body: dict, db: Session = Depends(get_db), admin: User = 
 
 @router.get("/admin/metal-dedicated")
 def admin_get_metal_dedicated(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, default_dedicated_display_name
+    from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, metal_ded_auto_names, _ded_base_code
     names = get_metal_ded_names(db)
     names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
     plans = get_active_plans(db, ServiceCategory.DEDICATED)
+    auto_names = metal_ded_auto_names(plans)
     return {
         "marginPercent": float(get_metal_ded_margin(db)),
         "names": names,
@@ -670,8 +674,8 @@ def admin_get_metal_dedicated(db: Session = Depends(get_db), admin: User = Depen
             {
                 "planCode": p.plan_code,
                 "invoiceName": p.invoice_name,
-                "metalName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or "",
-                "autoName": default_dedicated_display_name(p.invoice_name or "", p.plan_code),
+                "metalName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or names.get(_ded_base_code(p.plan_code)) or "",
+                "autoName": auto_names.get(_ded_base_code(p.plan_code)) or f"Metal {p.plan_code}",
             }
             for p in plans
         ],

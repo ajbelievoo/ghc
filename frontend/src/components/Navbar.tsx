@@ -274,11 +274,11 @@ const megaMenu: MegaEntry[] = [
         tagline: "Maximum performance, no compromise",
         columns: [
           { title: "Our server ranges", items: [
-            { label: "Advance (T3)", href: "/metal/dedicated#advance", desc: "Versatility for SMEs" },
-            { label: "Game (T3)", href: "/metal/dedicated#game", desc: "Performance and security for your games" },
-            { label: "Scale (T4)", href: "/metal/dedicated#scale", desc: "Power for heavy workloads" },
-            { label: "Scale GPU", href: "/metal/dedicated#scalegpu", desc: "Accelerated compute for AI and rendering" },
-            { label: "High Grade (T5)", href: "/metal/dedicated#highgrade", desc: "The most powerful for critical loads" },
+            { label: "Core", href: "/metal/dedicated#core", desc: "Versatility for SMEs" },
+            { label: "Arena", href: "/metal/dedicated#arena", desc: "Performance and security for your games" },
+            { label: "Flex", href: "/metal/dedicated#flex", desc: "Power for heavy workloads" },
+            { label: "Vision", href: "/metal/dedicated#vision", desc: "Accelerated compute for AI and rendering" },
+            { label: "Elite", href: "/metal/dedicated#elite", desc: "The most powerful for critical loads" },
           ]},
           { title: "Deployment mode", items: [
             { label: "Wholesale", href: "/metal/dedicated", desc: "Complete server racks" },
@@ -286,7 +286,7 @@ const megaMenu: MegaEntry[] = [
           ]},
           { title: "Uses", items: [
             { label: "AZ and resilience", href: "/metal/dedicated", desc: "Business continuity with high availability" },
-            { label: "Grid computing", href: "/metal/dedicated#scale", desc: "Compute-intensive models for critical issues" },
+            { label: "Grid computing", href: "/metal/dedicated#grid", desc: "Compute-intensive models for critical issues" },
             { label: "Virtualisation and containerisation", href: "/solutions/proxmox", desc: "Cloud-native flexibility on physical servers" },
             { label: "Website and business application", href: "/metal/vps", desc: "Scalability and security for your web applications" },
             { label: "All uses", href: "/metal/dedicated" },

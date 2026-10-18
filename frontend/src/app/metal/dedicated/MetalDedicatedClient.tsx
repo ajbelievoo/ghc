@@ -20,45 +20,44 @@ function money(value?: number, currency?: string) {
   return `${sym}${value.toLocaleString("en-IN", { maximumFractionDigits: decimals })}`;
 }
 
+const RANGE_NAMES: Record<string, string> = {
+  adv: "Core", advstor: "Vault", game: "Arena",
+  scaleamd: "Flex", scaleintel: "Flex", scalegpu: "Vision",
+  hg: "Elite", hgr: "Elite", hgstor: "Elite", hgrai: "Neuro",
+  hci: "Grid", hcisap: "Grid SAP", sds: "Bay",
+};
+
 function rangeOf(p: any): string {
-  const name = p.invoiceName || p.planCode || "";
-  const m = name.match(/^([A-Za-z]+(?:-[A-Za-z]+)?)/);
-  if (!m) return "Other";
-  const lk = m[1].toLowerCase();
-  if (lk.startsWith("hgr")) return "High Grade";
-  if (lk.startsWith("scale-gpu")) return "Scale GPU";
-  if (lk.startsWith("scale")) return "Scale";
-  if (lk.startsWith("adv")) return "Advance";
-  if (lk.startsWith("game")) return "Game";
-  if (lk.startsWith("stor")) return "Storage";
-  if (lk.startsWith("hci")) return "Hosted Private Cloud";
-  if (lk.startsWith("sds")) return "Software-Defined Storage";
-  return m[1].toUpperCase();
+  const code = (p.planCode || "").toLowerCase().replace(/-(mum|sgp|syd)$/, "");
+  const m = code.match(/^\d{2}([a-z]+)/);
+  return RANGE_NAMES[m?.[1] || ""] || "Other";
 }
 
 const RANGE_META: Record<string, { tagline: string; desc: string; badge?: string }> = {
-  "Advance": { tagline: "Versatility for SMEs", desc: "Single-socket workhorses balancing compute, memory and storage — the default choice for production apps, e-commerce and virtualisation hosts.", badge: "Most popular" },
-  "Game": { tagline: "Performance and security for your games", desc: "High-frequency AMD Ryzen CPUs with game-optimised anti-DDoS — built for Minecraft, Rust, CS2 and voice servers that hate lag.", badge: "High clock" },
-  "Scale": { tagline: "Power for heavy workloads", desc: "Dual-socket and many-core configurations for databases, analytics clusters, container fleets and render farms.", badge: "Many-core" },
-  "Scale GPU": { tagline: "Compute with acceleration", desc: "Scale-range chassis fitted with datacenter GPUs — for AI inference, ML training and GPU-accelerated pipelines.", badge: "GPU" },
-  "High Grade": { tagline: "The most powerful for critical loads", desc: "Dual high-core-count CPUs, huge RAM footprints and up to 50 Gbps links — mission-critical infrastructure without compromise.", badge: "Flagship" },
-  "Storage": { tagline: "Capacity first", desc: "Dense disk configurations for backup targets, archives and object storage." },
-  "Hosted Private Cloud": { tagline: "Dedicated virtualisation hosts", desc: "Single-tenant hypervisor hosts for building private clouds." },
-  "Software-Defined Storage": { tagline: "Ceph clusters", desc: "SDS nodes for replicated storage backends." },
+  "Core": { tagline: "Versatility for SMEs", desc: "Single-socket workhorses balancing compute, memory and storage — the default choice for production apps, e-commerce and virtualisation hosts.", badge: "Most popular" },
+  "Arena": { tagline: "Performance and security for your games", desc: "High-frequency AMD Ryzen CPUs with game-optimised anti-DDoS — built for Minecraft, Rust, CS2 and voice servers that hate lag.", badge: "High clock" },
+  "Flex": { tagline: "Power for heavy workloads", desc: "Dual-socket and many-core configurations for databases, analytics clusters, container fleets and render farms.", badge: "Many-core" },
+  "Vision": { tagline: "Compute with acceleration", desc: "Flex-range chassis fitted with datacenter GPUs — for AI inference, ML training and GPU-accelerated pipelines.", badge: "GPU" },
+  "Elite": { tagline: "The most powerful for critical loads", desc: "Dual high-core-count CPUs, huge RAM footprints and up to 50 Gbps links — mission-critical infrastructure without compromise.", badge: "Flagship" },
+  "Neuro": { tagline: "GPU-dense AI compute", desc: "Purpose-built GPU nodes for large-model inference, training clusters and accelerated pipelines.", badge: "AI" },
+  "Vault": { tagline: "Capacity first", desc: "Dense disk configurations for backup targets, archives and object storage." },
+  "Grid": { tagline: "Dedicated virtualisation hosts", desc: "Single-tenant hypervisor hosts for building private clouds." },
+  "Grid SAP": { tagline: "SAP-certified hosts", desc: "Certified single-tenant nodes sized for SAP HANA and enterprise application landscapes." },
+  "Bay": { tagline: "Ceph clusters", desc: "SDS nodes for replicated storage backends." },
 };
 
 const USE_CASES = [
   { icon: Layers, t: "Virtualisation", d: "Run Proxmox, ESXi or Hyper-V clusters on dedicated hardware — no noisy neighbours, full VT-x/AMD-V access." },
   { icon: Database, t: "Databases", d: "PostgreSQL, ClickHouse, Cassandra and Redis on NVMe-backed bare metal with predictable I/O." },
   { icon: Container, t: "Kubernetes", d: "Build container platforms on raw metal — Metal servers are ideal K8s workers and control-plane nodes." },
-  { icon: Flame, t: "Game hosting", d: "High-clock Game range CPUs plus always-on game anti-DDoS for smooth multiplayer experiences." },
-  { icon: Boxes, t: "AI & GPU compute", d: "Scale GPU configurations accelerate inference, fine-tuning and media pipelines." },
-  { icon: Shield, t: "Critical workloads", d: "High Grade range for payment systems, core platforms and anything that cannot afford to go down." },
+  { icon: Flame, t: "Game hosting", d: "High-clock Arena range CPUs plus always-on game anti-DDoS for smooth multiplayer experiences." },
+  { icon: Boxes, t: "AI & GPU compute", d: "Vision and Neuro GPU configurations accelerate inference, fine-tuning and media pipelines." },
+  { icon: Shield, t: "Critical workloads", d: "Elite range for payment systems, core platforms and anything that cannot afford to go down." },
 ];
 
 const FAQS = [
   { q: "What is a Metal dedicated server?", a: "A physical single-tenant server — 100% of the CPU, RAM and disk is yours. No hypervisor tax, no shared resources: raw performance for production workloads." },
-  { q: "How fast is delivery?", a: "Most Metal dedicated servers are delivered automatically within minutes of payment. High Grade and custom configurations can take up to 24 hours." },
+  { q: "How fast is delivery?", a: "Most Metal dedicated servers are delivered automatically within minutes of payment. Elite and custom configurations can take up to 24 hours." },
   { q: "Is anti-DDoS included?", a: "Yes — every Metal dedicated server includes always-on DDoS mitigation at the network edge, free of charge." },
   { q: "Which operating systems can I install?", a: "Ubuntu, Debian, AlmaLinux, Rocky Linux, Fedora, Windows Server, Proxmox, ESXi and one-click apps — install or reinstall any time from the control panel." },
   { q: "Can I customise hardware (disks, RAID, network)?", a: "Yes — during configuration you can pick disk layouts, RAID levels, additional IPs and bandwidth upgrades depending on the range." },

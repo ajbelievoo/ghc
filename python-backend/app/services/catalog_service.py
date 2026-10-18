@@ -454,6 +454,91 @@ def default_dedicated_display_name(invoice_name: str, plan_code: str, prefix: st
     return f"{prefix} {label}" if label else f"{prefix} {plan_code}"
 
 
+# ---------- Original Metal naming ----------
+# Public Metal names are fully original — no upstream range labels
+# (Advance/Game/Scale/High Grade) and no generation years. The real upstream
+# identity stays on plan_code/invoice_name for admins only.
+
+_DED_REGION_SUFFIX_RE = re.compile(r"-(mum|sgp|syd)$", re.IGNORECASE)
+_DED_CODE_RE = re.compile(r"^\d{2}([a-z]+?)(?:-([a-z]))?\d*(?:-v\d+)?$")
+
+METAL_DED_FAMILIES = {
+    "adv": "Core",
+    "advstor": "Vault",
+    "game": "Arena",
+    "scaleamd": "Flex A",
+    "scaleintel": "Flex I",
+    "scalegpu": "Vision",
+    "hg": "Elite",
+    "hgr": "Elite",
+    "hgstor": "Elite",
+    "hgrai": "Neuro",
+    "hci": "Grid",
+    "hcisap": "Grid SAP",
+    "sds": "Bay",
+    "rise": "Base",
+    "storm": "Storm",
+}
+
+
+def _ded_base_code(plan_code: str) -> str:
+    """'24adv01-v3-mum' -> '24adv01-v3' — regional siblings share one public name."""
+    return _DED_REGION_SUFFIX_RE.sub("", (plan_code or "").lower())
+
+
+def _ded_name_parts(plan_code: str) -> Tuple[str, str, str]:
+    """-> (family display, variant letter, lowercase base code)."""
+    base = _ded_base_code(plan_code)
+    m = _DED_CODE_RE.match(base)
+    if not m:
+        return "Server", "", base or "x"
+    return METAL_DED_FAMILIES.get(m.group(1), m.group(1).title()), (m.group(2) or ""), base
+
+
+def metal_ded_auto_names(plans: List[PlanCatalog]) -> Dict[str, str]:
+    """{lowercase base plan_code: 'Metal Core 1' / 'Metal Grid A3' …}.
+
+    Sequential numbering per family (+ variant letter for hci a/i and Flex A/I)
+    across all generations, so two generations never collide on a name."""
+    from collections import defaultdict
+    groups: Dict[Tuple[str, str], List[str]] = defaultdict(list)
+    for p in plans:
+        fam, letter, base = _ded_name_parts(p.plan_code)
+        groups[(fam, letter)].append(base)
+    out: Dict[str, str] = {}
+    for (fam, letter), bases in groups.items():
+        for i, code in enumerate(sorted(set(bases)), 1):
+            if letter:
+                name = f"Metal {fam} {letter.upper()}{i}"
+            elif fam.endswith((" A", " I")):
+                name = f"Metal {fam}{i}"
+            else:
+                name = f"Metal {fam} {i}"
+            out[code] = name
+    return out
+
+
+def metal_ded_auto_name(db: Session, plan_code: str) -> str:
+    plans = get_active_plans(db, ServiceCategory.DEDICATED)
+    return metal_ded_auto_names(plans).get(_ded_base_code(plan_code)) or f"Metal {plan_code}"
+
+
+def default_metal_vps_name(plan_code: str) -> str:
+    """Original Metal VPS names — 'vps-2027-model3' -> 'Metal Bolt 3'."""
+    code = (plan_code or "").lower()
+    m = re.match(r"vps-\d+-model(\d+)(\.lz)?", code)
+    if m:
+        return f"Metal Bolt {m.group(1)}" + (" LZ" if m.group(2) else "")
+    m2 = re.match(r"vps-([a-z]+)-(.+)", code)
+    if m2:
+        tier = {
+            "starter": "Lite", "value": "Go", "essential": "Plus",
+            "comfort": "Pro", "elite": "Ultra", "le": "Max", "discovery": "Air",
+        }.get(m2.group(1), m2.group(1).title())
+        return f"Metal Bolt {tier} {m2.group(2)}"
+    return f"Metal Bolt {plan_code}"
+
+
 # ---------- Essential channel (standard /vps + /dedicated-servers branding) ----------
 # The same upstream catalog is also sold on the regular pages under the
 # "Essential" public identity — own display names + own (lower) category margin,

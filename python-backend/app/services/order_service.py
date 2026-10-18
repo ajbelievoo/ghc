@@ -230,23 +230,27 @@ def create_customer_order(
     is_metal = str((config or {}).get("_brand") or "").lower() == "metal" and plan.category in (ServiceCategory.VPS, ServiceCategory.DEDICATED)
     if is_metal:
         if plan.category == ServiceCategory.DEDICATED:
-            from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, default_dedicated_display_name
+            from app.services.catalog_service import get_metal_ded_margin, get_metal_ded_names, metal_ded_auto_name, _ded_base_code
             margin = get_metal_ded_margin(db)
             ded_names = get_metal_ded_names(db)
             ded_names_norm = {_normalize_public_plan_code(k): v for k, v in ded_names.items()}
-            import re as _re0
-            base_pub = _re0.sub(r"-(mum|sgp|syd)$", "", resolved_code)
+            base_pub = _ded_base_code(resolved_code)
             metal_name = (
                 ded_names.get(resolved_code)
                 or ded_names.get(base_pub)
                 or ded_names_norm.get(_normalize_public_plan_code(resolved_code))
                 or ded_names_norm.get(_normalize_public_plan_code(base_pub))
-                or default_dedicated_display_name(plan.invoice_name or "", resolved_code)
+                or metal_ded_auto_name(db, resolved_code)
             )
         else:
+            from app.services.catalog_service import default_metal_vps_name
             metal_names = get_metal_vps_names(db)
             metal_names_norm = {_normalize_public_plan_code(k): v for k, v in metal_names.items()}
-            metal_name = metal_names.get(resolved_code) or metal_names_norm.get(_normalize_public_plan_code(resolved_code))
+            metal_name = (
+                metal_names.get(resolved_code)
+                or metal_names_norm.get(_normalize_public_plan_code(resolved_code))
+                or default_metal_vps_name(resolved_code)
+            )
         if metal_name:
             config = {**(config or {}), "display_name": metal_name}
 

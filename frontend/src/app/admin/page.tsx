@@ -736,7 +736,7 @@ export default function AdminPage() {
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
-                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Essential name</th><th className="px-3 py-2 w-28">Margin %</th></tr>
+                      <tr><th className="px-3 py-2">OVH plan code</th><th className="px-3 py-2">OVH plan name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Essential name</th><th className="px-3 py-2 w-28">Margin %</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {essVpsPlans.map((p: any) => (
@@ -778,7 +778,7 @@ export default function AdminPage() {
                 <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
-                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Essential name</th></tr>
+                      <tr><th className="px-3 py-2">OVH plan code</th><th className="px-3 py-2">OVH plan name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Essential name</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {essDedPlans.map((p: any) => (
@@ -828,7 +828,7 @@ export default function AdminPage() {
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
-                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2">Base cost</th><th className="px-3 py-2 w-56">Metal name</th><th className="px-3 py-2 w-28">Margin %</th></tr>
+                      <tr><th className="px-3 py-2">OVH plan code</th><th className="px-3 py-2">OVH plan name</th><th className="px-3 py-2">Base cost</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Metal name</th><th className="px-3 py-2 w-28">Margin %</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {metalPlans.map((p: any) => (
@@ -836,11 +836,12 @@ export default function AdminPage() {
                           <td className="px-3 py-2 font-mono text-[11px]">{p.planCode}</td>
                           <td className="px-3 py-2">{p.invoiceName}</td>
                           <td className="px-3 py-2">{p.rawPrice != null ? `${p.currency || ""} ${p.rawPrice}` : "—"}</td>
+                          <td className="px-3 py-2 text-slate-500">{p.autoName}</td>
                           <td className="px-3 py-2">
                             <input
                               value={metalNames[p.planCode] ?? p.metalName ?? ""}
                               onChange={(e) => setMetalNames((prev) => ({ ...prev, [p.planCode]: e.target.value }))}
-                              placeholder={p.invoiceName}
+                              placeholder={p.autoName || p.invoiceName}
                               className="w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[#ff3d00]/50"
                             />
                           </td>
@@ -856,7 +857,7 @@ export default function AdminPage() {
                           </td>
                         </tr>
                       ))}
-                      {metalPlans.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
+                      {metalPlans.length === 0 && <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">No VPS plans synced yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -879,13 +880,14 @@ export default function AdminPage() {
                 <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-96 overflow-y-auto">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide sticky top-0">
-                      <tr><th className="px-3 py-2">Plan code</th><th className="px-3 py-2">Original name</th><th className="px-3 py-2 w-56">Display name</th></tr>
+                      <tr><th className="px-3 py-2">OVH plan code</th><th className="px-3 py-2">OVH plan name</th><th className="px-3 py-2">Auto name</th><th className="px-3 py-2 w-56">Display name</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {dedPlans.map((p: any) => (
                         <tr key={p.planCode}>
                           <td className="px-3 py-2 font-mono text-[11px]">{p.planCode}</td>
                           <td className="px-3 py-2">{p.invoiceName}</td>
+                          <td className="px-3 py-2 text-slate-500">{p.autoName}</td>
                           <td className="px-3 py-2">
                             <input
                               value={dedNames[p.planCode] ?? p.metalName ?? ""}
@@ -896,7 +898,7 @@ export default function AdminPage() {
                           </td>
                         </tr>
                       ))}
-                      {dedPlans.length === 0 && <tr><td colSpan={3} className="px-3 py-6 text-center text-slate-400">No dedicated plans synced yet</td></tr>}
+                      {dedPlans.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">No dedicated plans synced yet</td></tr>}
                     </tbody>
                   </table>
                 </div>
