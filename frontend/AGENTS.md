@@ -62,3 +62,10 @@ get explicit user approval first. See python-backend/AGENTS.md for details.
 - Admin UI: `/admin` → Margins tab → "FREE ORDERS MODE" toggle (confirm dialog when enabling). APIs: `GET/POST /api/admin/free-orders` (admin), `GET /api/billing/free-orders` (public).
 - When enabled, `create_customer_order` sets `customer_amount`/`tax_amount` to 0 and tags `configuration_payload._free_order`. The configure page reads the public flag → shows "FREE" pricing + "Activate now — FREE" button that uses the wallet path (₹0 deduction → PAYMENT_RECEIVED → auto-provision). `payments_checkout` short-circuits ₹0 orders (auto-paid + provision, redirects to /dashboard); `/cart/checkout` forces ₹0 carts through the wallet fulfillment path; `/orders/{id}/provision` accepts `_free_order` as paid evidence.
 - Upstream (OVH) costs are still real — the order keeps the true `ovh_base_amount` for admin visibility.
+
+## Pre-booking (stock waitlist) (added 2026-10-18)
+
+- Configure page: when `providerConfig.preorder.enabled` is on, out-of-stock DC cards become selectable amber "⏳ Pre-book" cards instead of disabled. Selecting one sets `datacenter` to the OOS code → `preorderSelected` → summary shows a "Priority booking fee" line (percent of plan price, or flat ₹ — flat shows `~₹` when page currency ≠ INR; the server always recomputes the real amount) → button reads "Pre-book now →" → order payload carries `configuration._preorder=true`.
+- Backend charges plan + fee now, queues the order as WAITING_STOCK, and auto-provisions FIFO when OVH restocks that DC for the selected OS family; auto-refunds to wallet after `refundDays`.
+- Dashboard order badge: WAITING_STOCK renders as violet "PRE-BOOKED".
+- Admin: `/admin` → Margins tab → amber "PRE-BOOKING" block — enable toggle, fee type (percent/flat ₹), fee value, refund days, plus the live FIFO queue with manual refund buttons (`/api/admin/preorders`, `/api/admin/preorder-settings`, `/api/admin/preorders/{id}/refund`).

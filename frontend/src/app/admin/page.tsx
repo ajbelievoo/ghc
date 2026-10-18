@@ -832,6 +832,72 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
+
+            {/* ===== PRE-BOOKING (stock waitlist) ===== */}
+            <div className="mt-8 rounded-2xl border-2 border-amber-400/50 bg-white/60 backdrop-blur-xl p-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 border border-amber-300 flex items-center justify-center"><Tag className="w-5 h-5 text-amber-600" /></div>
+                <div>
+                  <p className="text-sm font-bold text-[#0f172a]">PRE-BOOKING — out-of-stock reservations</p>
+                  <p className="text-xs text-slate-500">Customers pay now for an out-of-stock location; a watcher provisions the earliest booking automatically when OVH restocks that DC (checked every ~5 min). Full auto-refund to wallet after the deadline.</p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                  <input type="checkbox" checked={!!preorderSettings.enabled} onChange={(e) => setPreorderSettings((s: any) => ({ ...s, enabled: e.target.checked }))} className="h-4 w-4 accent-amber-500" />
+                  <div><p className="text-xs font-bold text-[#0f172a]">Pre-booking enabled</p><p className="text-[10px] text-slate-500">Off = waitlisted orders still auto-refund</p></div>
+                </label>
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-[10px] font-bold uppercase text-slate-500">Fee type</p>
+                  <select value={preorderSettings.feeType || "percent"} onChange={(e) => setPreorderSettings((s: any) => ({ ...s, feeType: e.target.value }))} className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm outline-none">
+                    <option value="percent">% of plan price</option>
+                    <option value="flat">Flat amount (₹)</option>
+                  </select>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-[10px] font-bold uppercase text-slate-500">{preorderSettings.feeType === "flat" ? "Flat fee (₹)" : "Fee %"}</p>
+                  <input type="number" value={preorderSettings.feeValue ?? 5} onChange={(e) => setPreorderSettings((s: any) => ({ ...s, feeValue: parseFloat(e.target.value) || 0 }))} className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm outline-none" />
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-[10px] font-bold uppercase text-slate-500">Auto-refund after (days)</p>
+                  <input type="number" value={preorderSettings.refundDays ?? 30} onChange={(e) => setPreorderSettings((s: any) => ({ ...s, refundDays: parseInt(e.target.value) || 30 }))} className="mt-1 w-full rounded border border-slate-200 px-2 py-1.5 text-sm outline-none" />
+                </div>
+              </div>
+              <button onClick={async () => { try { const r = await api.admin.savePreorderSettings(preorderSettings); setPreorderSettings(r.settings || preorderSettings); showToast("Pre-booking settings saved", "success"); } catch (e: any) { showToast("Failed: " + e.message, "error"); } }} className="mt-4 rounded-lg bg-amber-100 border border-amber-300 px-5 py-2 text-sm font-bold text-amber-700 hover:bg-amber-200 transition-all">Save pre-booking settings</button>
+
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-bold text-[#0f172a]">Live waitlist queue <span className="font-normal text-slate-500">(FIFO — position 1 fulfills first on restock)</span></p>
+                  <button onClick={async () => { try { const po = await api.admin.getPreorders(); setPreorderSettings(po.settings || {}); setPreorderQueue(po.queue || []); } catch {} }} className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-200"><RefreshCw className="inline w-3 h-3 mr-1" />Refresh</button>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-500 uppercase tracking-wide">
+                      <tr><th className="px-3 py-2">#</th><th className="px-3 py-2">Order</th><th className="px-3 py-2">Customer</th><th className="px-3 py-2">Plan</th><th className="px-3 py-2">Location</th><th className="px-3 py-2">OS</th><th className="px-3 py-2">Paid</th><th className="px-3 py-2">Refund by</th><th className="px-3 py-2"></th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {preorderQueue.map((q: any) => (
+                        <tr key={q.orderId}>
+                          <td className="px-3 py-2 font-black text-amber-600">{q.position}</td>
+                          <td className="px-3 py-2 font-mono text-[10px]">{q.orderId?.slice(0, 8)}</td>
+                          <td className="px-3 py-2">{q.user}</td>
+                          <td className="px-3 py-2 font-bold">{q.displayName}</td>
+                          <td className="px-3 py-2 font-bold">{q.datacenter}</td>
+                          <td className="px-3 py-2 uppercase">{q.osFamily}</td>
+                          <td className="px-3 py-2">{q.currency} {q.amount}</td>
+                          <td className="px-3 py-2 text-slate-500">{q.refundBy ? new Date(q.refundBy).toLocaleDateString() : "—"}</td>
+                          <td className="px-3 py-2">
+                            <button onClick={async () => { if (!confirm(`Refund pre-order ${q.orderId?.slice(0,8)} for ${q.user}? The full ${q.currency} ${q.amount} goes back to their wallet.`)) return; try { await api.admin.refundPreorder(q.orderId); showToast("Refunded", "success"); setPreorderQueue((q2) => q2.filter((x) => x.orderId !== q.orderId)); } catch (e: any) { showToast("Failed: " + e.message, "error"); } }} className="rounded bg-red-50 border border-red-200 px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100">Refund now</button>
+                          </td>
+                        </tr>
+                      ))}
+                      {preorderQueue.length === 0 && <tr><td colSpan={9} className="px-3 py-6 text-center text-slate-400">No pending pre-bookings</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

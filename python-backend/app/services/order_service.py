@@ -92,6 +92,17 @@ def _validate_configuration(plan: PlanCatalog, config: Dict[str, Any]) -> None:
             continue
         allowed = catalog_cfg.get("values") or []
         if str(value) not in allowed:
+            # Pre-orders may target DCs outside the catalog allowed list — the
+            # waitlist universe also includes rule-endpoint codes and extras
+            # like BOM that OVH displays but the catalog doesn't list.
+            if config.get("_preorder") and cfg_key in ("datacenter", "vps_datacenter"):
+                try:
+                    from app.routers.compat import _VPS_EXTRA_DCS, _vps_dc_availability
+                    extra = {str(x).upper() for x in set(_vps_dc_availability(plan.plan_code).keys()) | _VPS_EXTRA_DCS}
+                    if str(value).upper() in extra:
+                        continue
+                except Exception:
+                    pass
             raise ValueError(f"Invalid {cfg_key} '{value}' for plan {plan.plan_code}. Allowed: {', '.join(map(str, allowed))}")
 
 

@@ -112,3 +112,12 @@ every site offline permanently.
 - `metal_ded_names` admin config = per-plan display-name overrides for dedicated; auto-fallback `default_dedicated_display_name()` → "Metal Advance 2 (2024)" style. `displayName`/`spec`/`metal margin` are exposed ONLY via `GET /api/metal/dedicated/plans` — `/api/server/plans` returns `spec` but no Metal names (keeps Metal branding out of the Essential channel).
 - `metal_ded_margin` admin config = dedicated Metal margin % (independent of category margin; currently 35). Applied in `metal_dedicated_plans` and in `order_service` when `configuration._brand == "metal"` + category DEDICATED.
 - Admin API: `GET/POST /api/admin/metal-dedicated` accepts `{names, marginPercent}`; `/api/admin/metal-vps` same shape for VPS.
+
+## Pre-booking / stock waitlist (added 2026-10-18)
+
+- `OrderStatus.WAITING_STOCK` — customer paid for an out-of-stock plan+DC; queued FIFO until OVH restocks.
+- Flow: configure page sends `configuration._preorder=true` for an out-of-stock DC → `create_customer_order` adds the admin-set fee (`admin_configs.preorder_fee_type` = `percent`|`flat`, `preorder_fee_value`; flat stored in INR, converted to order currency; fee is taxed inside `taxable`) → all payment paths call `kickoff_after_payment()` which routes pre-orders to WAITING_STOCK (email + notification) instead of spawning provisioning.
+- Watcher: `preorder_watcher_loop` in `main.py` (every 5 min) → `preorder_tick()` in `order_service.py`: refunds orders older than `preorder_refund_days` (default 30) via `credit_wallet`, re-queues `_preorder` PROVISIONING_FAILED orders (max 3 attempts, race-loss safety), and for each plan probes `_vps_dc_availability` — when the order's DC+OS family is `available`, it spawns normal provisioning (ONE order per plan+DC per cycle, FIFO by created_at).
+- DC matching is OS-family aware: `_preorder_os_family()` → `linuxStatus`/`windowsStatus`. Validation: `_validate_configuration` accepts preorder DCs in the wider DC universe (rule-endpoint ∪ extras like BOM), not just catalog values.
+- Admin APIs: `GET /api/admin/preorders` (settings + queue), `POST /api/admin/preorder-settings`, `POST /api/admin/preorders/{id}/refund` (manual early refund). Public settings exposed at `plan_configuration.preorder`.
+- Caveat: OVH does NOT reserve stock — fulfillment rechecks live stock and can still lose the race; attempts are recorded in `configuration_payload._preorder_attempts`.

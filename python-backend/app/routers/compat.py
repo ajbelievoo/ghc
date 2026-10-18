@@ -1838,7 +1838,7 @@ def billing_wallet_pay(body: dict, db: Session = Depends(get_db), user: User = D
         return {
             "order": {"id": order.id, "status": order.status.value},
             "subscription": _subscription_to_server(order.subscription) if order.subscription else None,
-            "message": "Paid with wallet and provisioned",
+            "message": "Pre-booking confirmed — activates automatically when the location restocks" if order.status == OrderStatus.WAITING_STOCK else "Paid with wallet and provisioned",
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

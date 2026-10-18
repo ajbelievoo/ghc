@@ -266,10 +266,6 @@ function ConfigurePageContent() {
   const optionsTotal = 0;
   const subtotal = parseFloat((((selectedDuration?.finalPrice || 0) + optionsTotal) * quantity).toFixed(2));
   const discount = couponResult ? parseFloat((couponResult.discount || 0).toFixed(2)) : 0;
-  const taxable = Math.max(0, subtotal - discount) + (preorderFee || 0);
-  const taxRate = 0.18;
-  const tax = parseFloat((taxable * taxRate).toFixed(2));
-  const total = parseFloat((taxable + tax).toFixed(2));
   const requiredConfigs = providerConfig?.requiredConfiguration || providerConfig?.configurations || [];
   const findConfigValues = (names: string[]) => {
     const entry = requiredConfigs.find((cfg: any) =>
@@ -366,9 +362,16 @@ function ConfigurePageContent() {
   // discounted plan price, and the fee is taxed like any other charge.
   const preorderFee = preorderSelected
     ? preorderCfg?.feeType === "flat"
-      ? (planCurrency === "INR" ? Number(preorderCfg?.feeValue || 0) : Number(preorderCfg?.feeValue || 0))
+      ? Number(preorderCfg?.feeValue || 0) // flat fee is stored in INR; exact conversion happens server-side
       : parseFloat((((subtotal - discount) * (Number(preorderCfg?.feeValue || 0) / 100)) || 0).toFixed(2))
     : 0;
+  const preorderFeeDisplay = preorderCfg?.feeType === "flat" && planCurrency !== "INR"
+    ? `~${fmtCurrency(preorderFee, "INR")}`
+    : fmtCurrency(preorderFee, planCurrency);
+  const taxable = Math.max(0, subtotal - discount) + (preorderFee || 0);
+  const taxRate = 0.18;
+  const tax = parseFloat((taxable * taxRate).toFixed(2));
+  const total = parseFloat((taxable + tax).toFixed(2));
 
   useEffect(() => {
     if (durations[0] && !durations.find((d: any) => d.durationLabel === durationLabel)) {
@@ -879,7 +882,7 @@ function ConfigurePageContent() {
                   <div className="flex justify-between text-emerald-600 font-semibold"><span>Coupon {couponResult?.code} ({couponResult?.discountType === "percent" ? `${couponResult?.discountValue}%` : "fixed"} off)</span><span>-{fmtCurrency(discount, planCurrency)}</span></div>
                 )}
                 {preorderSelected && preorderFee > 0 && (
-                  <div className="flex justify-between text-amber-700 font-semibold"><span>Priority booking fee{preorderCfg?.feeType === "percent" ? ` (${preorderCfg?.feeValue}%)` : ""}</span><span>{fmtCurrency(preorderFee, planCurrency)}</span></div>
+                  <div className="flex justify-between text-amber-700 font-semibold"><span>Priority booking fee{preorderCfg?.feeType === "percent" ? ` (${preorderCfg?.feeValue}%)` : ""}</span><span>{preorderFeeDisplay}</span></div>
                 )}
                 <div className="flex justify-between"><span>GST ({(taxRate*100).toFixed(0)}%)</span><span>{fmtCurrency(tax, planCurrency)}</span></div>
                 <div className="mt-2 flex gap-2">
