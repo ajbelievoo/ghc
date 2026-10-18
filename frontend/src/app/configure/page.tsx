@@ -147,7 +147,7 @@ function ConfigurePageContent() {
   const [imageVersion, setImageVersion] = useState("26.04");
   const [quantity, setQuantity] = useState(1);
   const [region, setRegion] = useState<keyof typeof regionLocations>("Asia/Oceania");
-  const [showUnavailable, setShowUnavailable] = useState(false);
+  const [showUnavailable, setShowUnavailable] = useState(true); // default ON — unavailable DCs stay visible as pre-book cards
   const [manualPayment, setManualPayment] = useState<{ id: string; amount: number; currency: string; instructions: string } | null>(null);
   const [gateway, setGateway] = useState("");
   const [backup, setBackup] = useState(false);
