@@ -4,7 +4,7 @@ import re as _re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -686,6 +686,45 @@ def _vps_dc_availability(plan_code: str) -> Dict[str, Any]:
     return result
 
 
+def _vps_plans_availability(plan_codes: List[str]) -> Dict[str, Any]:
+    """Batch stock check: {planCode: {"linux": bool, "windows": bool}} — one call
+    to OVH's aggregated order-rule endpoint. Used to suggest alternative plans
+    that are actually orderable when the selected plan/DC is out of stock."""
+    import time as _time
+    import json as _json
+    import urllib.request as _urlreq
+
+    key = "__all__:" + ",".join(sorted(plan_codes))
+    now = _time.time()
+    cached = _DC_AVAIL_CACHE.get(key)
+    if cached:
+        ttl = 600 if cached[1] else 60
+        if now - cached[0] < ttl:
+            return cached[1]
+    result: Dict[str, Any] = {}
+    try:
+        import ovh as _ovhlib
+
+        settings = get_settings()
+        base = (_ovhlib.client.ENDPOINTS.get(settings.ovh_endpoint) or "https://ca.api.ovh.com/1.0").rstrip("/")
+        sub = settings.ovh_subsidiary or "IN"
+        url = f"{base}/vps/order/rule/datacenter/aggregated?planCodes={','.join(plan_codes)}&ovhSubsidiary={sub}"
+        req = _urlreq.Request(url, headers={"Accept": "application/json"})
+        with _urlreq.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read().decode())
+        for m in data.get("models") or []:
+            code = m.get("planCode")
+            dcs = m.get("datacenters") or []
+            result[code] = {
+                "linux": any(d.get("linuxStatus") == "available" for d in dcs),
+                "windows": any(d.get("windowsStatus") == "available" for d in dcs),
+            }
+    except Exception as e:
+        logger.warning(f"VPS aggregated availability probe failed: {e}")
+    _DC_AVAIL_CACHE[key] = (now, result)
+    return result
+
+
 @router.get("/server/plans/configuration")
 def plan_configuration(
     planCode: str,
@@ -702,9 +741,17 @@ def plan_configuration(
     catalog_configs = metadata.get("configurations", [])
     # Live stock for *_datacenter configs (VPS plans) — lets the frontend hide
     # out-of-stock locations exactly like the OVH configurator does.
-    availability: Dict[str, str] = {}
+    availability: Dict[str, Any] = {}
+    siblings: Dict[str, Any] = {}
     if plan.category == ServiceCategory.VPS:
         availability = _vps_dc_availability(plan.plan_code)
+        sibling_codes = [
+            p.plan_code
+            for p in db.query(PlanCatalog).filter(PlanCatalog.category == ServiceCategory.VPS, PlanCatalog.is_active == True).all()
+            if p.plan_code
+        ]
+        if sibling_codes:
+            siblings = _vps_plans_availability(sibling_codes)
     for cfg in catalog_configs:
         name = cfg.get("name")
         values = cfg.get("values", [])
@@ -726,6 +773,9 @@ def plan_configuration(
         "durationLabel": durationLabel,
         "available": True,
         "configurations": configs,
+        # {planCode: {linux: bool, windows: bool}} — which sibling VPS plans are
+        # actually orderable right now; powers the "available plans" suggestions.
+        "siblingsAvailability": siblings,
     }
 
 
