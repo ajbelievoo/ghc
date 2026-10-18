@@ -321,6 +321,20 @@ function ConfigurePageContent() {
     seenDcCities.add(city);
     return true;
   });
+  // Full catalog DC list (also city-deduped) — rendered grayed-out when the
+  // "Show unavailable locations" toggle is on, exactly like OVH's configurator.
+  const dcCityKey = (dc: string) => (getDcName(dc).split(" - ").pop() || dc).toLowerCase();
+  const allCatalogRaw = (dcConfigEntry?.values || dcConfigEntry?.allowedValues || dcConfigEntry?.enum || dcConfigEntry?.choices || []) as any[];
+  const seenAllDcCities = new Set<string>();
+  const allCatalogLocations = (Array.isArray(allCatalogRaw) ? allCatalogRaw : [])
+    .map((v: any) => (typeof v === "string" ? v : v.value || v.name || v.label))
+    .filter(Boolean)
+    .filter((dc: string) => {
+      if (seenAllDcCities.has(dcCityKey(dc))) return false;
+      seenAllDcCities.add(dcCityKey(dc));
+      return true;
+    });
+  const renderedLocations = showUnavailable ? allCatalogLocations : displayedLocations;
 
   useEffect(() => {
     if (durations[0] && !durations.find((d: any) => d.durationLabel === durationLabel)) {
@@ -543,10 +557,22 @@ function ConfigurePageContent() {
           <section className="mt-8">
             <div className="mb-1 flex items-center justify-between">
               <h2 className="text-lg font-black">Select the location of your VPS</h2>
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-500">
+                Show unavailable locations
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showUnavailable}
+                  onClick={() => setShowUnavailable(!showUnavailable)}
+                  className={`relative h-5 w-9 rounded-full transition ${showUnavailable ? "bg-[#00b7ff]" : "bg-slate-300"}`}
+                >
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${showUnavailable ? "left-4.5" : "left-0.5"}`} style={showUnavailable ? { left: "1.125rem" } : { left: "0.125rem" }} />
+                </button>
+              </label>
             </div>
             <p className="mb-3 text-xs text-slate-600">You can host your VPS in one of our datacenters in our worldwide network.</p>
             <div className="mb-4 flex gap-1 border-b border-slate-200">
-              {(Object.keys(regionLocations) as (keyof typeof regionLocations)[]).filter((r) => displayedLocations.some((dc) => getDcRegion(dc) === r)).map((r) => (
+              {(Object.keys(regionLocations) as (keyof typeof regionLocations)[]).filter((r) => renderedLocations.some((dc) => getDcRegion(dc) === r)).map((r) => (
                 <button key={r} onClick={() => setRegion(r)} className={`px-4 py-2 text-xs font-bold transition ${region === r ? "border-b-2 border-[#00b7ff] text-[#00b7ff]" : "text-slate-500 hover:text-[#0f172a]"}`}>{r}</button>
               ))}
             </div>
@@ -557,11 +583,25 @@ function ConfigurePageContent() {
                 <p className="font-black text-[#0f172a]">This plan is temporarily unavailable.</p>
                 <p className="mt-1 text-sm text-slate-600">{providerConfig?.reason || "Configuration not available."}</p>
               </div>
-            ) : displayedLocations.length > 0 ? (
+            ) : renderedLocations.length > 0 ? (
               <div className="space-y-2">
-                {displayedLocations.filter((dc) => getDcRegion(dc) === region).map((dc: string) => {
-                  const sel = datacenter === dc;
+                {renderedLocations.filter((dc) => getDcRegion(dc) === region).map((dc: string) => {
                   const name = getDcName(dc);
+                  const dcAvail = displayedLocations.includes(dc);
+                  if (!dcAvail) {
+                    return (
+                      <div key={dc} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 opacity-60">
+                        <input type="radio" name="dc" disabled className="h-4 w-4" />
+                        <span className="text-lg grayscale">{getFlag(name)}</span>
+                        <div className="flex-1">
+                          <p className="text-xs font-bold text-slate-500">{name}</p>
+                          <p className="text-[10px] text-slate-400">⊘ Out of stock</p>
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Unavailable</span>
+                      </div>
+                    );
+                  }
+                  const sel = datacenter === dc;
                   return (
                     <label key={dc} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
                       <input type="radio" name="dc" checked={sel} onChange={() => setDatacenter(dc)} className="h-4 w-4 accent-[#00b7ff]" />
@@ -585,6 +625,18 @@ function ConfigurePageContent() {
               </div>
             ) : (
               <div className="rounded border border-slate-200 p-5 text-sm text-slate-600">No datacenter selection required.</div>
+            )}
+            {dcConfigEntry && !displayedLocations.some((dc) => getDcRegion(dc) === region) && (
+              <div className="mt-4 rounded-lg border border-[#00b7ff]/30 bg-[#00b7ff]/10 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-lg">ℹ️</span>
+                  <div>
+                    <p className="text-sm font-bold text-[#0f172a]">VPS temporarily unavailable</p>
+                    <p className="mt-1 text-xs text-slate-600">This plan has no available datacenter in {region} for the selected OS. Alternative solution: pick a different plan or OS, still at the best price.</p>
+                    <Link href="/vps" className="mt-2 inline-flex items-center gap-1 rounded bg-[#00b7ff] px-4 py-2 text-xs font-bold text-[#0f172a] hover:bg-[#0f0c29] hover:text-white">See other plans →</Link>
+                  </div>
+                </div>
+              </div>
             )}
             <div className="mt-4 rounded-lg border border-[#00b7ff]/30 bg-[#00b7ff]/10 p-4">
               <div className="flex items-start gap-3">
