@@ -278,7 +278,11 @@ function ConfigurePageContent() {
     const rawValues = entry?.values || entry?.allowedValues || entry?.enum || entry?.choices || [];
     return Array.isArray(rawValues) ? rawValues.map((v: any) => typeof v === "string" ? v : v.value || v.name || v.label).filter(Boolean) : [];
   };
-  const providerDatacenters = findConfigValues(["datacenter", "location", "zone", "region", "district", "country"]);
+  // Prefer the fine-grained *_datacenter config (real DC codes: GRA, SGP, SYD…)
+  // over the coarse "region" config (canada/europe) — OVH lists actual DCs.
+  const providerDatacenters = findConfigValues(["datacenter", "location", "zone", "district"]).length
+    ? findConfigValues(["datacenter", "location", "zone", "district"])
+    : findConfigValues(["region", "country"]);
   const providerImages = findConfigValues(["image", "os", "template", "distribution"]);
   const durationTitle = (l: string) => l === "1_month" ? "No commitment" : `${parseInt(l)} months`;
   const durationText = durationLabel === "1_month" ? "1 month" : `${parseInt(durationLabel)} months`;
