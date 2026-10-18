@@ -225,9 +225,9 @@ export default function VirtualisationPage({ plans }: { plans: any[] }) {
         <h2 className="text-xl font-black text-[#0f172a]">Find out more about our recommended ranges for this use case</h2>
         <div className="mt-7 grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
-            { t: "Advance", d: "Power and reliability for common workloads — versatile hosts for small and mid-size clusters.", href: "/dedicated-servers/advance" },
-            { t: "Scale", d: "Compute power for the most demanding workloads — dense cores and memory for large clusters.", href: "/dedicated-servers/scale" },
-            { t: "High Grade", d: "High resilience for critical workloads — top-spec hosts for production platforms.", href: "/dedicated-servers" },
+            { t: "Core", d: "Power and reliability for common workloads — versatile hosts for small and mid-size clusters.", href: "/dedicated-servers/advance" },
+            { t: "Flex", d: "Compute power for the most demanding workloads — dense cores and memory for large clusters.", href: "/dedicated-servers/scale" },
+            { t: "Elite", d: "High resilience for critical workloads — top-spec hosts for production platforms.", href: "/dedicated-servers" },
           ].map((r, i) => (
             <a key={r.t} href={r.href} className="group relative rounded-2xl border border-slate-200 bg-white p-6 pt-8 overflow-hidden hover:border-[#0284c7] hover:shadow-lg transition-all">
               <span className={`absolute top-0 left-0 right-0 h-1.5 ${["bg-[#00b7ff]", "bg-violet-500", "bg-[#0b1020]"][i]}`} />

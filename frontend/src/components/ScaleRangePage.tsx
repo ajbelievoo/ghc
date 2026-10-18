@@ -10,12 +10,12 @@ import Footer from "@/components/Footer";
 import { useCurrency, getCurrencySymbol } from "@/components/CurrencyProvider";
 
 const FAQS: [string, string][] = [
-  ["What should a Scale server be used for?", "Scale servers are engineered for demanding workloads — virtualisation clusters, big databases, HPC, CI/CD fleets and large container platforms that need massive core counts and memory."],
-  ["Where would my data be hosted?", "Scale servers deploy across multiple regions on several continents — pick the location closest to your users during configuration."],
+  ["What should a Flex server be used for?", "Flex servers are engineered for demanding workloads — virtualisation clusters, big databases, HPC, CI/CD fleets and large container platforms that need massive core counts and memory."],
+  ["Where would my data be hosted?", "Flex servers deploy across multiple regions on several continents — pick the location closest to your users during configuration."],
   ["What is the private network?", "vRack gives you isolated layer-2 private networking between your servers with up to 50 Gbps private bandwidth — ideal for cluster replication and storage traffic."],
-  ["What are the technical specifications of the Scale range?", "AMD EPYC 9004/9005 platforms with up to 384 cores (dual socket), up to 2 TB DDR5 ECC, up to 8+ NVMe Gen4/Gen5 drives and 25 Gbps network ports."],
-  ["Are Scale servers certified ISO 27001?", "Our datacentres and management processes carry industry certifications including ISO 27001 — see compliance docs for per-region coverage."],
-  ["Why choose a Scale dedicated server?", "Predictable fixed pricing on the highest-density bare metal we sell — enterprise CPUs, water-cooling sustained boost, redundant power and 99.99% SLA."],
+  ["What are the technical specifications of the Flex range?", "AMD EPYC 9004/9005 platforms with up to 384 cores (dual socket), up to 2 TB DDR5 ECC, up to 8+ NVMe Gen4/Gen5 drives and 25 Gbps network ports."],
+  ["Are Flex servers certified ISO 27001?", "Our datacentres and management processes carry industry certifications including ISO 27001 — see compliance docs for per-region coverage."],
+  ["Why choose a Flex dedicated server?", "Predictable fixed pricing on the highest-density bare metal we sell — enterprise CPUs, water-cooling sustained boost, redundant power and 99.99% SLA."],
 ];
 
 function rangeOf(p: any): string {
@@ -23,18 +23,18 @@ function rangeOf(p: any): string {
   const m = name.match(/^([A-Za-z]+(?:-[A-Za-z]+)?)/);
   if (!m) return "Other";
   const lk = m[1].toLowerCase();
-  if (lk.startsWith("hgr")) return "High Grade";
-  if (lk.startsWith("scale")) return "Scale";
-  if (lk.startsWith("adv")) return "Advance";
-  if (lk.startsWith("game")) return "Game";
+  if (lk.startsWith("hgr")) return "Elite";
+  if (lk.startsWith("scale")) return "Flex";
+  if (lk.startsWith("adv")) return "Core";
+  if (lk.startsWith("game")) return "Arena";
   return "Other";
 }
 
 const RANGE_META: Record<string, { href: string; desc: string }> = {
-  Game: { href: "/dedicated-servers/game", desc: "High-frequency processors for online gaming" },
-  Advance: { href: "/dedicated-servers/advance", desc: "Powerful versatility for common workloads" },
-  Scale: { href: "/dedicated-servers/scale", desc: "Computing power for the most demanding workloads" },
-  "High Grade": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
+  Arena: { href: "/dedicated-servers/game", desc: "High-frequency processors for online gaming" },
+  Core: { href: "/dedicated-servers/advance", desc: "Powerful versatility for common workloads" },
+  Flex: { href: "/dedicated-servers/scale", desc: "Computing power for the most demanding workloads" },
+  "Elite": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
 };
 
 type Row = { label: string; vals: string[]; summary?: boolean };
@@ -59,7 +59,7 @@ const DETAIL: { title: string; rows: Row[] }[] = [
     { label: "Public bandwidth", vals: R4("1 Gbps", "from 1 – 5 Gbps", "from 1 – 25 Gbps", "from 1 – 25 Gbps"), summary: true },
     { label: "Private bandwidth", vals: R4("1 Gbps", "25 Gbps", "50 Gbps", "from 50 – 100 Gbps"), summary: true },
     { label: "DDoS protection", vals: R4("✓", "✓", "✓", "✓") },
-    { label: "Anti-DDoS Game", vals: R4("✓", "–", "–", "–") },
+    { label: "Anti-DDoS Arena", vals: R4("✓", "–", "–", "–") },
     { label: "IPMI", vals: R4("✓", "✓", "✓", "✓") },
     { label: "Load balancer", vals: R4("✓", "✓", "✓", "✓") },
     { label: "Link aggregation", vals: R4("✓", "✓", "✓", "✓") },
@@ -105,7 +105,7 @@ export default function ScaleRangePage({ plans }: { plans: any[] }) {
         const cur = d.currency || p.currency || "USD";
         if (!rangeMin[r] || d.monthlyPrice < rangeMin[r].price) rangeMin[r] = { price: d.monthlyPrice, cur };
       }
-      if (r !== "Scale" || !d) continue;
+      if (r !== "Flex" || !d) continue;
       (p.regions || []).forEach((x: string) => regs.add(x));
       const key = String(p.planCode || "").split("-").slice(0, 2).join("-");
       const isRegional = /-(syd|mum|sgp|waw|gra|rbx|sbg|bhs|lon|eri|lim|par)$/i.test(String(p.planCode));
@@ -128,14 +128,14 @@ export default function ScaleRangePage({ plans }: { plans: any[] }) {
       <div className="border-b border-white/10 sticky top-0 z-30 bg-[#16181d]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex gap-1 overflow-x-auto">
           {Object.keys(RANGE_META).map((r) => (
-            <a key={r} href={RANGE_META[r].href} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${r === "Scale" ? "border-[#00b7ff] text-[#00b7ff]" : "border-transparent text-white/50 hover:text-white"}`}>{r}</a>
+            <a key={r} href={RANGE_META[r].href} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${r === "Flex" ? "border-[#00b7ff] text-[#00b7ff]" : "border-transparent text-white/50 hover:text-white"}`}>{r}</a>
           ))}
         </div>
       </div>
 
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
-        <p className="text-[11px] text-white/40"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Scale</p>
+        <p className="text-[11px] text-white/40"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Flex</p>
         <h1 className="mt-6 text-3xl md:text-4xl font-black">Built for eco-friendly performance</h1>
         <p className="mt-4 text-sm text-white/70 leading-7 max-w-3xl">
           We design our racks in-house to maintain smooth performance as the infrastructure expands. With complete control over thermal performance, we keep your compute dense and efficient — power performance is consistent and reliable, so you can focus on building the services you run on it.
@@ -163,7 +163,7 @@ export default function ScaleRangePage({ plans }: { plans: any[] }) {
             <p className="text-xs text-white/50">across 4 continents</p>
           </div>
           <div className="col-span-2 md:col-span-1 flex items-start">
-            <a href="#scale-plans" className="rounded-lg bg-[#00b7ff] px-6 py-2.5 text-sm font-bold text-[#16181d] hover:bg-sky-400">See Scale servers →</a>
+            <a href="#scale-plans" className="rounded-lg bg-[#00b7ff] px-6 py-2.5 text-sm font-bold text-[#16181d] hover:bg-sky-400">See Flex servers →</a>
           </div>
         </div>
       </section>
@@ -335,7 +335,7 @@ export default function ScaleRangePage({ plans }: { plans: any[] }) {
               <div />
               {Object.entries(RANGE_META).map(([r, meta]) => {
                 const mn = rangeMin[r];
-                const active = r === "Scale";
+                const active = r === "Flex";
                 return (
                   <div key={r} className={`rounded-t-xl p-4 flex flex-col bg-white/[0.04] ${active ? "border-2 border-b-0 border-[#00b7ff] bg-[#00b7ff]/10" : ""}`}>
                     <p className="text-lg font-black">{r}</p>
@@ -364,7 +364,7 @@ export default function ScaleRangePage({ plans }: { plans: any[] }) {
                           <div className="py-2 pr-2 text-[11px] text-white/40 self-center">{row.label}</div>
                           {Object.keys(RANGE_META).map((r, ci) => {
                             const v = row.vals[ci];
-                            const active = r === "Scale";
+                            const active = r === "Flex";
                             return (
                               <div key={r} className={`py-2 px-2 text-center text-[11px] self-center ${active ? `bg-[#00b7ff]/10 border-x-2 border-[#00b7ff] ${lastRow ? "border-b-2 rounded-b-xl pb-3" : ""}` : "bg-white/[0.03]"} ${v === "✓" ? "text-emerald-400 font-bold" : v === "–" ? "text-white/20" : v === "Coming soon" ? "text-white/30" : "text-white font-semibold"}`}>{v}</div>
                             );
@@ -385,9 +385,9 @@ export default function ScaleRangePage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Scale plan table */}
+      {/* Flex plan table */}
       <section id="scale-plans" className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <h2 className="text-xl font-black">Explore our selection of Scale servers</h2>
+        <h2 className="text-xl font-black">Explore our selection of Flex servers</h2>
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden overflow-x-auto">
           <table className="w-full min-w-[860px] text-xs">
             <thead>

@@ -10,15 +10,15 @@ import Footer from "@/components/Footer";
 import { useCurrency, getCurrencySymbol } from "@/components/CurrencyProvider";
 
 const FAQS: [string, string][] = [
-  ["What should a High Grade server be used for?", "High Grade servers run mission-critical workloads — large virtualisation farms, SAP databases, HPC, AI training pipelines and any production platform where downtime and thermal throttling are unacceptable."],
-  ["What is a High Grade server used for?", "It is our top-tier bare-metal range: dual-socket CPUs, up to 2 TB DDR5 ECC, up to 36 disk bays and 50 Gbps private networking — built for maximum density and reliability."],
-  ["Where would my data be hosted?", "High Grade servers deploy across our global regions — pick the datacentre closest to your users during configuration."],
-  ["What is the vRack private network?", "vRack provides isolated layer-2 private networking between your servers across regions with up to 50 Gbps private bandwidth — free with every High Grade server."],
-  ["Are High Grade servers certified ISO 27001?", "Yes — our datacentres and management processes are covered by industry certifications including ISO 27001, depending on region."],
-  ["What are the technical specifications of the High Grade range?", "Dual AMD EPYC 9004/9005 up to 2×96 cores or dual Intel Xeon 6 up to 2×24 cores at 4.2 GHz boost, DDR5 ECC up to 2 TB, hot-swap NVMe/SAS/SATA bays and 99.99% SLA."],
+  ["What should a Elite server be used for?", "Elite servers run mission-critical workloads — large virtualisation farms, SAP databases, HPC, AI training pipelines and any production platform where downtime and thermal throttling are unacceptable."],
+  ["What is a Elite server used for?", "It is our top-tier bare-metal range: dual-socket CPUs, up to 2 TB DDR5 ECC, up to 36 disk bays and 50 Gbps private networking — built for maximum density and reliability."],
+  ["Where would my data be hosted?", "Elite servers deploy across our global regions — pick the datacentre closest to your users during configuration."],
+  ["What is the vRack private network?", "vRack provides isolated layer-2 private networking between your servers across regions with up to 50 Gbps private bandwidth — free with every Elite server."],
+  ["Are Elite servers certified ISO 27001?", "Yes — our datacentres and management processes are covered by industry certifications including ISO 27001, depending on region."],
+  ["What are the technical specifications of the Elite range?", "Dual AMD EPYC 9004/9005 up to 2×96 cores or dual Intel Xeon 6 up to 2×24 cores at 4.2 GHz boost, DDR5 ECC up to 2 TB, hot-swap NVMe/SAS/SATA bays and 99.99% SLA."],
   ["Which is the best server?", "For maximum density pick dual-socket EPYC models; for frequency-sensitive workloads pick the Xeon 6 variants with the highest boost clocks."],
   ["Which dedicated server should I choose?", "Match memory and storage density to your workload — database and virtualisation hosts benefit from high RAM, storage servers from the 36-bay chassis."],
-  ["Why choose a professional High Grade dedicated server?", "Zero-throttling water-cooled CPUs, hot-swap drives, redundant PSUs and 99.99% SLA — the range built for workloads that cannot go down."],
+  ["Why choose a professional Elite dedicated server?", "Zero-throttling water-cooled CPUs, hot-swap drives, redundant PSUs and 99.99% SLA — the range built for workloads that cannot go down."],
 ];
 
 function rangeOf(p: any): string {
@@ -26,18 +26,18 @@ function rangeOf(p: any): string {
   const m = name.match(/^([A-Za-z]+(?:-[A-Za-z]+)?)/);
   if (!m) return "Other";
   const lk = m[1].toLowerCase();
-  if (lk.startsWith("hgr")) return "High Grade";
-  if (lk.startsWith("scale")) return "Scale";
-  if (lk.startsWith("adv")) return "Advance";
-  if (lk.startsWith("game")) return "Game";
+  if (lk.startsWith("hgr")) return "Elite";
+  if (lk.startsWith("scale")) return "Flex";
+  if (lk.startsWith("adv")) return "Core";
+  if (lk.startsWith("game")) return "Arena";
   return "Other";
 }
 
 const RANGE_META: Record<string, { href: string; desc: string }> = {
-  Game: { href: "/dedicated-servers/game", desc: "High-frequency processors for online gaming" },
-  Advance: { href: "/dedicated-servers/advance", desc: "Powerful versatility for common workloads" },
-  Scale: { href: "/dedicated-servers/scale", desc: "Computing power for the most demanding workloads" },
-  "High Grade": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
+  Arena: { href: "/dedicated-servers/game", desc: "High-frequency processors for online gaming" },
+  Core: { href: "/dedicated-servers/advance", desc: "Powerful versatility for common workloads" },
+  Flex: { href: "/dedicated-servers/scale", desc: "Computing power for the most demanding workloads" },
+  "Elite": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
 };
 
 type Row = { label: string; vals: string[]; summary?: boolean };
@@ -62,7 +62,7 @@ const DETAIL: { title: string; rows: Row[] }[] = [
     { label: "Public bandwidth", vals: R4("1 Gbps", "from 1 – 5 Gbps", "from 1 – 25 Gbps", "from 1 – 25 Gbps"), summary: true },
     { label: "Private bandwidth", vals: R4("1 Gbps", "25 Gbps", "50 Gbps", "from 50 – 100 Gbps"), summary: true },
     { label: "DDoS protection", vals: R4("✓", "✓", "✓", "✓") },
-    { label: "Anti-DDoS Game", vals: R4("✓", "–", "–", "–") },
+    { label: "Anti-DDoS Arena", vals: R4("✓", "–", "–", "–") },
     { label: "IPMI", vals: R4("✓", "✓", "✓", "✓") },
     { label: "Load balancer", vals: R4("✓", "✓", "✓", "✓") },
     { label: "Link aggregation", vals: R4("✓", "✓", "✓", "✓") },
@@ -108,7 +108,7 @@ export default function HighGradeRangePage({ plans }: { plans: any[] }) {
         const cur = d.currency || p.currency || "USD";
         if (!rangeMin[r] || d.monthlyPrice < rangeMin[r].price) rangeMin[r] = { price: d.monthlyPrice, cur };
       }
-      if (r !== "High Grade" || !d) continue;
+      if (r !== "Elite" || !d) continue;
       (p.regions || []).forEach((x: string) => regs.add(x));
       const key = String(p.planCode || "").split("-").slice(0, 2).join("-");
       const isRegional = /-(syd|mum|sgp|waw|gra|rbx|sbg|bhs|lon|eri|lim|par)$/i.test(String(p.planCode));
@@ -131,14 +131,14 @@ export default function HighGradeRangePage({ plans }: { plans: any[] }) {
       <div className="border-b border-white/10 sticky top-0 z-30 bg-[#04060b]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex gap-1 overflow-x-auto">
           {Object.keys(RANGE_META).map((r) => (
-            <a key={r} href={RANGE_META[r].href} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${r === "High Grade" ? "border-[#00b7ff] text-[#00b7ff]" : "border-transparent text-white/50 hover:text-white"}`}>{r}</a>
+            <a key={r} href={RANGE_META[r].href} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${r === "Elite" ? "border-[#00b7ff] text-[#00b7ff]" : "border-transparent text-white/50 hover:text-white"}`}>{r}</a>
           ))}
         </div>
       </div>
 
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
-        <p className="text-[11px] text-white/40"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; High Grade</p>
+        <p className="text-[11px] text-white/40"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Elite</p>
         <h1 className="mt-6 text-3xl md:text-4xl font-black">Designed for the most demanding workloads</h1>
         <p className="mt-4 text-sm text-white/70 leading-7 max-w-3xl">
           We designed racks in-house to maintain smooth performance as the infrastructure scales. With complete control over thermal performance, airflow and power density, your workloads perform at their best — even as your infrastructure evolves. Performance is consistent and stable, so you can focus on building the services you run on it.
@@ -166,7 +166,7 @@ export default function HighGradeRangePage({ plans }: { plans: any[] }) {
             <p className="text-xs text-white/50">across 4 continents</p>
           </div>
           <div className="col-span-2 md:col-span-1 flex items-start">
-            <a href="#hgr-plans" className="rounded-lg bg-[#00b7ff] px-6 py-2.5 text-sm font-bold text-[#04060b] hover:bg-sky-400">View our High Grade servers →</a>
+            <a href="#hgr-plans" className="rounded-lg bg-[#00b7ff] px-6 py-2.5 text-sm font-bold text-[#04060b] hover:bg-sky-400">View our Elite servers →</a>
           </div>
         </div>
       </section>
@@ -421,7 +421,7 @@ export default function HighGradeRangePage({ plans }: { plans: any[] }) {
               <div />
               {Object.entries(RANGE_META).map(([r, meta]) => {
                 const mn = rangeMin[r];
-                const active = r === "High Grade";
+                const active = r === "Elite";
                 return (
                   <div key={r} className={`rounded-t-xl p-4 flex flex-col bg-white/[0.04] ${active ? "border-2 border-b-0 border-[#00b7ff] bg-[#00b7ff]/10" : ""}`}>
                     <p className="text-lg font-black">{r}</p>
@@ -450,7 +450,7 @@ export default function HighGradeRangePage({ plans }: { plans: any[] }) {
                           <div className="py-2 pr-2 text-[11px] text-white/40 self-center">{row.label}</div>
                           {Object.keys(RANGE_META).map((r, ci) => {
                             const v = row.vals[ci];
-                            const active = r === "High Grade";
+                            const active = r === "Elite";
                             return (
                               <div key={r} className={`py-2 px-2 text-center text-[11px] self-center ${active ? `bg-[#00b7ff]/10 border-x-2 border-[#00b7ff] ${lastRow ? "border-b-2 rounded-b-xl pb-3" : ""}` : "bg-white/[0.03]"} ${v === "✓" ? "text-emerald-400 font-bold" : v === "–" ? "text-white/20" : v === "Coming soon" ? "text-white/30" : "text-white font-semibold"}`}>{v}</div>
                             );
@@ -471,9 +471,9 @@ export default function HighGradeRangePage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* High Grade plan table */}
+      {/* Elite plan table */}
       <section id="hgr-plans" className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <h2 className="text-xl font-black">Explore our selection of High Grade servers</h2>
+        <h2 className="text-xl font-black">Explore our selection of Elite servers</h2>
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden overflow-x-auto">
           <table className="w-full min-w-[860px] text-xs">
             <thead>

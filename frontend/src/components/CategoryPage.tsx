@@ -43,13 +43,13 @@ const subCategoryHero: Record<string, { title: string; subtitle: string; bullets
   "cpanel": { title: "Discover our cPanel-compatible VPSs", subtitle: "Centralised multi-site management, reliable, scalable web hosting, and transparent and predictable pricing.", bullets: ["cPanel & WHM pre-installed","Manage multiple websites easily","Automatic SSL and backups"] },
   "wordpress": { title: "Explore GHC VPS servers, compatible with WordPress", subtitle: "Performance at a competitive price. A customisable and scalable VPS, compatible with WordPress. Up to 3 Gbps unlimited bandwidth and traffic.", bullets: ["WordPress pre-installed","Scalable resources as you grow","Up to 3 Gbps unlimited bandwidth"] },
   "comfort": { title: "VPS Comfort Range", subtitle: "Balanced performance and storage for growing projects", bullets: ["More RAM and storage","Unlimited traffic","Anti-DDoS included"] },
-  "advance": { title: "Advance Dedicated Servers", subtitle: "Versatile bare-metal servers for SMEs, agencies and developers", bullets: ["Latest AMD EPYC platforms","NVMe SSD storage","Anti-DDoS included"] },
-  "game": { title: "Game Dedicated Servers", subtitle: "High-frequency Ryzen servers built for gaming and low-latency workloads", bullets: ["AMD Ryzen 9000 series","Game DDoS protection","1 Gbps guaranteed bandwidth"] },
-  "scale": { title: "Scale & GPU Dedicated Servers", subtitle: "High-density servers and GPU-accelerated bare metal for production at scale", bullets: ["Up to 10 Gbps network","GPU options for AI/ML","Enterprise-grade hardware"] },
-  "high-grade": { title: "High Grade Dedicated Servers", subtitle: "Mission-critical infrastructure for HCI, SAP, storage and AI workloads", bullets: ["Dual 10 Gbps networking","Massive NVMe capacity","SAP and VMware certified"] },
-  "storage": { title: "Storage & Backup Servers", subtitle: "High-capacity storage servers for backups, archives and data-intensive workloads", bullets: ["Up to 12 disk bays","SAS / SATA / NVMe options","Anti-DDoS included"] },
+  "advance": { title: "Core Dedicated Servers", subtitle: "Versatile bare-metal servers for SMEs, agencies and developers", bullets: ["Latest AMD EPYC platforms","NVMe SSD storage","Anti-DDoS included"] },
+  "game": { title: "Arena Dedicated Servers", subtitle: "High-frequency Ryzen servers built for gaming and low-latency workloads", bullets: ["AMD Ryzen 9000 series","Arena DDoS protection","1 Gbps guaranteed bandwidth"] },
+  "scale": { title: "Flex Dedicated Servers", subtitle: "High-density servers and GPU-accelerated bare metal for production at scale", bullets: ["Up to 10 Gbps network","GPU options for AI/ML","Enterprise-grade hardware"] },
+  "high-grade": { title: "Elite Dedicated Servers", subtitle: "Mission-critical infrastructure for HCI, SAP, storage and AI workloads", bullets: ["Dual 10 Gbps networking","Massive NVMe capacity","SAP and VMware certified"] },
+  "storage": { title: "Vault Storage & Backup Servers", subtitle: "High-capacity storage servers for backups, archives and data-intensive workloads", bullets: ["Up to 12 disk bays","SAS / SATA / NVMe options","Anti-DDoS included"] },
   "eco": { title: "Eco Dedicated Servers", subtitle: "Budget bare-metal servers for personal projects, labs and cost-sensitive workloads — real dedicated hardware at the lowest prices.", bullets: ["Best price/performance ratio","Anti-DDoS protection included","Great for dev, test and small sites"] },
-  "rise": { title: "Rise Dedicated Servers", subtitle: "Entry-level enterprise bare metal — modern platforms, predictable pricing and instant deployment for growing businesses.", bullets: ["Latest-gen AMD/Intel platforms","500 Mbps+ public bandwidth","Deploy in minutes with anti-DDoS"] },
+  "rise": { title: "Base Dedicated Servers", subtitle: "Entry-level enterprise bare metal — modern platforms, predictable pricing and instant deployment for growing businesses.", bullets: ["Latest-gen AMD/Intel platforms","500 Mbps+ public bandwidth","Deploy in minutes with anti-DDoS"] },
   // Domain / Hosting sub-pages
   "wordpress-hosting": { title: "Managed hosting for WordPress", subtitle: "Spend less time managing your WordPress sites — shared hosting optimised for WordPress with one-click install, free SSL and daily backups.", bullets: ["WordPress pre-installed in one click","Free SSL certificate included","Automatic updates and daily backups"] },
   "video": { title: "Video hosting for your websites", subtitle: "Stream videos without slowing down your websites — host video content on fast, bandwidth-friendly shared hosting.", bullets: ["Unmetered bandwidth for media","Host video libraries alongside your site","CDN-ready with Anti-DDoS protection"] },
@@ -179,8 +179,8 @@ function planRange(p: Plan, category: string): string | null {
     const m = p.planCode.match(/^vps-([a-z0-9]+)/);
     if (m) {
       const key = m[1];
-      if (key === "le") return "VLE";
-      const labels: Record<string, string> = { "2027": "VPS 2027", starter: "Starter", value: "Value", essential: "Essential", comfort: "Comfort", elite: "Elite" };
+      if (key === "le") return "Spark Max";
+      const labels: Record<string, string> = { "2027": "Spark", starter: "Spark Lite", value: "Spark Go", essential: "Spark Plus", comfort: "Spark Pro", elite: "Spark Ultra" };
       return labels[key] || key.charAt(0).toUpperCase() + key.slice(1);
     }
     return "VPS";
@@ -190,17 +190,17 @@ function planRange(p: Plan, category: string): string | null {
     if (m) {
       const key = m[1];
       const lk = key.toLowerCase();
-      if (lk.includes("stor")) return "Storage";
+      if (lk.includes("stor")) return "Vault";
       // map HGR-* generically
       if (lk.startsWith("hgr-")) {
         const sub = key.split("-")[1];
-        return `High Grade ${sub}`;
+        return `Elite ${sub}`;
       }
-      if (lk.startsWith("scale-gpu")) return "Scale GPU";
-      if (lk.startsWith("scale")) return "Scale";
-      if (lk.startsWith("advance")) return "Advance";
-      if (lk === "game") return "Game";
-      if (lk === "stor") return "Storage";
+      if (lk.startsWith("scale-gpu")) return "Vision";
+      if (lk.startsWith("scale")) return "Flex";
+      if (lk.startsWith("advance")) return "Core";
+      if (lk === "game") return "Arena";
+      if (lk === "stor") return "Vault";
       return key;
     }
   }

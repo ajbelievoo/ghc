@@ -13,8 +13,8 @@ import { useCurrency, getCurrencySymbol } from "@/components/CurrencyProvider";
 const FAQS: [string, string][] = [
   ["How do I configure a dedicated server after ordering?", "After delivery you get root access — install your OS from our catalogue (Linux, Windows, Proxmox, panels), configure disks and RAID, attach IPs and set your firewall. Everything is managed from the control panel or API."],
   ["How much bandwidth does a dedicated server offer?", "Every server includes guaranteed public bandwidth (from 500 Mbps up to 50 Gbps on high-end ranges) with unlimited traffic, plus private bandwidth on our vRack private network for cluster traffic."],
-  ["Where can I rent an affordable dedicated server that includes anti-DDoS protection?", "Right here — every GHC dedicated server includes always-on anti-DDoS protection at no extra cost, with entry-level prices starting from our Eco value range."],
-  ["What is the best value dedicated server for my project?", "For simple projects and light workloads, choose our lowest-priced servers — unbeatable price-to-performance. For game servers pick the Game range, and for demanding production pick Advance or Scale."],
+  ["Where can I rent an affordable dedicated server that includes anti-DDoS protection?", "Right here — every GHC dedicated server includes always-on anti-DDoS protection at no extra cost, with entry-level prices starting from our Base value range."],
+  ["What is the best value dedicated server for my project?", "For simple projects and light workloads, choose our lowest-priced servers — unbeatable price-to-performance. For game servers pick the Arena range, and for demanding production pick Core or Flex."],
   ["What are the advantages of a VPS compared to a dedicated server?", "A VPS is cheaper and quicker to resize, while a dedicated server gives you 100% of the hardware, more storage and stable performance. Choose VPS for small sites, dedicated for sustained workloads."],
   ["How do I choose the right configuration (CPU, RAM, disk) for my server?", "Match cores to parallelism, RAM to your working set and disks to capacity/IOPS. Start small — you can migrate to a bigger server later without rebuilding your stack."],
 ];
@@ -24,11 +24,11 @@ function rangeOf(p: any): string {
   const m = name.match(/^([A-Za-z]+(?:-[A-Za-z]+)?)/);
   if (!m) return "Other";
   const lk = m[1].toLowerCase();
-  if (lk.startsWith("hgr")) return "High Grade";
-  if (lk.startsWith("scale-gpu")) return "Scale GPU";
-  if (lk.startsWith("scale")) return "Scale";
-  if (lk.startsWith("adv")) return "Advance";
-  if (lk.startsWith("game")) return "Game";
+  if (lk.startsWith("hgr")) return "Elite";
+  if (lk.startsWith("scale-gpu")) return "Vision";
+  if (lk.startsWith("scale")) return "Flex";
+  if (lk.startsWith("adv")) return "Core";
+  if (lk.startsWith("game")) return "Arena";
   if (lk.startsWith("stor")) return "Storage";
   if (lk.startsWith("hci")) return "Hosted Private Cloud";
   if (lk.startsWith("sds")) return "Software-Defined Storage";
@@ -68,8 +68,8 @@ export default function EcoValuePage({ plans }: { plans: any[] }) {
       {/* Hero */}
       <section className="bg-gradient-to-br from-[#0b1020] via-[#101d42] to-[#14307c] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-6 pb-16">
-          <p className="text-xs text-white/70">Eco dedicated servers</p>
-          <p className="mt-1 text-[11px] text-white/50"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Eco</p>
+          <p className="text-xs text-white/70">Base dedicated servers</p>
+          <p className="mt-1 text-[11px] text-white/50"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Base</p>
           <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
             <div>
               <h1 className="text-3xl md:text-4xl font-black leading-tight">Dedicated servers at the best value, without compromise</h1>
@@ -151,7 +151,7 @@ export default function EcoValuePage({ plans }: { plans: any[] }) {
           <div>
             <h2 className="text-xl font-black text-[#0f172a]">Enjoy the computing power of a physical server at the best price.</h2>
             <div className="mt-4 flex flex-wrap gap-2">
-              {["Web hosting", "Game servers", "Archiving and backup"].map((t) => (
+              {["Web hosting", "Arena servers", "Archiving and backup"].map((t) => (
                 <span key={t} className="rounded-full border border-sky-200 bg-sky-50 px-3.5 py-1.5 text-xs font-semibold text-[#0284c7]">{t}</span>
               ))}
             </div>

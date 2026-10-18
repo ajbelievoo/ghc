@@ -183,7 +183,7 @@ export default function MetalResellerPage() {
           </p>
 
           <p className="mt-10 text-[10px] leading-4 text-white/30">
-            * Our VPS solutions in the Asia-Pacific region (Mumbai, Singapore, Sydney) come with a set monthly quota: 500 GB for VPS-1, 1 TB for VPS-2 and VPS-3, 2 TB for VPS-4. Beyond this, the bandwidth is capped at 10 Mbps.
+            * Our VPS solutions in the Asia-Pacific region (Mumbai, Singapore, Sydney) come with a set monthly quota: 500 GB for Metal Bolt 1, 1 TB for Metal Bolt 2 and Bolt 3, 2 TB for Metal Bolt 4. Beyond this, the bandwidth is capped at 10 Mbps.
           </p>
         </div>
       </section>

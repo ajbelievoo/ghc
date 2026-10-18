@@ -25,7 +25,7 @@ export default function AzResiliencePage({ plans }: { plans: any[] }) {
   const sym = (c: string) => getCurrencySymbol((c || currency || "USD").toUpperCase());
 
   const rows = useMemo(() => {
-    // 3-AZ compatible ranges per our catalog: Scale + High Grade (multi-AZ use-case plans)
+    // 3-AZ compatible ranges per our catalog: Flex + Elite (multi-AZ use-case plans)
     const groups = new Map<string, { p: any; d: any; locations: number; isRegional: boolean }>();
     for (const p of plans) {
       if (p.isActive === false) continue;
@@ -169,7 +169,7 @@ export default function AzResiliencePage({ plans }: { plans: any[] }) {
       {/* Server table — 3-AZ compatible ranges, real specs */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
         <h2 className="text-xl font-black text-[#0f172a]">Deploy on our dedicated servers</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-2xl">Compatible ranges for multi-AZ deployments: Scale and High Grade servers with high private bandwidth for cross-zone replication.</p>
+        <p className="mt-2 text-sm text-slate-500 max-w-2xl">Compatible ranges for multi-AZ deployments: Flex and Elite servers with high private bandwidth for cross-zone replication.</p>
         <div className="mt-5 rounded-2xl border border-slate-200 bg-white overflow-hidden overflow-x-auto">
           <table className="w-full min-w-[860px] text-xs">
             <thead>

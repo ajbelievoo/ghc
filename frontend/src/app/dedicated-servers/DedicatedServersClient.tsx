@@ -27,13 +27,13 @@ interface Plan {
 function planRange(p: Plan): string | null {
   const name = (p.invoiceName || "").toUpperCase();
   const code = p.planCode.toLowerCase();
-  if (name.startsWith("GAME")) return "Game";
-  if (name.startsWith("ADVANCE-STOR") || code.includes("advstor") || name.startsWith("STOR") || /\bSDS\b/.test(name)) return "Storage";
-  if (name.startsWith("ADVANCE")) return "Advance";
-  if (/scale.?gpu/i.test(code) || /GPU/i.test(name)) return "Scale GPU";
-  if (name.startsWith("SCALE") || code.includes("scale")) return "Scale";
-  if (/(^|[\s-])(HGR|HGSTOR|HGRAI|HCI|HCISAP|RISE)/.test(name) || code.includes("hci") || code.includes("hg") || code.includes("rise")) return "High Grade";
-  if (name.startsWith("STOR") || code.includes("stor")) return "Storage";
+  if (name.startsWith("GAME")) return "Arena";
+  if (name.startsWith("ADVANCE-STOR") || code.includes("advstor") || name.startsWith("STOR") || /\bSDS\b/.test(name)) return "Vault";
+  if (name.startsWith("ADVANCE")) return "Core";
+  if (/scale.?gpu/i.test(code) || /GPU/i.test(name)) return "Vision";
+  if (name.startsWith("SCALE") || code.includes("scale")) return "Flex";
+  if (/(^|[\s-])(HGR|HGSTOR|HGRAI|HCI|HCISAP|RISE)/.test(name) || code.includes("hci") || code.includes("hg") || code.includes("rise")) return "Elite";
+  if (name.startsWith("STOR") || code.includes("stor")) return "Vault";
   return null;
 }
 
@@ -41,18 +41,18 @@ const RANGE_CARDS: {
   id: string; name: string; href: string; desc: string;
   match: (r: string | null) => boolean;
 }[] = [
-  { id: "game", name: "Game", href: "/dedicated-servers/game", desc: "High-frequency servers optimised for gaming and low-latency workloads.", match: (r) => r === "Game" },
-  { id: "advance", name: "Advance", href: "/dedicated-servers/advance", desc: "Versatile servers for SMEs, agencies and developers.", match: (r) => r === "Advance" },
-  { id: "scale", name: "Scale", href: "/dedicated-servers/scale", desc: "High-end servers for complex, high-resilience infrastructures.", match: (r) => r === "Scale" || r === "Scale GPU" },
-  { id: "high-grade", name: "High Grade", href: "/dedicated-servers/high-grade", desc: "Mission-critical servers for HCI, SAP, storage and AI.", match: (r) => r === "High Grade" },
-  { id: "storage", name: "Storage", href: "/dedicated-servers/storage", desc: "High-capacity servers for backups, archives and big data.", match: (r) => r === "Storage" },
+  { id: "game", name: "Arena", href: "/dedicated-servers/game", desc: "High-frequency servers optimised for gaming and low-latency workloads.", match: (r) => r === "Arena" },
+  { id: "advance", name: "Core", href: "/dedicated-servers/advance", desc: "Versatile servers for SMEs, agencies and developers.", match: (r) => r === "Core" },
+  { id: "scale", name: "Flex", href: "/dedicated-servers/scale", desc: "High-end servers for complex, high-resilience infrastructures.", match: (r) => r === "Flex" || r === "Vision" },
+  { id: "high-grade", name: "Elite", href: "/dedicated-servers/high-grade", desc: "Mission-critical servers for HCI, SAP, storage and AI.", match: (r) => r === "Elite" },
+  { id: "storage", name: "Vault", href: "/dedicated-servers/storage", desc: "High-capacity servers for backups, archives and big data.", match: (r) => r === "Vault" },
 ];
 
 const RANGE_FEATURES: { label: string; per: Record<string, string | boolean> }[] = [
   { label: "Public bandwidth", per: { game: "1 Gbps", advance: "1 Gbps", scale: "2x 10 Gbps", "high-grade": "10 Gbps", storage: "1 Gbps" } },
   { label: "Private bandwidth (vRack)", per: { game: true, advance: true, scale: true, "high-grade": true, storage: true } },
   { label: "Public IPv4 included", per: { game: true, advance: true, scale: true, "high-grade": true, storage: true } },
-  { label: "Anti-DDoS protection", per: { game: "Game DDoS", advance: true, scale: true, "high-grade": true, storage: true } },
+  { label: "Anti-DDoS protection", per: { game: "Arena DDoS", advance: true, scale: true, "high-grade": true, storage: true } },
   { label: "SLA", per: { game: "99.90%", advance: "99.90%", scale: "99.99%", "high-grade": "99.99%", storage: "99.90%" } },
 ];
 
@@ -90,7 +90,7 @@ const FEATURE_TABS: { id: string; label: string; items: { t: string; d: string }
     id: "antiddos", label: "Anti-DDoS",
     items: [
       { t: "Included Anti-DDoS protection", d: "Every dedicated server ships with always-on DDoS mitigation at the network edge — at no extra cost." },
-      { t: "Game DDoS protection", d: "Game-range servers add protocol-aware filtering for UDP game traffic." },
+      { t: "Arena DDoS protection", d: "Arena-range servers add protocol-aware filtering for UDP game traffic." },
       { t: "Firewall network", d: "Optional edge firewall rules configurable from the control panel." },
     ],
   },
@@ -121,7 +121,7 @@ const FEATURE_TABS: { id: string; label: string; items: { t: string; d: string }
   {
     id: "sla", label: "SLA",
     items: [
-      { t: "Up to 99.99% SLA", d: "Scale and High Grade ranges carry enhanced availability SLAs." },
+      { t: "Up to 99.99% SLA", d: "Flex and Elite ranges carry enhanced availability SLAs." },
       { t: "Guaranteed bandwidth", d: "Public bandwidth is committed, not shared oversold capacity." },
       { t: "24/7 support", d: "Ticket support and status page transparency at status.believoo.com." },
     ],
@@ -131,7 +131,7 @@ const FEATURE_TABS: { id: string; label: string; items: { t: string; d: string }
 const APART = [
   { icon: Gauge, t: "Performance", d: "Latest-generation AMD EPYC and Intel platforms, NVMe storage and guaranteed bandwidth for demanding workloads." },
   { icon: ShieldCheck, t: "Availability", d: "Anti-DDoS included, redundant links and up to 99.99% SLA keep services reachable." },
-  { icon: Scale3d, t: "Scalability", d: "From a single ADVANCE box to multi-datacentre High Grade clusters — scale on demand." },
+  { icon: Scale3d, t: "Scalability", d: "From a single Core box to multi-datacentre Elite clusters — scale on demand." },
   { icon: Recycle, t: "Sustainability", d: "In-house designed servers with a refurbished-hardware programme and efficient cooling." },
   { icon: FileText, t: "Transparency", d: "Clear specs, clear prices, no hidden fees — you pay the listed price, nothing else." },
   { icon: BadgeCheck, t: "Compliance", d: "ISO 27001-certified datacentres and GDPR-compliant infrastructure." },

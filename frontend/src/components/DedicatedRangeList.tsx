@@ -7,20 +7,20 @@ import Navbar from "./Navbar";
 import Footer from "@/components/Footer";
 import { useCurrency, getCurrencySymbol } from "@/components/CurrencyProvider";
 
-const RANGES = ["Advance", "Storage", "Game", "Scale", "High Grade"] as const;
+const RANGES = ["Core", "Vault", "Arena", "Flex", "Elite"] as const;
 const RANGE_DESC: Record<string, string> = {
-  Advance: "Versatile servers for small and medium businesses.",
-  Storage: "Servers built for large-capacity storage workloads.",
-  Game: "Servers optimised for video games and streaming platforms.",
-  Scale: "Servers designed for complex, high-resilience infrastructures.",
-  "High Grade": "The most powerful servers, optimised for critical workloads.",
+  Core: "Versatile servers for small and medium businesses.",
+  Vault: "Servers built for large-capacity storage workloads.",
+  Arena: "Servers optimised for video games and streaming platforms.",
+  Flex: "Servers designed for complex, high-resilience infrastructures.",
+  Elite: "The most powerful servers, optimised for critical workloads.",
 };
 const RANGE_HREF: Record<string, string> = {
-  Advance: "/dedicated-servers/advance",
-  Game: "/dedicated-servers/game",
-  Scale: "/dedicated-servers/scale",
-  "High Grade": "/dedicated-servers/high-grade",
-  Storage: "/dedicated-servers/storage",
+  Core: "/dedicated-servers/advance",
+  Arena: "/dedicated-servers/game",
+  Flex: "/dedicated-servers/scale",
+  Elite: "/dedicated-servers/high-grade",
+  Vault: "/dedicated-servers/storage",
 };
 const REGIONS: { group: string; items: { code: string; label: string }[] }[] = [
   { group: "Asia Pacific", items: [{ code: "syd", label: "Australia - Sydney" }, { code: "ynm", label: "India - Mumbai" }, { code: "sgp", label: "Singapore - Singapore" }] },
@@ -48,12 +48,12 @@ const REGION_SUFFIX: Record<string, string> = { syd: "syd", sgp: "sgp", mum: "yn
 function rangeOf(p: any): string {
   const code = String(p.planCode || "").toLowerCase();
   const n = String(p.invoiceName || "").toLowerCase();
-  if (/adv.*stor|stor/.test(n.split("|")[0]) && n.startsWith("adv")) return "Storage";
-  if (n.startsWith("adv")) return "Advance";
-  if (n.startsWith("hgr")) return "High Grade";
-  if (n.startsWith("scale")) return "Scale";
-  if (n.startsWith("game")) return "Game";
-  if (code.includes("stor")) return "Storage";
+  if (/adv.*stor|stor/.test(n.split("|")[0]) && n.startsWith("adv")) return "Vault";
+  if (n.startsWith("adv")) return "Core";
+  if (n.startsWith("hgr")) return "Elite";
+  if (n.startsWith("scale")) return "Flex";
+  if (n.startsWith("game")) return "Arena";
+  if (code.includes("stor")) return "Vault";
   return "Other";
 }
 function baseCode(code: string) { return String(code).replace(/-(syd|mum|sgp)$/i, ""); }

@@ -401,11 +401,11 @@ export default function DashboardPage() {
   }, [tab]);
 
   const DEDICATED_FAMILIES: Record<string, string> = {
-    rise: "Kimufi",
-    advance: "Advance",
-    game: "Game",
-    scale: "Scale",
-    highGrade: "High Grade",
+    rise: "Base",
+    advance: "Core",
+    game: "Arena",
+    scale: "Flex",
+    highGrade: "Elite",
   };
 
   const getPlanLabel = (plan: any) => {

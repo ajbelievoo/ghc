@@ -10,14 +10,14 @@ import Footer from "@/components/Footer";
 import { useCurrency, getCurrencySymbol } from "@/components/CurrencyProvider";
 
 const FAQS: [string, string][] = [
-  ["What should an Advance server be used for?", "Advance servers are versatile machines for everyday workloads — web hosting, business applications, small virtualisation clusters, databases and pre-production environments."],
-  ["What is an Advance server used for?", "They balance price and performance: AMD EPYC 4005 or Intel Xeon 6 CPUs, DDR5 ECC memory and NVMe or SATA storage — enough for most production workloads without enterprise pricing."],
-  ["Where would my data be hosted?", "Advance servers deploy across multiple datacentre regions — you pick the location closest to your users during configuration."],
+  ["What should an Core server be used for?", "Core servers are versatile machines for everyday workloads — web hosting, business applications, small virtualisation clusters, databases and pre-production environments."],
+  ["What is an Core server used for?", "They balance price and performance: AMD EPYC 4005 or Intel Xeon 6 CPUs, DDR5 ECC memory and NVMe or SATA storage — enough for most production workloads without enterprise pricing."],
+  ["Where would my data be hosted?", "Core servers deploy across multiple datacentre regions — you pick the location closest to your users during configuration."],
   ["What is the private network?", "Our private network (vRack) links your servers across datacentres in an isolated layer-2 network with guaranteed private bandwidth — free with your server."],
-  ["Are Advance servers certified ISO 27001?", "Our datacentres and processes are covered by industry certifications including ISO 27001 — see the compliance section for per-region coverage."],
-  ["What are the technical specifications of the Advance range?", "Up to 16 cores per CPU, boost frequencies up to 5.7 GHz, DDR5 ECC memory, PCIe Gen4/Gen5 NVMe storage and 25 Gbps private bandwidth — varies by model."],
-  ["Which is the best server?", "For web hosting pick the entry Advance models; for virtualisation and databases choose 16-core EPYC or Xeon variants with NVMe — use the comparison table above."],
-  ["Why choose a preconfigured Advance dedicated server?", "Preconfigured models are optimised by our teams for common workloads and deploy faster — same hardware, less decision fatigue."],
+  ["Are Core servers certified ISO 27001?", "Our datacentres and processes are covered by industry certifications including ISO 27001 — see the compliance section for per-region coverage."],
+  ["What are the technical specifications of the Core range?", "Up to 16 cores per CPU, boost frequencies up to 5.7 GHz, DDR5 ECC memory, PCIe Gen4/Gen5 NVMe storage and 25 Gbps private bandwidth — varies by model."],
+  ["Which is the best server?", "For web hosting pick the entry Core models; for virtualisation and databases choose 16-core EPYC or Xeon variants with NVMe — use the comparison table above."],
+  ["Why choose a preconfigured Core dedicated server?", "Preconfigured models are optimised by our teams for common workloads and deploy faster — same hardware, less decision fatigue."],
 ];
 
 function rangeOf(p: any): string {
@@ -25,19 +25,19 @@ function rangeOf(p: any): string {
   const m = name.match(/^([A-Za-z]+(?:-[A-Za-z]+)?)/);
   if (!m) return "Other";
   const lk = m[1].toLowerCase();
-  if (lk.startsWith("hgr")) return "High Grade";
-  if (lk.startsWith("scale")) return "Scale";
-  if (lk.startsWith("adv")) return "Advance";
-  if (lk.startsWith("game")) return "Game";
-  if (lk.startsWith("stor")) return "Storage";
+  if (lk.startsWith("hgr")) return "Elite";
+  if (lk.startsWith("scale")) return "Flex";
+  if (lk.startsWith("adv")) return "Core";
+  if (lk.startsWith("game")) return "Arena";
+  if (lk.startsWith("stor")) return "Vault";
   return "Other";
 }
 
 const RANGE_META: Record<string, { href: string; desc: string }> = {
-  Game: { href: "/dedicated-servers/game", desc: "High-frequency processors for online gaming" },
-  Advance: { href: "/dedicated-servers/advance", desc: "Powerful versatility for common workloads" },
-  Scale: { href: "/dedicated-servers/scale", desc: "Computing power for the most demanding workloads" },
-  "High Grade": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
+  Arena: { href: "/dedicated-servers/game", desc: "High-frequency processors for online gaming" },
+  Core: { href: "/dedicated-servers/advance", desc: "Powerful versatility for common workloads" },
+  Flex: { href: "/dedicated-servers/scale", desc: "Computing power for the most demanding workloads" },
+  "Elite": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
 };
 
 type Row = { label: string; vals: string[]; summary?: boolean };
@@ -62,7 +62,7 @@ const DETAIL: { title: string; rows: Row[] }[] = [
     { label: "Public bandwidth", vals: R4("1 Gbps", "from 1 – 5 Gbps", "from 1 – 25 Gbps", "from 1 – 25 Gbps"), summary: true },
     { label: "Private bandwidth", vals: R4("–", "25 Gbps", "50 Gbps", "from 50 – 100 Gbps"), summary: true },
     { label: "DDoS protection", vals: R4("✓", "✓", "✓", "✓") },
-    { label: "Anti-DDoS Game", vals: R4("✓", "–", "–", "–") },
+    { label: "Anti-DDoS Arena", vals: R4("✓", "–", "–", "–") },
     { label: "IPMI", vals: R4("✓", "✓", "✓", "✓") },
     { label: "Load balancer", vals: R4("✓", "✓", "✓", "✓") },
     { label: "Link aggregation", vals: R4("✓", "✓", "✓", "✓") },
@@ -88,10 +88,10 @@ const DETAIL: { title: string; rows: Row[] }[] = [
   ] },
 ];
 const CARD_BG: Record<string, string> = {
-  Game: "bg-[#14161d] text-white",
-  Advance: "bg-slate-100 text-[#0f172a]",
-  Scale: "bg-[#4b4d52] text-white",
-  "High Grade": "bg-[#14161d] text-white",
+  Arena: "bg-[#14161d] text-white",
+  Core: "bg-slate-100 text-[#0f172a]",
+  Flex: "bg-[#4b4d52] text-white",
+  "Elite": "bg-[#14161d] text-white",
 };
 
 export default function AdvanceRangePage({ plans }: { plans: any[] }) {
@@ -114,7 +114,7 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
         const cur = d.currency || p.currency || "USD";
         if (!rangeMin[r] || d.monthlyPrice < rangeMin[r].price) rangeMin[r] = { price: d.monthlyPrice, cur };
       }
-      if (r !== "Advance" || !d) continue;
+      if (r !== "Core" || !d) continue;
       (p.regions || []).forEach((x: string) => regs.add(x));
       // One row per server model+revision — regional variants (…-syd/-mum) group together.
       const key = String(p.planCode || "").split("-").slice(0, 2).join("-");
@@ -138,14 +138,14 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
       <div className="border-b border-slate-200 bg-white sticky top-0 z-30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex gap-1 overflow-x-auto">
           {Object.keys(RANGE_META).map((r) => (
-            <a key={r} href={RANGE_META[r].href} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${r === "Advance" ? "border-[#0284c7] text-[#0284c7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}>{r}</a>
+            <a key={r} href={RANGE_META[r].href} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${r === "Core" ? "border-[#0284c7] text-[#0284c7]" : "border-transparent text-slate-500 hover:text-[#0f172a]"}`}>{r}</a>
           ))}
         </div>
       </div>
 
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
-        <p className="text-[11px] text-slate-400"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Advance</p>
+        <p className="text-[11px] text-slate-400"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Core</p>
         <h1 className="mt-6 text-3xl md:text-4xl font-black text-[#0f172a]">Reliable performance for everyday workloads</h1>
         <p className="mt-4 text-sm text-slate-600 leading-7 max-w-3xl">
           Standard racks provide consistent airflow and stable temperatures, which are excellent for everyday workloads. Applications run smoothly, without requiring advanced cooling systems or very high-density configurations. This offers businesses a way to achieve predictable performance with no added complexity.
@@ -165,7 +165,7 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
           <div>
             <p className="text-xs text-slate-400">Up to</p>
             <p className="text-2xl font-black text-[#0f172a]">{advRows.length} servers</p>
-            <p className="text-xs text-slate-500">in the Advance range</p>
+            <p className="text-xs text-slate-500">in the Core range</p>
           </div>
           <div>
             <p className="text-xs text-slate-400">Deployable in</p>
@@ -173,7 +173,7 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
             <p className="text-xs text-slate-500">across 4 continents</p>
           </div>
           <div className="col-span-2 md:col-span-1 flex items-start">
-            <a href="#adv-plans" className="rounded-lg bg-[#ff3d00] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#e63700]">View Advance servers →</a>
+            <a href="#adv-plans" className="rounded-lg bg-[#ff3d00] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#e63700]">View Core servers →</a>
           </div>
         </div>
       </section>
@@ -232,7 +232,7 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
                 <div><p className="text-[10px] text-slate-400">Memory</p><p className="text-xl font-black text-[#0f172a]">DDR5</p><p className="text-[10px] text-slate-400">latest generation</p></div>
               </div>
             </div>
-            <p className="mt-4 text-xs text-slate-500 leading-5">Intel Xeon 6 brings efficient performance cores, DDR5 memory and modern I/O — a dependable platform for consolidation, web and application hosting on the Advance range.</p>
+            <p className="mt-4 text-xs text-slate-500 leading-5">Intel Xeon 6 brings efficient performance cores, DDR5 memory and modern I/O — a dependable platform for consolidation, web and application hosting on the Core range.</p>
           </div>
         </div>
       </section>
@@ -267,13 +267,13 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
             <div />
             {Object.entries(RANGE_META).map(([r, meta]) => {
               const mn = rangeMin[r];
-              const active = r === "Advance";
+              const active = r === "Core";
               return (
                 <div key={r} className={`rounded-t-xl p-4 flex flex-col ${CARD_BG[r]} ${active ? "border-2 border-b-0 border-[#0284c7]" : ""}`}>
                   <p className="text-lg font-black">{r}</p>
-                  <p className={`mt-1 text-[11px] leading-4 min-h-[44px] ${r === "Advance" ? "text-slate-600" : "text-white/80"}`}>{meta.desc}</p>
+                  <p className={`mt-1 text-[11px] leading-4 min-h-[44px] ${r === "Core" ? "text-slate-600" : "text-white/80"}`}>{meta.desc}</p>
                   {mn && (
-                    <p className={`mt-3 text-[10px] ${r === "Advance" ? "text-slate-500" : "text-white/70"}`}>Starting from
+                    <p className={`mt-3 text-[10px] ${r === "Core" ? "text-slate-500" : "text-white/70"}`}>Starting from
                       <span className="block text-xl font-black">{sym(mn.cur)}{mn.price.toLocaleString("en-IN", { maximumFractionDigits: 0 })}<span className="text-[10px] font-normal opacity-70"> ex. VAT/month</span></span>
                     </p>
                   )}
@@ -296,7 +296,7 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
                         <div className="py-2 pr-2 text-[11px] text-slate-500 self-center">{row.label}</div>
                         {Object.keys(RANGE_META).map((r, ci) => {
                           const v = row.vals[ci];
-                          const active = r === "Advance";
+                          const active = r === "Core";
                           return (
                             <div key={r} className={`py-2 px-2 text-center text-[11px] self-center ${active ? `bg-sky-50/70 border-x-2 border-[#0284c7] ${lastRow ? "border-b-2 rounded-b-xl pb-3" : ""}` : "bg-slate-50/60"} ${v === "✓" ? "text-emerald-600 font-bold" : v === "–" ? "text-slate-300" : v === "Coming soon" ? "text-slate-400" : "text-[#0f172a] font-semibold"}`}>{v}</div>
                           );
@@ -316,9 +316,9 @@ export default function AdvanceRangePage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Advance plan table */}
+      {/* Core plan table */}
       <section id="adv-plans" className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <h2 className="text-xl font-black text-[#0f172a]">Explore our selection of Advance servers</h2>
+        <h2 className="text-xl font-black text-[#0f172a]">Explore our selection of Core servers</h2>
         <div className="mt-5 rounded-2xl border border-slate-200 bg-white overflow-hidden overflow-x-auto">
           <table className="w-full min-w-[860px] text-xs">
             <thead>

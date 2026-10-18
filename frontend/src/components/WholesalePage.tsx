@@ -15,9 +15,9 @@ const FAQS: [string, string][] = [
 ];
 
 const RACKS = [
-  { name: "Advance Rack", href: "/dedicated-servers/advance", bullets: ["Available on all Advance servers", "Up to 320 GB memory", "Max public bandwidth: 25 Gbps per server", "Max private bandwidth: 25 Gbps guaranteed per server", "SLA: 99.95%"] },
-  { name: "High Grade Rack", href: "/dedicated-servers/high-grade", bullets: ["Available on all High Grade servers", "Up to 1.5 TB memory", "Max public bandwidth: 50 Gbps per server", "Max private bandwidth: 50 Gbps guaranteed per server", "SLA: 99.99%"] },
-  { name: "Scale Rack", href: "/dedicated-servers/scale", bullets: ["Available on all Scale servers", "Up to 2 TB memory", "Max public bandwidth: 50 Gbps per server", "Max private bandwidth: 50 Gbps guaranteed per server", "SLA: 99.99%"] },
+  { name: "Core Rack", href: "/dedicated-servers/advance", bullets: ["Available on all Core servers", "Up to 320 GB memory", "Max public bandwidth: 25 Gbps per server", "Max private bandwidth: 25 Gbps guaranteed per server", "SLA: 99.95%"] },
+  { name: "Elite Rack", href: "/dedicated-servers/high-grade", bullets: ["Available on all Elite servers", "Up to 1.5 TB memory", "Max public bandwidth: 50 Gbps per server", "Max private bandwidth: 50 Gbps guaranteed per server", "SLA: 99.99%"] },
+  { name: "Flex Rack", href: "/dedicated-servers/scale", bullets: ["Available on all Flex servers", "Up to 2 TB memory", "Max public bandwidth: 50 Gbps per server", "Max private bandwidth: 50 Gbps guaranteed per server", "SLA: 99.99%"] },
 ];
 
 export default function WholesalePage() {

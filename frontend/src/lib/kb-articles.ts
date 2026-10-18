@@ -153,7 +153,7 @@ export const kbArticles: KbArticle[] = [
       {
         heading: "Choose a range",
         body: [
-          "Dedicated servers are grouped by range — Scale, High Grade, Storage, Game and Advance.",
+          "Dedicated servers are grouped by range — Flex, Elite, Vault, Arena and Core.",
           "Compare CPU, RAM, storage type (NVMe/SATA) and network capacity on the range pages.",
         ],
       },

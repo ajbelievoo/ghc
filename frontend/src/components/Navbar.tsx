@@ -148,12 +148,12 @@ const megaMenu: MegaEntry[] = [
         tagline: "Bare metal power, predictable pricing",
         columns: [
       { title: "Our server ranges", items: [
-        { label: "Advance", href: "/dedicated-servers/advance", desc: "Versatile bare metal for SMEs" },
-        { label: "Game", href: "/dedicated-servers/game", desc: "Performance and security for games" },
-        { label: "Scale", href: "/dedicated-servers/scale", desc: "Power for heavy workloads" },
-        { label: "High Grade", href: "/dedicated-servers/high-grade", desc: "Mission-critical bare metal" },
-        { label: "Storage", href: "/dedicated-servers/storage", desc: "High-capacity storage servers" },
-        { label: "Rise", href: "/dedicated-servers/rise", desc: "Entry-level enterprise bare metal" },
+        { label: "Core", href: "/dedicated-servers/advance", desc: "Versatile bare metal for SMEs" },
+        { label: "Arena", href: "/dedicated-servers/game", desc: "Performance and security for games" },
+        { label: "Flex", href: "/dedicated-servers/scale", desc: "Power for heavy workloads" },
+        { label: "Elite", href: "/dedicated-servers/high-grade", desc: "Mission-critical bare metal" },
+        { label: "Vault", href: "/dedicated-servers/storage", desc: "High-capacity storage servers" },
+        { label: "Base", href: "/dedicated-servers/rise", desc: "Entry-level enterprise bare metal" },
         { label: "Eco", href: "/dedicated-servers/eco", desc: "Budget bare metal for labs" },
       ]},
       { title: "Uses", items: [
@@ -187,7 +187,7 @@ const megaMenu: MegaEntry[] = [
         { label: "VPS for WordPress", href: "/vps/wordpress", desc: "Easy website design at scale" },
         { label: "Plesk VPS", href: "/vps/plesk", desc: "Web hosting made simple" },
         { label: "cPanel VPS", href: "/vps/cpanel", desc: "Centralised web hosting" },
-        { label: "Comfort VPS", href: "/vps/comfort", desc: "Balanced performance and storage" },
+        { label: "Spark Pro VPS", href: "/vps/comfort", desc: "Balanced performance and storage" },
         { label: "Distributions & Licenses", href: "/apps", desc: "OS and software to deploy" },
       ]},
       { title: "Who is it for?", items: [
@@ -305,7 +305,7 @@ const megaMenu: MegaEntry[] = [
         tagline: "Scalability at the best price",
         columns: [
           { title: "Metal VPS", items: [
-            { label: "VPS 2027", href: "/metal/vps", desc: "Virtually isolated CPU, RAM, and storage Reliable performance at lower prices" },
+            { label: "Metal Bolt", href: "/metal/vps", desc: "Virtually isolated CPU, RAM, and storage Reliable performance at lower prices" },
             { label: "n8n VPS", href: "/metal/vps?s=n8n", desc: "Automate everything. Maintain control." },
             { label: "Plesk VPS", href: "/metal/vps?s=plesk", desc: "Web hosting made simple A unified interface" },
             { label: "cPanel VPS", href: "/metal/vps?s=cpanel", desc: "Centralised web hosting. Unified management." },

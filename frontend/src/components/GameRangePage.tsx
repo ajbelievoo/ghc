@@ -10,15 +10,15 @@ import Footer from "@/components/Footer";
 import { useCurrency, getCurrencySymbol } from "@/components/CurrencyProvider";
 
 const FAQS: [string, string][] = [
-  ["What should a Game server be used for?", "Game servers are built for multiplayer game hosting — Minecraft, Rust, CS2, ARK, FiveM and more. High-frequency CPUs with large caches deliver the tick rates that keep gameplay smooth under load."],
-  ["What is a Game server used for?", "Hosting dedicated game instances, voice servers, matchmaking backends and game community websites — anything where single-thread performance and DDoS resilience matter most."],
-  ["Where would my data be hosted?", "Game servers deploy across our global regions — pick the datacentre closest to your player base to minimise latency."],
+  ["What should a Arena server be used for?", "Arena servers are built for multiplayer game hosting — Minecraft, Rust, CS2, ARK, FiveM and more. High-frequency CPUs with large caches deliver the tick rates that keep gameplay smooth under load."],
+  ["What is a Arena server used for?", "Hosting dedicated game instances, voice servers, matchmaking backends and game community websites — anything where single-thread performance and DDoS resilience matter most."],
+  ["Where would my data be hosted?", "Arena servers deploy across our global regions — pick the datacentre closest to your player base to minimise latency."],
   ["What is the private network?", "The vRack private network connects your game servers, databases and panels over isolated layer-2 networking — cluster traffic never touches the public internet."],
-  ["Are Game servers certified ISO 27001?", "Yes — our datacentres and management processes are covered by industry certifications including ISO 27001, depending on region."],
-  ["What are the technical specifications of the Game range?", "AMD Ryzen 9800X 3D / 9950X 3D processors — up to 16 cores, 5.7 GHz boost, 3D V-Cache, DDR5 ECC memory and NVMe Gen4 storage, with Game-optimised anti-DDoS protection."],
-  ["Which is the best Game server?", "For most game communities the 9800X 3D models offer the best value; esports-grade deployments pick the 9950X 3D with maximum cores."],
-  ["Which Game dedicated server should I choose?", "Match player count and mod load to cores and RAM — light vanilla servers need less, heavily modded instances benefit from the top-tier model."],
-  ["Why choose a Game dedicated server?", "Purpose-built cooling sustains boost clocks, Game DDoS protection filters gaming-protocol attacks, and fixed monthly pricing keeps costs predictable as your community grows."],
+  ["Are Arena servers certified ISO 27001?", "Yes — our datacentres and management processes are covered by industry certifications including ISO 27001, depending on region."],
+  ["What are the technical specifications of the Arena range?", "AMD Ryzen 9800X 3D / 9950X 3D processors — up to 16 cores, 5.7 GHz boost, 3D V-Cache, DDR5 ECC memory and NVMe Gen4 storage, with Arena-optimised anti-DDoS protection."],
+  ["Which is the best Arena server?", "For most game communities the 9800X 3D models offer the best value; esports-grade deployments pick the 9950X 3D with maximum cores."],
+  ["Which Arena dedicated server should I choose?", "Match player count and mod load to cores and RAM — light vanilla servers need less, heavily modded instances benefit from the top-tier model."],
+  ["Why choose a Arena dedicated server?", "Purpose-built cooling sustains boost clocks, Arena DDoS protection filters gaming-protocol attacks, and fixed monthly pricing keeps costs predictable as your community grows."],
 ];
 
 function rangeOf(p: any): string {
@@ -26,18 +26,18 @@ function rangeOf(p: any): string {
   const m = name.match(/^([A-Za-z]+(?:-[A-Za-z]+)?)/);
   if (!m) return "Other";
   const lk = m[1].toLowerCase();
-  if (lk.startsWith("hgr")) return "High Grade";
-  if (lk.startsWith("scale")) return "Scale";
-  if (lk.startsWith("adv")) return "Advance";
-  if (lk.startsWith("game")) return "Game";
+  if (lk.startsWith("hgr")) return "Elite";
+  if (lk.startsWith("scale")) return "Flex";
+  if (lk.startsWith("adv")) return "Core";
+  if (lk.startsWith("game")) return "Arena";
   return "Other";
 }
 
 const RANGE_META: Record<string, { href: string; desc: string }> = {
-  Game: { href: "/dedicated-servers/game", desc: "High-frequency processors for online gaming" },
-  Advance: { href: "/dedicated-servers/advance", desc: "Powerful versatility for common workloads" },
-  Scale: { href: "/dedicated-servers/scale", desc: "Computing power for the most demanding workloads" },
-  "High Grade": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
+  Arena: { href: "/dedicated-servers/game", desc: "High-frequency processors for online gaming" },
+  Core: { href: "/dedicated-servers/advance", desc: "Powerful versatility for common workloads" },
+  Flex: { href: "/dedicated-servers/scale", desc: "Computing power for the most demanding workloads" },
+  "Elite": { href: "/dedicated-servers/high-grade", desc: "High performance for critical workloads" },
 };
 
 type Row = { label: string; vals: string[]; summary?: boolean };
@@ -62,7 +62,7 @@ const DETAIL: { title: string; rows: Row[] }[] = [
     { label: "Public bandwidth", vals: R4("1 Gbps", "from 1 – 5 Gbps", "from 1 – 25 Gbps", "from 1 – 25 Gbps"), summary: true },
     { label: "Private bandwidth", vals: R4("1 Gbps", "25 Gbps", "50 Gbps", "from 50 – 100 Gbps"), summary: true },
     { label: "DDoS protection", vals: R4("✓", "✓", "✓", "✓") },
-    { label: "Anti-DDoS Game", vals: R4("✓", "–", "–", "–") },
+    { label: "Anti-DDoS Arena", vals: R4("✓", "–", "–", "–") },
     { label: "IPMI", vals: R4("✓", "✓", "✓", "✓") },
     { label: "Load balancer", vals: R4("✓", "✓", "✓", "✓") },
     { label: "Link aggregation", vals: R4("✓", "✓", "✓", "✓") },
@@ -108,7 +108,7 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
         const cur = d.currency || p.currency || "USD";
         if (!rangeMin[r] || d.monthlyPrice < rangeMin[r].price) rangeMin[r] = { price: d.monthlyPrice, cur };
       }
-      if (r !== "Game" || !d) continue;
+      if (r !== "Arena" || !d) continue;
       (p.regions || []).forEach((x: string) => regs.add(x));
       const key = String(p.planCode || "").split("-").slice(0, 2).join("-");
       const isRegional = /-(syd|mum|sgp|waw|gra|rbx|sbg|bhs|lon|eri|lim|par)$/i.test(String(p.planCode));
@@ -127,7 +127,7 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
     <div className="border-b border-white/10 sticky top-0 z-30 bg-[#050914]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 flex gap-1 overflow-x-auto">
         {Object.keys(RANGE_META).map((r) => (
-          <a key={r} href={RANGE_META[r].href} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${r === "Game" ? "border-[#00b7ff] text-[#00b7ff]" : "border-transparent text-white/50 hover:text-white"}`}>{r}</a>
+          <a key={r} href={RANGE_META[r].href} className={`px-5 py-3 text-xs font-bold whitespace-nowrap border-b-2 transition ${r === "Arena" ? "border-[#00b7ff] text-[#00b7ff]" : "border-transparent text-white/50 hover:text-white"}`}>{r}</a>
         ))}
       </div>
     </div>
@@ -140,10 +140,10 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
 
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-12">
-        <p className="text-[11px] text-white/40"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Game</p>
+        <p className="text-[11px] text-white/40"><a href="/" className="hover:underline">Home</a> &gt; <a href="/dedicated-servers" className="hover:underline">Dedicated servers</a> &gt; Arena</p>
         <h1 className="mt-6 text-3xl md:text-4xl font-black">A platform built for game hosting</h1>
         <p className="mt-4 text-sm text-white/70 leading-7 max-w-3xl">
-          Game servers, with their AMD Ryzen 9000X 3D processors and custom DDoS protection for online gaming, are built to deliver a top-notch, lag-free experience for your players and customers alike.
+          Arena servers, with their AMD Ryzen 9000X 3D processors and custom DDoS protection for online gaming, are built to deliver a top-notch, lag-free experience for your players and customers alike.
         </p>
         {/* CSS chassis */}
         <div className="mt-8 hidden md:flex justify-center">
@@ -169,7 +169,7 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
             <p className="text-xs text-white/50">on 5 continents, including the US</p>
           </div>
           <div className="col-span-2 md:col-span-1 flex items-start">
-            <a href="#game-plans" className="rounded-lg bg-[#00b7ff] px-6 py-2.5 text-sm font-bold text-[#050914] hover:bg-sky-400">Discover Game servers →</a>
+            <a href="#game-plans" className="rounded-lg bg-[#00b7ff] px-6 py-2.5 text-sm font-bold text-[#050914] hover:bg-sky-400">Discover Arena servers →</a>
           </div>
         </div>
       </section>
@@ -187,11 +187,11 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
               <div><p className="text-[10px] text-white/40">Up to</p><p className="text-xl font-black">5.7 GHz</p><p className="text-[10px] text-white/40">boost frequency</p></div>
             </div>
           </div>
-          <p className="mt-4 text-xs text-white/60 leading-5">Equipped with AMD Ryzen 9800X 3D and 9950X 3D processors, Game servers offer high clock frequencies and an expanded L3 3D V-Cache. The high frequencies and low latency memory deliver faster tick times, improved performance stability, and a seamless gaming experience.</p>
+          <p className="mt-4 text-xs text-white/60 leading-5">Equipped with AMD Ryzen 9800X 3D and 9950X 3D processors, Arena servers offer high clock frequencies and an expanded L3 3D V-Cache. The high frequencies and low latency memory deliver faster tick times, improved performance stability, and a seamless gaming experience.</p>
         </div>
       </section>
 
-      {/* Game DDoS */}
+      {/* Arena DDoS */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-14 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
         <div className="hidden md:flex justify-center">
           <div className="relative w-72 h-40">
@@ -201,23 +201,23 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
           </div>
         </div>
         <div>
-          <h2 className="text-xl md:text-2xl font-black">Ensure a smooth gameplay with our Game DDoS Protection</h2>
+          <h2 className="text-xl md:text-2xl font-black">Ensure a smooth gameplay with our Arena DDoS Protection</h2>
           <p className="mt-3 text-sm text-white/70 leading-7">
             Deliver service quality by reducing downtime, and enjoy easy setup via our control panel. Designed to suit just a few clicks and deployed within a minute — what's more, we're always adding new protected game profiles.
           </p>
         </div>
       </section>
 
-      {/* Game Panel */}
+      {/* Arena Panel */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 py-14 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
         <div>
-          <h2 className="text-xl md:text-2xl font-black">GHC Game Panel</h2>
+          <h2 className="text-xl md:text-2xl font-black">GHC Arena Panel</h2>
           <p className="mt-3 text-sm text-white/70 leading-7">
             Our game panel is a simple and easy-to-use web interface for deploying, configuring and managing your game servers on your GHC dedicated servers. Designed for gaming communities and game-hosting pros, it strips away technical complexity, making the entire process — from deployment to monitoring — effortless.
           </p>
           <ul className="mt-5 space-y-2.5">
             {[
-              "Game server setup should be quick and easy, without needing command lines or hours of configuration. Our panel simplifies everything.",
+              "Arena server setup should be quick and easy, without needing command lines or hours of configuration. Our panel simplifies everything.",
               "Get your server up and running with one click via a clear and rapid web interface — start, stop, restart.",
               "It's ideal for quickly setting up a server with friends, so you can just jump in and play without any technical headaches.",
             ].map((b) => (
@@ -272,7 +272,7 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
               <div />
               {Object.entries(RANGE_META).map(([r, meta]) => {
                 const mn = rangeMin[r];
-                const active = r === "Game";
+                const active = r === "Arena";
                 return (
                   <div key={r} className={`rounded-t-xl p-4 flex flex-col bg-white/[0.04] ${active ? "border-2 border-b-0 border-[#00b7ff] bg-[#00b7ff]/10" : ""}`}>
                     <p className="text-lg font-black">{r}</p>
@@ -301,7 +301,7 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
                           <div className="py-2 pr-2 text-[11px] text-white/40 self-center">{row.label}</div>
                           {Object.keys(RANGE_META).map((r, ci) => {
                             const v = row.vals[ci];
-                            const active = r === "Game";
+                            const active = r === "Arena";
                             return (
                               <div key={r} className={`py-2 px-2 text-center text-[11px] self-center ${active ? `bg-[#00b7ff]/10 border-x-2 border-[#00b7ff] ${lastRow ? "border-b-2 rounded-b-xl pb-3" : ""}` : "bg-white/[0.03]"} ${v === "✓" ? "text-emerald-400 font-bold" : v === "–" ? "text-white/20" : v === "Coming soon" ? "text-white/30" : "text-white font-semibold"}`}>{v}</div>
                             );
@@ -322,9 +322,9 @@ export default function GameRangePage({ plans }: { plans: any[] }) {
         </div>
       </section>
 
-      {/* Game plan table */}
+      {/* Arena plan table */}
       <section id="game-plans" className="mx-auto max-w-7xl px-4 sm:px-6 pb-14">
-        <h2 className="text-xl font-black">Explore our selection of Game servers</h2>
+        <h2 className="text-xl font-black">Explore our selection of Arena servers</h2>
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden overflow-x-auto">
           <table className="w-full min-w-[860px] text-xs">
             <thead>
