@@ -304,6 +304,37 @@ function ConfigurePageContent() {
     ? dcRawValues.map((v: any) => (typeof v === "string" ? v : v.value || v.name || v.label)).filter(Boolean)
     : [];
   const providerImages = findConfigValues(["image", "os", "template", "distribution"]);
+  // Group catalog OS values OVH-style: distro family cards each holding a
+  // version dropdown (Ubuntu → 26.04/24.04/22.04), and app cards grouped by
+  // application ("Debian 12 - Docker" → Docker, "AlmaLinux 8 - cPanel" → cPanel).
+  const KNOWN_IMG_APPS = ["cpanel", "plesk", "docker", "n8n", "wordpress", "prestashop", "cyberpanel", "virtualmin", "directadmin", "webmin", "hestia", "cloudpanel", "litespeed", "gitlab", "nextcloud", "moodle", "magento", "drupal", "joomla", "ghost", "discourse", "openvpn", "wireguard", "woocommerce", "nodejs", "node.js"];
+  type ImgCard = { family: string; options: { label: string; value: string }[] };
+  const imageCards = (() => {
+    const dist: Record<string, ImgCard> = {};
+    const app: Record<string, ImgCard> = {};
+    for (const v of providerImages) {
+      const s = String(v);
+      const appM = s.match(/^(.*?)\s*-\s*(.+)$/);
+      if (appM && KNOWN_IMG_APPS.includes(appM[2].trim().toLowerCase())) {
+        const fam = appM[2].trim();
+        (app[fam] ||= { family: fam, options: [] }).options.push({ label: appM[1].trim(), value: s });
+        continue;
+      }
+      const dm = s.match(/^([A-Za-z][A-Za-z .]*?)[\s-]+(\d[\d.\w-]*.*)$/);
+      const fam = dm ? dm[1].trim() : s;
+      const ver = dm ? dm[2].replace(/\s*-\s*UEFI$/i, " (UEFI)").trim() : "";
+      (dist[fam] ||= { family: fam, options: [] }).options.push({ label: ver || s, value: s });
+    }
+    const orderDist = ["Ubuntu", "Debian", "Fedora", "AlmaLinux", "Rocky Linux", "CloudLinux", "FreeBSD", "Windows Server", "Windows", "CentOS", "openSUSE", "Arch Linux", "Gentoo", "Alpine", "Oracle Linux"];
+    const sortOpts = (c: ImgCard): ImgCard => ({ ...c, options: [...c.options].sort((a, b) => b.label.localeCompare(a.label, undefined, { numeric: true })) });
+    const distCards = Object.values(dist).map(sortOpts).sort((a, b) => {
+      const ia = orderDist.indexOf(a.family), ib = orderDist.indexOf(b.family);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.family.localeCompare(b.family);
+    });
+    const appCards = Object.values(app).map(sortOpts).sort((a, b) => a.family.localeCompare(b.family));
+    return { distCards, appCards };
+  })();
+  const shownImageCards = imageTab === "app" ? imageCards.appCards : imageCards.distCards;
   const durationTitle = (l: string) => l === "1_month" ? "No commitment" : `${parseInt(l)} months`;
   const durationText = durationLabel === "1_month" ? "1 month" : `${parseInt(durationLabel)} months`;
   const monthlyBase = durations.find((d: any) => d.durationLabel === "1_month")?.monthlyPrice || 0;
@@ -419,12 +450,14 @@ function ConfigurePageContent() {
   }, [displayedSig]);
 
   useEffect(() => {
-    if (providerImages.length > 0 && !image) {
-      const base = providerImages.find((i: string) => !i.includes("-")) || providerImages[0];
-      setImage(base);
+    // Default to Ubuntu's newest version (like OVH), else first distro card.
+    if (imageCards.distCards.length > 0 && !image) {
+      const ub = imageCards.distCards.find((c) => c.family === "Ubuntu") || imageCards.distCards[0];
+      setImage(ub.options[0].value);
     }
-    const app = providerImages.find((i: string) => imageTab === "app" ? i.includes("-") : false);
-    if (imageTab === "app" && app && !selectedApp) setSelectedApp(app);
+    if (imageTab === "app" && imageCards.appCards.length > 0 && !selectedApp) {
+      setSelectedApp(imageCards.appCards[0].options[0].value);
+    }
   }, [providerImages, image, imageTab, selectedApp]);
 
   const startPayment = async () => {
@@ -748,28 +781,48 @@ function ConfigurePageContent() {
             ) : providerImages.length === 0 ? (
               <div className="rounded border border-slate-200 p-5 text-sm text-slate-600">No image selection required.</div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {providerImages.filter((i: string) => imageTab === "app" ? i.includes("-") : !i.includes("-")).map((i: string) => (
-                  <label key={i} className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition ${image === i || selectedApp === i ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
-                    <input
-                      type="radio"
-                      name="os"
-                      checked={imageTab === "app" ? selectedApp === i : image === i}
-                      onChange={() => {
-                        if (imageTab === "app") { setSelectedApp(i); setImage(""); }
-                        else { setImage(i); setSelectedApp(""); }
-                      }}
-                      className="mt-0.5 h-4 w-4 accent-[#00b7ff]"
-                    />
-                    <span className="text-sm font-bold text-[#0f172a]">{i}</span>
-                  </label>
-                ))}
-              </div>
+              <>
+                <div className="mb-4 flex gap-4 border-b border-slate-200 text-sm font-bold">
+                  <button onClick={() => setImageTab("dist")} className={`px-1 py-2 transition ${imageTab === "dist" ? "border-b-2 border-[#00b7ff] text-[#00b7ff]" : "text-slate-500 hover:text-[#0f172a]"}`}>Distribution only</button>
+                  <button onClick={() => setImageTab("app")} className={`px-1 py-2 transition ${imageTab === "app" ? "border-b-2 border-[#00b7ff] text-[#00b7ff]" : "text-slate-500 hover:text-[#0f172a]"}`}>Distribution with application</button>
+                </div>
+                {shownImageCards.length === 0 ? (
+                  <div className="rounded border border-slate-200 p-5 text-sm text-slate-600">
+                    {imageTab === "app" ? "No pre-installed applications for this plan." : "No images available."}
+                  </div>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    {shownImageCards.map((card) => {
+                      const curValue = imageTab === "app" ? selectedApp : image;
+                      const sel = card.options.some((o) => o.value === curValue);
+                      const ddValue = sel ? curValue : card.options[0].value;
+                      const pick = (v: string) => {
+                        if (imageTab === "app") { setSelectedApp(v); setImage(""); }
+                        else { setImage(v); setSelectedApp(""); }
+                      };
+                      return (
+                        <div key={card.family} className={`rounded-lg border p-4 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
+                          <label className="flex cursor-pointer items-center gap-2">
+                            <input type="radio" name="osfam" checked={sel} onChange={() => pick(ddValue)} className="h-4 w-4 accent-[#00b7ff]" />
+                            <span className="text-sm font-bold text-[#0f172a]">{card.family}</span>
+                          </label>
+                          <select
+                            value={ddValue}
+                            onChange={(e) => pick(e.target.value)}
+                            className="mt-2.5 w-full rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-[#0f172a] outline-none focus:border-[#00b7ff]"
+                          >
+                            {card.options.map((o) => (
+                              <option key={o.value} value={o.value}>{imageTab === "app" ? o.label : `Version ${o.label}`}</option>
+                            ))}
+                          </select>
+                          {imageTab === "dist" && <p className="mt-1.5 text-xs font-bold text-slate-400">Free</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
-            <div className="mt-4 flex gap-4 border-b border-slate-200 text-sm font-bold">
-              <button onClick={() => setImageTab("dist")} className={`px-1 py-2 transition ${imageTab === "dist" ? "border-b-2 border-[#00b7ff] text-[#00b7ff]" : "text-slate-500 hover:text-[#0f172a]"}`}>Distribution only</button>
-              <button onClick={() => setImageTab("app")} className={`px-1 py-2 transition ${imageTab === "app" ? "border-b-2 border-[#00b7ff] text-[#00b7ff]" : "text-slate-500 hover:text-[#0f172a]"}`}>Distribution with application</button>
-            </div>
           </section>
 
           <section className="mt-8">
