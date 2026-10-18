@@ -631,6 +631,15 @@ function ConfigurePageContent() {
   }, [effectivePlanCode]);
 
   useEffect(() => {
+    // DC/variant switch can change the license catalog (codes are validated
+    // server-side against the ordered plan) — drop selections that don't
+    // exist in the active variant so the payload never carries stale codes.
+    const valid = new Set(dedLicFams.flatMap((f: any) => (f.choices || []).map((c: any) => c.code)));
+    setDedLic((cur) => cur.filter((c) => valid.has(c)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datacenter]);
+
+  useEffect(() => {
     // Default to Ubuntu's newest version (like OVH), else first distro card.
     if (imageCards.distCards.length > 0 && (!image || (isDed && !providerImages.includes(image)))) {
       const ub = imageCards.distCards.find((c) => c.family === "Ubuntu") || imageCards.distCards[0];
