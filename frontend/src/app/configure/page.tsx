@@ -999,16 +999,22 @@ function ConfigurePageContent() {
                             <label key={g.mbps} onClick={() => tCode && setDedHw({ ...dedHw, [f.family]: tCode })} className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3.5 transition ${active ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
                               <input type="radio" name={`ded-${f.family}`} checked={active} readOnly className="h-4 w-4 accent-[#00b7ff]" />
                               <div className="flex-1">
-                                <p className="text-sm font-bold text-[#0f172a]">{g.speed}</p>
-                                <p className="text-[10px] text-slate-400">Select the traffic associated with your public bandwidth.</p>
-                                <select
-                                  value={tCode}
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => { setDedBwTraffic({ ...dedBwTraffic, [g.mbps]: e.target.value }); setDedHw({ ...dedHw, [f.family]: e.target.value }); }}
-                                  className="mt-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-xs"
-                                >
-                                  {g.items.map((i: any) => <option key={i.code} value={i.code}>{i.traffic}</option>)}
-                                </select>
+                                <p className="text-sm font-bold text-[#0f172a]">{g.speed}{g.items.length === 1 ? ` ${g.items[0].traffic}` : ""}</p>
+                                {g.items.length > 1 ? (
+                                  <>
+                                    <p className="text-[10px] text-slate-400">Select the traffic associated with your public bandwidth.</p>
+                                    <select
+                                      value={tCode}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => { setDedBwTraffic({ ...dedBwTraffic, [g.mbps]: e.target.value }); setDedHw({ ...dedHw, [f.family]: e.target.value }); }}
+                                      className="mt-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-xs"
+                                    >
+                                      {g.items.map((i: any) => <option key={i.code} value={i.code}>{i.traffic}</option>)}
+                                    </select>
+                                  </>
+                                ) : (
+                                  <p className="text-[10px] text-slate-400">{g.items[0].traffic === "unmetered" ? "Unmetered guaranteed bandwidth" : `Traffic: ${g.items[0].traffic}`}</p>
+                                )}
                               </div>
                               <span className={`text-sm font-black ${tChoice?.included ? "text-slate-500" : "text-[#00b7ff]"}`}>{tChoice?.included ? "Included" : `+${fmtCurrency(tChoice?.monthlyPrice || 0, planCurrency)}/mo`}</span>
                             </label>
