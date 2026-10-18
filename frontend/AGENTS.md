@@ -45,8 +45,8 @@ get explicit user approval first. See python-backend/AGENTS.md for details.
 ## Live VPS datacenter stock (added 2026-10-18)
 
 - OVH catalog `vps_datacenter` values = **allowed** codes, NOT stock. Real per-DC stock comes from the **no-auth public endpoint** `GET {endpoint}/vps/order/rule/datacenter?planCode=X&ovhSubsidiary=IN` (returns `status`/`linuxStatus`/`windowsStatus`/`daysBeforeDelivery` per DC). No cart needed — `noAuthentication: true`.
-- `GET /api/server/plans/configuration` (`plan_configuration` in compat.py) merges this: the `vps_datacenter` config entry gets `availability` (map) + `availableValues` (in-stock only). `_vps_dc_availability` caches 10 min (60s on failure).
-- `configure/page.tsx` shows ONLY `availableValues` when present; same-city dupes collapse (BHS+YNM → one Beauharnois card); if stock known but all OOS → "temporarily out of stock" notice instead of selectable cards.
+- `GET /api/server/plans/configuration` (`plan_configuration` in compat.py) merges this: the `vps_datacenter` config entry gets `availability` ({DC: {status, linuxStatus, windowsStatus}}), `availableValues` (Linux in-stock) + `availableWindowsValues`. `_vps_dc_availability` caches 10 min (60s on failure). **Stock is per-OS-family** — a DC can be Windows-only (VPS-2 Europe was exactly that: linuxStatus OOS); the aggregate `status` field is misleading, never filter on it alone.
+- `configure/page.tsx` shows DCs for the selected image's OS family (`/windows/i` on the image → windowsStatus, else linuxStatus); same-city dupes collapse (BHS+YNM → one Beauharnois card); all OOS → "temporarily out of stock" notice instead of selectable cards.
 - ⚠️ Catalog values say e.g. SYD is a valid input but it can be out-of-stock — without this filter, orders fail AFTER payment. Keep this filtering in place.
 
 ## Two storefront channels — Essential vs Metal (added 2026-10-13)

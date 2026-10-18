@@ -643,8 +643,14 @@ def admin_save_essential_dedicated(body: dict, db: Session = Depends(get_db), ad
 _DC_AVAIL_CACHE: Dict[str, Any] = {}
 
 
-def _vps_dc_availability(plan_code: str) -> Dict[str, str]:
-    """Return {DC_CODE: status} ('available' | 'out-of-stock' | ...) for a VPS planCode."""
+def _vps_dc_availability(plan_code: str) -> Dict[str, Any]:
+    """Return {DC_CODE: {status, linuxStatus, windowsStatus}} for a VPS planCode.
+
+    OVH tracks stock per OS family — a DC can be 'available' for Windows while
+    Linux is out-of-stock there (e.g. VPS-2 Europe right now). The overall
+    'status' field alone is misleading, so we expose the per-family flags and
+    let the frontend filter by the selected image.
+    """
     import time as _time
     import json as _json
     import urllib.request as _urlreq
@@ -655,7 +661,7 @@ def _vps_dc_availability(plan_code: str) -> Dict[str, str]:
         ttl = 600 if cached[1] else 60  # retry failures quickly
         if now - cached[0] < ttl:
             return cached[1]
-    result: Dict[str, str] = {}
+    result: Dict[str, Any] = {}
     try:
         import ovh as _ovhlib
 
@@ -669,7 +675,11 @@ def _vps_dc_availability(plan_code: str) -> Dict[str, str]:
         for d in data.get("datacenters") or []:
             dc = d.get("datacenter")
             if dc:
-                result[dc] = d.get("status") or "unknown"
+                result[dc] = {
+                    "status": d.get("status") or "unknown",
+                    "linuxStatus": d.get("linuxStatus") or "unknown",
+                    "windowsStatus": d.get("windowsStatus") or "unknown",
+                }
     except Exception as e:
         logger.warning(f"VPS datacenter availability probe failed for {plan_code}: {e}")
     _DC_AVAIL_CACHE[plan_code] = (now, result)
@@ -701,12 +711,13 @@ def plan_configuration(
         if name and values:
             entry = {"label": name, "values": values}
             if availability and "datacenter" in str(name).lower():
-                avail_vals = [v for v in values if availability.get(str(v)) == "available"]
                 entry["availability"] = availability
-                # Only restrict when at least one DC is actually in stock —
-                # a probe failure returning {} already leaves values untouched.
-                if avail_vals:
-                    entry["availableValues"] = avail_vals
+                # Linux is the default image family — pre-compute the DCs that
+                # can host a Linux VPS. Frontend re-filters for Windows images.
+                linux_vals = [v for v in values if (availability.get(str(v)) or {}).get("linuxStatus") == "available"]
+                win_vals = [v for v in values if (availability.get(str(v)) or {}).get("windowsStatus") == "available"]
+                entry["availableValues"] = linux_vals
+                entry["availableWindowsValues"] = win_vals
             configs.append(entry)
     # Also expose common frontend keys
     return {

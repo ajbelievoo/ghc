@@ -289,13 +289,18 @@ function ConfigurePageContent() {
       ["region", "country"].some((n) =>
         `${cfg.name || cfg.label || cfg.type || cfg.key || ""}`.toLowerCase().includes(n))
     );
-  // Live stock: backend attaches availability + availableValues (in-stock DCs) when
-  // the OVH order-rule probe succeeds — show only those, like OVH's configurator.
-  // If the probe ran but every DC is out-of-stock, the plan is not orderable now.
+  // Live stock: backend attaches availability + availableValues (Linux in-stock DCs)
+  // + availableWindowsValues when the OVH order-rule probe succeeds. OVH stocks
+  // Linux and Windows separately — e.g. VPS-2 Europe is Windows-only right now —
+  // so filter by the selected image's OS family, exactly like OVH's configurator.
+  const isWindowsImage = /windows/i.test(image || "") || /windows/i.test(selectedApp || "");
   const dcStockKnown = !!dcConfigEntry?.availability;
-  const dcAllOutOfStock = dcStockKnown && !(Array.isArray(dcConfigEntry?.availableValues) && dcConfigEntry.availableValues.length);
+  const stockValues: any[] = dcStockKnown
+    ? (isWindowsImage ? (dcConfigEntry?.availableWindowsValues || []) : (dcConfigEntry?.availableValues || []))
+    : [];
+  const dcAllOutOfStock = dcStockKnown && !stockValues.length;
   const dcRawValues = (dcStockKnown
-    ? (dcConfigEntry?.availableValues || [])
+    ? stockValues
     : dcConfigEntry?.values || dcConfigEntry?.allowedValues || dcConfigEntry?.enum || dcConfigEntry?.choices || []) as any[];
   const providerDatacenters: string[] = Array.isArray(dcRawValues)
     ? dcRawValues.map((v: any) => (typeof v === "string" ? v : v.value || v.name || v.label)).filter(Boolean)
