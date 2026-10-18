@@ -569,6 +569,27 @@ def get_metal_vps_plan_margins(db: Session) -> Dict[str, float]:
     return {}
 
 
+def dedicated_pricing(plan, duration):
+    """Native provider term and installation cost; never invent a cart term."""
+    rows = (plan.catalog_metadata or {}).get("pricings") or []
+    rental = next((p for p in rows if p.get("interval") == duration.interval
+                   and p.get("intervalUnit") == duration.interval_unit), None)
+    if rental is None:
+        raise ValueError("This dedicated commitment is no longer available")
+    mode = rental.get("mode") or "default"
+    setup = next((p for p in rows if p.get("mode") == mode
+                  and "installation" in (p.get("capacities") or [])), None)
+    return mode, float(ovh_price_to_decimal(setup)) if setup else 0.0
+
+
+def dedicated_setup_price(db, plan, duration, metal=False):
+    _, raw = dedicated_pricing(plan, duration)
+    margin = (get_metal_ded_margin(db) if metal else
+              plan.override_margin if plan.override_margin is not None else
+              get_margin_for_category(db, plan.category))
+    return float(apply_margin(Decimal(str(raw)), Decimal(str(margin)))), raw
+
+
 def compute_sell_price(db: Session, plan, duration, metal: bool = False) -> Tuple[float, float]:
     """Customer sell price for one plan duration: upstream raw -> channel/plan
     margin -> duration commitment discount. Returns (price, discount_pct).

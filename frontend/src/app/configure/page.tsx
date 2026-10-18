@@ -69,19 +69,17 @@ const dcMeta: Record<string, { name: string; region: keyof typeof regionLocation
   lon: { name: "United Kingdom - London", region: "Europe" },
   eri: { name: "United Kingdom - Erith", region: "Europe" },
   waw: { name: "Poland - Warsaw", region: "Europe" },
-  "eu-west-par-a": { name: "France - Paris", region: "Europe" },
-  "eu-west-par-b": { name: "France - Paris", region: "Europe" },
-  "eu-west-par-c": { name: "France - Paris", region: "Europe" },
+  "eu-west-par-a": { name: "France - Paris (zone A)", region: "Europe" },
+  "eu-west-par-b": { name: "France - Paris (zone B)", region: "Europe" },
+  "eu-west-par-c": { name: "France - Paris (zone C)", region: "Europe" },
   bhs: { name: "Canada - Beauharnois", region: "North America" },
   "ca-east-tor-a": { name: "Canada - Toronto", region: "North America" },
   vin: { name: "US East - Vint Hill", region: "North America" },
   hil: { name: "US West - Hillsboro", region: "North America" },
-  pap: { name: "US West - Hillsboro", region: "North America" },
   sgp: { name: "Singapore - Singapore", region: "Asia/Oceania" },
   syd: { name: "Australia - Sydney", region: "Asia/Oceania" },
   ynm: { name: "India - Mumbai", region: "Asia/Oceania" },
   bom: { name: "India - Mumbai", region: "Asia/Oceania" },
-  lim: { name: "Peru - Lima", region: "Asia/Oceania" },
 };
 
 function getDcName(code: string) {
@@ -293,10 +291,13 @@ function ConfigurePageContent() {
     return () => { alive = false; window.removeEventListener("currencychange", onCurrency); };
   }, [category, currency, brand]);
 
-  const plan = useMemo(() => plans.find((p: any) => p.planCode === planCode) || plans[0], [plans, planCode]);
+  const basePlan = useMemo(() => plans.find((p: any) => p.planCode === planCode) || (!planCode ? plans[0] : undefined), [plans, planCode]);
+  const selectedVariantCode = providerConfig?.dcVariants?.[datacenter]?.planCode;
+  const plan = plans.find((p: any) => p.planCode === selectedVariantCode) || basePlan;
   const planCurrency = plan?.currency || plan?.durations?.[0]?.currency || currency || "USD";
   const durations = (plan?.durations || [])
-    .filter((d: any) => ["1_month", "3_month", "6_month", "12_month"].includes(d.durationLabel))
+    .filter((d: any) => d.intervalUnit === "month")
+    .sort((a: any, b: any) => a.interval - b.interval)
     .map((d: any) => ({ durationLabel: d.durationLabel, finalPrice: d.finalPrice, monthlyPrice: d.monthlyPrice, originalPrice: d.rawPrice || d.finalPrice }));
   const selectedDuration = durations.find((d: any) => d.durationLabel === durationLabel) || durations[0] || { durationLabel: "1_month", finalPrice: 0, originalPrice: 0 };
   const isDed = (plan?.category || category) === "DEDICATED";
@@ -321,13 +322,13 @@ function ConfigurePageContent() {
   // Dedicated: OVH sells APAC locations as sibling planCodes (-mum/-sgp/-syd)
   // with their own price. dcVariants[dc] = {planCode, prices:{label: monthly}}
   // — selecting such a DC swaps the order to that planCode and reprices it.
-  const dcVariants: Record<string, { planCode?: string; prices?: Record<string, number> }> = providerConfig?.dcVariants || {};
+  const dcVariants: Record<string, { planCode?: string; prices?: Record<string, number>; totals?: Record<string, number>; setupPrices?: Record<string, number>; spec?: any; osValues?: string[] }> = providerConfig?.dcVariants || {};
   const dcMonthlyPrice = (dc: string) => dcVariants[dc]?.prices?.[selectedDuration?.durationLabel] ?? selectedDuration?.monthlyPrice;
   const effectivePlanCode = (datacenter && dcVariants[datacenter]?.planCode) || plan?.planCode;
-  const planPeriodTotal = dcVariants[datacenter]?.prices?.[selectedDuration?.durationLabel] != null
-    ? (dcVariants[datacenter].prices![selectedDuration.durationLabel] || 0) * durationMonths
-    : (selectedDuration?.finalPrice || 0);
-  const subtotal = parseFloat((planPeriodTotal * quantity + optionsTotal).toFixed(2));
+  const planPeriodTotal = dcVariants[datacenter]?.totals?.[selectedDuration.durationLabel] ?? selectedDuration.finalPrice ?? 0;
+  const setupPrice = dcVariants[datacenter]?.setupPrices?.[selectedDuration.durationLabel] || 0;
+  const dedicatedSpec = dcVariants[datacenter]?.spec || plan?.spec || {};
+  const subtotal = parseFloat(((planPeriodTotal + setupPrice) * quantity + optionsTotal).toFixed(2));
   const discount = couponResult ? parseFloat((couponResult.discount || 0).toFixed(2)) : 0;
   const requiredConfigs = providerConfig?.requiredConfiguration || providerConfig?.configurations || [];
   const findConfigValues = (names: string[]) => {
@@ -364,7 +365,7 @@ function ConfigurePageContent() {
   const providerDatacenters: string[] = Array.isArray(dcRawValues)
     ? dcRawValues.map((v: any) => (typeof v === "string" ? v : v.value || v.name || v.label)).filter(Boolean)
     : [];
-  const providerImages = findConfigValues(["image", "os", "template", "distribution"]);
+  const providerImages = (isDed && dcVariants[datacenter]?.osValues) || findConfigValues(["image", "os", "template", "distribution"]);
   // Group catalog OS values OVH-style: distro family cards each holding a
   // version dropdown (Ubuntu → 26.04/24.04/22.04), and app cards grouped by
   // application ("Debian 12 - Docker" → Docker, "AlmaLinux 8 - cPanel" → cPanel).
@@ -375,6 +376,10 @@ function ConfigurePageContent() {
     const app: Record<string, ImgCard> = {};
     for (const v of providerImages) {
       const s = String(v);
+      if (s === "none_64.en") {
+        dist["No preinstalled OS"] = { family: "No preinstalled OS", options: [{ label: "Install your OS after delivery", value: s }] };
+        continue;
+      }
       const appM = s.match(/^(.*?)\s*-\s*(.+)$/);
       if (appM && KNOWN_IMG_APPS.includes(appM[2].trim().toLowerCase())) {
         const fam = appM[2].trim();
@@ -434,7 +439,7 @@ function ConfigurePageContent() {
   const tabSourceLocations = allCatalogLocations.length ? allCatalogLocations : displayedLocations;
   const regionHasAvail = (r: string) => displayedLocations.some((dc) => getDcRegion(dc) === r);
   const cardsForRegion = (r: string) =>
-    (showUnavailable || !regionHasAvail(r) ? allCatalogLocations : displayedLocations).filter(
+    (showUnavailable ? allCatalogLocations : displayedLocations).filter(
       (dc) => getDcRegion(dc) === r
     );
   // Sibling plans actually orderable right now (per selected OS family) —
@@ -449,23 +454,32 @@ function ConfigurePageContent() {
   // live in-stock list for the selected OS family.
   const preorderCfg = providerConfig?.preorder;
   const preorderEnabled = !!preorderCfg?.enabled && dcStockKnown;
+  const canPrebookDc = (dc: string) => preorderEnabled && (!isDed || dcConfigEntry?.availability?.[dc]?.status === "unavailable");
   const preorderSelected = !!(
-    preorderEnabled && datacenter && !displayedLocations.includes(datacenter)
+    datacenter && canPrebookDc(datacenter) && !displayedLocations.includes(datacenter)
   );
+  const canOrder = !configLoading && providerConfig?.available && (!isDed || (
+    !!dcVariants[datacenter]?.totals?.[selectedDuration.durationLabel] &&
+    (displayedLocations.includes(datacenter) || preorderSelected) &&
+    providerImages.includes(imageTab === "app" ? selectedApp : image)
+  ));
   // Same math as backend: flat fee is stored in INR, % applies to the
   // discounted plan price, and the fee is taxed like any other charge.
   const preorderFee = preorderSelected
     ? preorderCfg?.feeType === "flat"
-      ? Number(preorderCfg?.feeValue || 0) // flat fee is stored in INR; exact conversion happens server-side
-      : parseFloat((((subtotal - discount) * (Number(preorderCfg?.feeValue || 0) / 100)) || 0).toFixed(2))
+      ? Number(preorderCfg?.displayFeeValue ?? preorderCfg?.feeValue ?? 0)
+      : parseFloat(((planPeriodTotal * (Number(preorderCfg?.feeValue || 0) / 100)) || 0).toFixed(2))
     : 0;
-  const preorderFeeDisplay = preorderCfg?.feeType === "flat" && planCurrency !== "INR"
-    ? `~${fmtCurrency(preorderFee, "INR")}`
-    : fmtCurrency(preorderFee, planCurrency);
+  const preorderFeeDisplay = fmtCurrency(preorderFee, planCurrency);
   const taxable = Math.max(0, subtotal - discount) + (preorderFee || 0);
   const taxRate = 0.18;
   const tax = parseFloat((taxable * taxRate).toFixed(2));
   const total = parseFloat((taxable + tax).toFixed(2));
+
+  useEffect(() => {
+    setCouponResult(null);
+    if (isDed) setQuantity(1);
+  }, [effectivePlanCode, durationLabel, currency, isDed]);
 
   useEffect(() => {
     if (durations[0] && !durations.find((d: any) => d.durationLabel === durationLabel)) {
@@ -474,10 +488,11 @@ function ConfigurePageContent() {
   }, [durations, durationLabel]);
 
   useEffect(() => {
-    if (!plan?.planCode || !durationLabel) return;
+    if (!basePlan?.planCode) return;
     let alive = true;
     setConfigLoading(true);
-    api.server.planConfiguration({ planCode: plan.planCode, category: plan.category || category, durationLabel, brand })
+    setOvhConfig(null);
+    api.server.planConfiguration({ planCode: basePlan.planCode, category: basePlan.category || category, brand })
       .then((data: any) => {
         if (!alive) return;
         setOvhConfig(data);
@@ -490,7 +505,7 @@ function ConfigurePageContent() {
       })
       .finally(() => alive && setConfigLoading(false));
     return () => { alive = false; };
-  }, [plan?.planCode, plan?.category, category, durationLabel]);
+  }, [basePlan?.planCode, basePlan?.category, category, brand, currency]);
 
   // Stable signature — displayedLocations is a fresh array every render, so a
   // raw array dep would refire on EVERY render and undo manual region clicks.
@@ -512,7 +527,7 @@ function ConfigurePageContent() {
 
   useEffect(() => {
     // Default to Ubuntu's newest version (like OVH), else first distro card.
-    if (imageCards.distCards.length > 0 && !image) {
+    if (imageCards.distCards.length > 0 && (!image || (isDed && !providerImages.includes(image)))) {
       const ub = imageCards.distCards.find((c) => c.family === "Ubuntu") || imageCards.distCards[0];
       setImage(ub.options[0].value);
     }
@@ -528,7 +543,7 @@ function ConfigurePageContent() {
       return;
     }
     if (!plan || !selectedDuration) { showToast("Plan pricing is not available", "error"); return; }
-    if (!providerConfig?.available) { showToast("This plan is not currently available", "error"); return; }
+    if (!canOrder) { showToast("Please select an available location or pre-booking and a valid image", "error"); return; }
     setPaying(true);
     try {
       const osValue = imageTab === "app" ? selectedApp : image;
@@ -701,9 +716,10 @@ function ConfigurePageContent() {
               <div className="flex items-center rounded border border-slate-200">
                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-3 py-1 text-lg text-[#0f172a] hover:bg-[#f8faff]">−</button>
                 <span className="w-10 text-center text-sm font-black">{quantity}</span>
-                <button onClick={() => setQuantity(quantity + 1)} className="px-3 py-1 text-lg text-[#0f172a] hover:bg-[#f8faff]">+</button>
+                <button disabled={isDed} onClick={() => setQuantity(quantity + 1)} className="px-3 py-1 text-lg text-[#0f172a] hover:bg-[#f8faff] disabled:opacity-30">+</button>
               </div>
             </div>
+            {isDed && <p className="mt-2 text-xs text-slate-500">One dedicated server per order.</p>}
           </section>
 
           <section className="mt-8">
@@ -743,7 +759,7 @@ function ConfigurePageContent() {
                   if (!dcAvail) {
                     // Pre-booking enabled → the card stays selectable and flips
                     // the checkout into "reserve now, activate on restock" mode.
-                    if (preorderEnabled) {
+                    if (canPrebookDc(dc)) {
                       const sel = datacenter === dc;
                       return (
                         <label key={dc} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${sel ? "border-amber-400 bg-amber-50" : "border-slate-200 bg-slate-50 opacity-70 hover:border-amber-300 hover:opacity-100"}`}>
@@ -754,6 +770,7 @@ function ConfigurePageContent() {
                             <p className="text-[10px] text-slate-400">⊘ Out of stock</p>
                           </div>
                           <div className="text-right">
+                            {isDed && <p className="mb-1 text-xs font-bold">{fmtCurrency(dcMonthlyPrice(dc), planCurrency)}/month</p>}
                             <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">⏳ Pre-book</span>
                             <p className="mt-0.5 text-[9px] text-slate-400">activates on restock</p>
                           </div>
@@ -766,7 +783,7 @@ function ConfigurePageContent() {
                         <span className="text-lg grayscale">{getFlag(name)}</span>
                         <div className="flex-1">
                           <p className="text-xs font-bold text-slate-500">{name}</p>
-                          <p className="text-[10px] text-slate-400">⊘ Out of stock</p>
+                          <p className="text-[10px] text-slate-400">{isDed && dcConfigEntry?.availability?.[dc]?.status === "unknown" ? "Stock check temporarily unavailable — retry shortly" : "⊘ Out of stock"}</p>
                         </div>
                         <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Unavailable</span>
                       </div>
@@ -807,8 +824,8 @@ function ConfigurePageContent() {
                 <div className="flex items-start gap-3">
                   <span className="text-lg">ℹ️</span>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-[#0f172a]">VPS temporarily unavailable</p>
-                    <p className="mt-1 text-xs text-slate-600">This plan has no available datacenter in {region} for the selected OS. Pick an in-stock plan below.</p>
+                    <p className="text-sm font-bold text-[#0f172a]">{isDed ? "Server" : "VPS"} temporarily unavailable</p>
+                    <p className="mt-1 text-xs text-slate-600">No confirmed stock in {region} for this configuration. {preorderEnabled ? "Select a pre-bookable location to join the queue." : "Please check back later."}</p>
                   </div>
                 </div>
               </div>
@@ -843,7 +860,7 @@ function ConfigurePageContent() {
                 <div>
                   <p className="text-sm font-bold text-[#0f172a]">Other locations?</p>
                   <p className="text-xs text-slate-600">Alternative solution: pick a dedicated server, available now and still at the best price, suited to your needs.</p>
-                  <Link href="/dedicated-servers" className="mt-2 inline-flex items-center gap-1 rounded bg-[#00b7ff] px-4 py-2 text-xs font-bold text-[#0f172a] hover:bg-[#0f0c29] hover:text-white">See available servers →</Link>
+                  <Link href={brand === "metal" ? "/metal/dedicated" : "/dedicated-servers"} className="mt-2 inline-flex items-center gap-1 rounded bg-[#00b7ff] px-4 py-2 text-xs font-bold text-[#0f172a] hover:bg-[#0f0c29] hover:text-white">Browse dedicated servers →</Link>
                 </div>
               </div>
             </div>
@@ -1000,7 +1017,7 @@ function ConfigurePageContent() {
 
           {/* Bottom nav */}
           <div className="mt-8 flex items-center justify-between">
-            <Link href="/vps" className="text-xs font-bold text-[#00b7ff] hover:underline">← Back</Link>
+            <Link href={isDed ? (brand === "metal" ? "/metal/dedicated" : "/dedicated-servers") : (brand === "metal" ? "/metal/vps" : "/vps")} className="text-xs font-bold text-[#00b7ff] hover:underline">← Back</Link>
             <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-xs font-bold text-[#00b7ff] hover:underline">Back to top ↑</button>
           </div>
         </div>
@@ -1014,24 +1031,26 @@ function ConfigurePageContent() {
                 <ChevronRight className="h-4 w-4 rotate-90 text-slate-400" />
               </div>
               <div className="mt-1 flex items-center justify-between">
-                <h3 className="text-base font-bold">{plan.invoiceName || plan.planCode}</h3>
+                <h3 className="text-base font-bold">{plan.displayName || plan.invoiceName || plan.planCode}</h3>
                 <div className="text-right">
-                  {selectedDuration?.originalPrice && selectedDuration.originalPrice !== selectedDuration.finalPrice && (
+                  {!isDed && selectedDuration?.originalPrice && selectedDuration.originalPrice !== selectedDuration.finalPrice && (
                     <p className="text-xs text-slate-400 line-through">{fmtCurrency(selectedDuration.originalPrice, planCurrency)}</p>
                   )}
-                  <p className="text-sm font-black text-[#e0006d]">{fmtCurrency(selectedDuration?.finalPrice, planCurrency)}</p>
+                  <p className="text-sm font-black text-[#e0006d]">{fmtCurrency(planPeriodTotal / durationMonths, planCurrency)}/month</p>
                 </div>
               </div>
             </div>
             {/* Specs */}
             <div className="space-y-3 p-4 text-xs">
-              {plan.cpuCores && <div className="flex items-center justify-between"><span className="text-slate-600">Processor</span><b className="text-[#0f172a]">{plan.cpuCores} vCore{plan.cpuCores > 1 ? "s" : ""}</b></div>}
-              {plan.ramGb && <div className="flex items-center justify-between"><span className="text-slate-600">Memory</span><b className="text-[#0f172a]">{plan.ramGb} GB RAM</b></div>}
-              {plan.diskGb && <div className="flex items-center justify-between"><span className="text-slate-600">Storage</span><b className="text-[#0f172a]">{plan.diskGb} GB {plan.diskType || "SSD NVMe"}</b></div>}
-              {plan.bandwidthMbps && <div className="flex items-center justify-between"><span className="text-slate-600">Public bandwidth</span><b className="text-[#0f172a]">{plan.bandwidthMbps} Mbps unlimited</b></div>}
+              {isDed ? <div className="flex items-center justify-between gap-3"><span className="text-slate-600">Processor</span><b className="text-right text-[#0f172a]">{dedicatedSpec.cpu}</b></div> : plan.cpuCores && <div className="flex items-center justify-between"><span className="text-slate-600">Processor</span><b className="text-[#0f172a]">{plan.cpuCores} vCore{plan.cpuCores > 1 ? "s" : ""}</b></div>}
+              {plan.ramGb && <div className="flex items-center justify-between"><span className="text-slate-600">Memory</span><b className="text-[#0f172a]">{isDed ? dedicatedSpec.ram : `${plan.ramGb} GB RAM`}</b></div>}
+              {plan.diskGb && <div className="flex items-center justify-between"><span className="text-slate-600">Storage</span><b className="text-[#0f172a]">{isDed ? dedicatedSpec.storage : `${plan.diskGb} GB ${plan.diskType || "SSD NVMe"}`}</b></div>}
+              {plan.bandwidthMbps && <div className="flex items-center justify-between"><span className="text-slate-600">Public bandwidth</span><b className="text-[#0f172a]">{isDed ? dedicatedSpec.bandwidth : `${plan.bandwidthMbps} Mbps unlimited`}</b></div>}
+              {isDed && dedicatedSpec.privBw && <div className="flex items-center justify-between"><span className="text-slate-600">Private bandwidth</span><b>{dedicatedSpec.privBw / 1000} Gbps</b></div>}
               <div className="flex items-center justify-between"><span className="text-slate-600">Commitment</span><div className="text-right"><b className="text-[#0f172a]">{durationText}</b>{commitmentDiscount && <p className="text-[10px] font-bold text-[#e0006d]">{commitmentDiscount}</p>}</div></div>
-              <div className="flex items-center justify-between"><span className="text-slate-600">Datacenter location</span><div className="text-right"><b className="text-[#0f172a]">{quantity}× {datacenter || "Select"}</b>{preorderSelected && <p className="text-[10px] font-bold text-amber-600">⏳ PRE-BOOKING — activates on restock</p>}</div></div>
-              <div className="flex items-center justify-between"><span className="text-slate-600">Image</span><div className="text-right"><b className="text-[#0f172a]">{image} {imageVersion}</b><p className="text-[10px] font-bold text-[#0f172a]">{licenseOpt ? "License billed below" : "Free"}</p></div></div>
+              <div className="flex items-center justify-between"><span className="text-slate-600">Datacenter location</span><div className="text-right"><b className="text-[#0f172a]">{quantity}× {datacenter ? getDcName(datacenter) : "Select"}</b>{preorderSelected && <p className="text-[10px] font-bold text-amber-600">⏳ PRE-BOOKING — activates on restock</p>}</div></div>
+              <div className="flex items-center justify-between"><span className="text-slate-600">Image</span><div className="text-right"><b className="text-[#0f172a]">{imageTab === "app" ? selectedApp : image === "none_64.en" ? "No preinstalled OS" : image}</b><p className="text-[10px] font-bold text-[#0f172a]">{licenseOpt ? "License billed below" : "Included"}</p></div></div>
+              {isDed && <div className="flex items-center justify-between"><span className="text-slate-600">Installation fee (once)</span><b>{fmtCurrency(setupPrice, planCurrency)}</b></div>}
               <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><b className="text-[#0f172a]">Local Storage - {plan.invoiceName || plan.planCode}</b></div>
               {backup && premiumBackupOpt && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Premium automatic backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(premiumBackupOpt.monthlyPrice, planCurrency)}/mo</p></div></div>}
               {snapshot && snapshotOpt && <div className="flex items-center justify-between"><span className="text-slate-600">Option</span><div className="text-right"><b className="text-[#0f172a]">Snapshot backup</b><p className="text-[10px] font-bold text-[#00b7ff]">{fmtCurrency(snapshotOpt.monthlyPrice, planCurrency)}/mo</p></div></div>}
@@ -1043,7 +1062,7 @@ function ConfigurePageContent() {
               <div className="flex items-end justify-between">
                 <div>
                   <p className="text-sm font-black text-[#0f172a]">Total</p>
-                  <p className="text-[10px] text-slate-500">{selectedDuration?.durationLabel === "1_month" ? "including taxes/month" : `including taxes for ${selectedDuration?.durationLabel.replace("_", " ")}`}</p>
+                  <p className="text-[10px] text-slate-500">{isDed ? "Due now, including installation and taxes" : selectedDuration?.durationLabel === "1_month" ? "including taxes/month" : `including taxes for ${selectedDuration?.durationLabel.replace("_", " ")}`}</p>
                 </div>
                 <p className="text-xl font-black text-[#0f172a]">{fmtCurrency(total, planCurrency)}</p>
               </div>
@@ -1073,7 +1092,7 @@ function ConfigurePageContent() {
                       onClick={async () => {
                         setCouponLoading(true); setCouponError("");
                         try {
-                          const r = await api.coupons.validate({ code: couponCode.trim(), planCode: plan.planCode, durationLabel: selectedDuration.durationLabel });
+                          const r = await api.coupons.validate({ code: couponCode.trim(), planCode: effectivePlanCode, durationLabel: selectedDuration.durationLabel });
                           setCouponResult(r);
                           showToast(`Coupon applied — ${r.discountType === "percent" ? r.discountValue + "%" : "₹" + r.discount} off`, "success");
                         } catch (e: any) { setCouponError(e.message || "Invalid coupon"); }
@@ -1089,10 +1108,10 @@ function ConfigurePageContent() {
               {preorderSelected && (
                 <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-800">
                   <p className="font-bold">⏳ Pre-booking — {getDcName(datacenter)}</p>
-                  <p className="mt-0.5">This location is out of stock. Pay now to reserve your slot — your VPS provisions <b>automatically</b> the moment it restocks (first-come priority). Full wallet refund if unavailable for {preorderCfg?.refundDays || 30} days.</p>
+                  <p className="mt-0.5">Pay now to join the queue. Your {isDed ? "server" : "VPS"} is ordered automatically when a stock check confirms availability, with first-come priority. Delivery time starts after the provider accepts the order. Full wallet refund if unfulfilled for {preorderCfg?.refundDays || 30} days.</p>
                 </div>
               )}
-              <button onClick={startPayment} disabled={paying || !providerConfig?.available || ((providerDatacenters.length > 0 || (preorderEnabled && allCatalogLocations.length > 0)) && !datacenter)} className="mt-4 flex w-full items-center justify-center gap-2 rounded bg-[#0f0c29] px-5 py-3 text-sm font-bold text-white hover:bg-[#302b63] disabled:opacity-50">
+              <button onClick={startPayment} disabled={paying || !canOrder || ((providerDatacenters.length > 0 || (preorderEnabled && allCatalogLocations.length > 0)) && !datacenter)} className="mt-4 flex w-full items-center justify-center gap-2 rounded bg-[#0f0c29] px-5 py-3 text-sm font-bold text-white hover:bg-[#302b63] disabled:opacity-50">
                 {preorderSelected ? "Pre-book now →" : "Continue order →"}
               </button>
               {user && (
@@ -1102,6 +1121,7 @@ function ConfigurePageContent() {
                     const configuration: any = {};
                     if (osValue) configuration.os = osValue;
                     if (datacenter) configuration.datacenter = datacenter;
+                    if (brand === "metal") configuration._brand = "metal";
                     if (preorderSelected) configuration._preorder = true;
                     const selOpts: string[] = [];
                     if (snapshot && snapshotOpt) selOpts.push(snapshotOpt.code);
@@ -1124,7 +1144,7 @@ function ConfigurePageContent() {
                       showToast(e.message || "Could not add to cart", "error");
                     }
                   }}
-                  disabled={!providerConfig?.available}
+                  disabled={!canOrder}
                   className="mt-2 flex w-full items-center justify-center gap-2 rounded border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-[#0f172a] hover:border-[#00b7ff] hover:text-[#00b7ff] disabled:opacity-50"
                 >
                   Add to cart
@@ -1133,7 +1153,7 @@ function ConfigurePageContent() {
               {providerDatacenters.length > 0 && !datacenter && <p className="mt-2 text-center text-[10px] text-slate-500">Select a datacenter to continue</p>}
               <p className="mt-2 text-center text-[10px] text-slate-400">
                 ⏱ Estimated provisioning: {
-                  (plan?.category || category) === "DEDICATED" ? "up to 2 hours (automated install)"
+                  isDed ? (preorderSelected ? "Waiting for stock" : deliveryLabel(dcConfigEntry?.availability?.[datacenter]?.deliveryHours))
                   : (plan?.category || category) === "WEB_HOSTING" ? "a few minutes after payment"
                   : (plan?.category || category) === "DOMAINS" ? "minutes after payment"
                   : "usually a few minutes"

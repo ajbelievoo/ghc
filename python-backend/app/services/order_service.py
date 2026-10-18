@@ -78,6 +78,7 @@ def _validate_configuration(plan: PlanCatalog, config: Dict[str, Any]) -> None:
     label_map = {
         "os": "vps_os" if plan.category == ServiceCategory.VPS else ("dedicated_os" if plan.category == ServiceCategory.DEDICATED else "os"),
         "vps_os": "vps_os",
+        "dedicated_os": "dedicated_os",
         "datacenter": "vps_datacenter" if plan.category == ServiceCategory.VPS else ("dedicated_datacenter" if plan.category == ServiceCategory.DEDICATED else "datacenter"),
         "vps_datacenter": "vps_datacenter",
         "dedicated_datacenter": "dedicated_datacenter",
@@ -95,7 +96,7 @@ def _validate_configuration(plan: PlanCatalog, config: Dict[str, Any]) -> None:
             # Pre-orders may target DCs outside the catalog allowed list — the
             # waitlist universe also includes rule-endpoint codes and extras
             # like BOM that OVH displays but the catalog doesn't list.
-            if config.get("_preorder") and cfg_key in ("datacenter", "vps_datacenter"):
+            if plan.category == ServiceCategory.VPS and config.get("_preorder") and cfg_key in ("datacenter", "vps_datacenter"):
                 try:
                     from app.routers.compat import _VPS_EXTRA_DCS, _vps_dc_availability
                     extra = {str(x).upper() for x in set(_vps_dc_availability(plan.plan_code).keys()) | _VPS_EXTRA_DCS}
@@ -158,6 +159,25 @@ def create_customer_order(
     if not duration:
         raise ValueError(f"Duration {duration_label} not available for plan {plan_code}")
 
+    if plan.category == ServiceCategory.DEDICATED:
+        from app.routers.compat import _ded_dc_availability
+        from app.services.catalog_service import dedicated_pricing
+        dedicated_pricing(plan, duration)
+        config = dict(config or {})
+        dc = config.get("datacenter") or config.get("dedicated_datacenter")
+        info = _ded_dc_availability(plan, fresh=True).get(str(dc), {})
+        status = info.get("status")
+        if status not in ("available", "unavailable"):
+            raise ValueError("Could not verify this location's stock. Please refresh and try again.")
+        if status == "unavailable" and not config.get("_preorder"):
+            raise ValueError("This location is out of stock. Please select pre-booking.")
+        if status == "available":
+            config.pop("_preorder", None)
+        if config.get("_options"):
+            raise ValueError("Please use the included dedicated hardware configuration")
+        if not (config.get("os") or config.get("dedicated_os")):
+            raise ValueError("Please select an operating system")
+
     # Metal channel (Metal menu → VPS/Dedicated): same upstream plans, priced
     # with the Metal margin instead of the standard margin/overrides.
     is_metal = str((config or {}).get("_brand") or "").lower() == "metal" and plan.category in (ServiceCategory.VPS, ServiceCategory.DEDICATED)
@@ -189,8 +209,18 @@ def create_customer_order(
     target_currency = (currency or duration.currency or get_settings().currency or "USD").upper()
     rate = convert(db, 1.0, duration.currency or "INR", target_currency)
     final_price_converted = float(final_price * rate)
+    if plan.category == ServiceCategory.DEDICATED:
+        final_price_converted = round(final_price_converted, 2)
     ovh_base_amount = float(duration.raw_price) * rate
     commission_amount = final_price_converted - ovh_base_amount
+    setup_total = 0.0
+    if plan.category == ServiceCategory.DEDICATED:
+        from app.services.catalog_service import dedicated_setup_price
+        setup, setup_raw = dedicated_setup_price(db, plan, duration, is_metal)
+        setup_total = round(setup * rate, 2)
+        ovh_base_amount += setup_raw * rate
+        commission_amount += setup_total - setup_raw * rate
+        config = {**(config or {}), "_setup_price": setup_total}
 
     discount_amount = 0.0
     coupon_obj = None
@@ -256,7 +286,7 @@ def create_customer_order(
         preorder_fee = compute_preorder_fee(db, final_price_converted, target_currency)
         config = {**(config or {}), "_preorder": True, "_preorder_fee": preorder_fee}
 
-    taxable = max(0.0, final_price_converted - discount_amount) + preorder_fee + options_total
+    taxable = max(0.0, final_price_converted - discount_amount) + preorder_fee + options_total + setup_total
     tax_rate = get_settings().tax_rate_percent / 100.0
     tax_amount = round(taxable * tax_rate, 2)
     customer_amount = round(taxable + tax_amount, 2)
@@ -354,13 +384,17 @@ def _build_required_configurations(plan: PlanCatalog, config: Dict[str, Any]) ->
     elif category == ServiceCategory.DEDICATED:
         os_label = "dedicated_os" if "dedicated_os" in catalog_config_names else "os"
         dc_label = "dedicated_datacenter" if "dedicated_datacenter" in catalog_config_names else "datacenter"
-        if cfg.get("os"):
-            add_config(os_label, cfg["os"])
-        if cfg.get("datacenter"):
-            add_config(dc_label, cfg["datacenter"])
-        if cfg.get("language"):
+        os_value = cfg.get("os") or cfg.get("dedicated_os")
+        dc_value = cfg.get("datacenter") or cfg.get("dedicated_datacenter")
+        add_config(os_label, os_value)
+        add_config(dc_label, dc_value)
+        region_values = next((c.get("values") or [] for c in catalog_configs if c.get("name") == "region"), [])
+        region_value = "canada" if str(dc_value).lower() in ("bhs", "ca-east-tor-a", "sgp", "syd", "ynm") else "europe"
+        if region_values:
+            add_config("region", region_value if region_value in region_values else region_values[0])
+        if cfg.get("language") and "language" in catalog_config_names:
             add_config("language", cfg["language"])
-        elif cfg.get("os"):
+        elif os_value and "language" in catalog_config_names:
             add_config("language", "en_GB")
 
     elif category == ServiceCategory.WEB_HOSTING:
@@ -410,6 +444,10 @@ def _add_mandatory_options(db, ovh, order, parent_item_id, service, plan, durati
     selected = {str(c) for c in (config or {}).get("_options") or []}
 
     duration_str = f"P{duration.interval}{duration.interval_unit[0].upper()}"
+    pricing_mode = "default"
+    if plan.category == ServiceCategory.DEDICATED:
+        from app.services.catalog_service import dedicated_pricing
+        pricing_mode, _ = dedicated_pricing(plan, duration)
 
     for family in addon_families:
         addons = family.get("addons") or []
@@ -425,7 +463,7 @@ def _add_mandatory_options(db, ovh, order, parent_item_id, service, plan, durati
         elif picked:
             chosen_list = picked
         elif family.get("mandatory"):
-            chosen_list = [addons[0]]
+            chosen_list = [family.get("default") or addons[0]]
         else:
             continue
 
@@ -438,7 +476,7 @@ def _add_mandatory_options(db, ovh, order, parent_item_id, service, plan, durati
                     {
                         "planCode": chosen,
                         "duration": duration_str,
-                        "pricingMode": "default",
+                        "pricingMode": pricing_mode,
                         "quantity": 1,
                     },
                 )
@@ -454,6 +492,8 @@ def _add_mandatory_options(db, ovh, order, parent_item_id, service, plan, durati
                 )
             except Exception as e:
                 logger.warning(f"Could not add option {chosen} for plan {plan.plan_code}: {e}")
+                if plan.category == ServiceCategory.DEDICATED:
+                    raise
                 # Non-fatal: OVH may allow checkout without optional/recommended addons
 
     return all_item_ids
@@ -1484,6 +1524,11 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
     config = order.configuration_payload or {}
 
     try:
+        if plan.category == ServiceCategory.DEDICATED:
+            from app.routers.compat import _ded_dc_availability
+            dc = config.get("datacenter") or config.get("dedicated_datacenter")
+            if _ded_dc_availability(plan, fresh=True).get(str(dc), {}).get("status") != "available":
+                raise ValueError("Dedicated stock changed; awaiting availability for this hardware configuration")
         # 1. Create cart
         cart = ovh.create_cart(description=f"BelieVoo order {order.id}")
         order.ovh_cart_id = cart.get("cartId")
@@ -1525,6 +1570,9 @@ def execute_checkout(db: Session, ovh: OvhClient, order_id: str) -> CustomerOrde
             )
         else:
             add_payload = _build_add_item_payload(order.plan_code, duration, plan.category, config)
+            if plan.category == ServiceCategory.DEDICATED:
+                from app.services.catalog_service import dedicated_pricing
+                add_payload["pricingMode"], _ = dedicated_pricing(plan, duration)
             item = ovh.add_item_to_cart(order.ovh_cart_id, segment, add_payload)
             item_id = item.get("itemId")
             log_ovh_step(db, order.id, "ADD_ITEM", f"/order/cart/{order.ovh_cart_id}/{segment}", add_payload, item)
@@ -1685,7 +1733,7 @@ def pay_order_with_wallet(db: Session, user_id: str, order_id: str) -> CustomerO
 
 def _preorder_dc(order: CustomerOrder) -> Optional[str]:
     cfg = order.configuration_payload or {}
-    dc = cfg.get("datacenter") or cfg.get("vps_datacenter")
+    dc = cfg.get("datacenter") or cfg.get("vps_datacenter") or cfg.get("dedicated_datacenter")
     return str(dc).upper() if dc else None
 
 
@@ -1772,7 +1820,7 @@ def preorder_tick(db: Session) -> Dict[str, int]:
                 logger.exception(f"Preorder refund failed for {order.id}")
     waiting = [o for o in waiting if o.status == OrderStatus.WAITING_STOCK]
 
-    if not ps.get("enabled", True) or not waiting:
+    if not ps.get("enabled", True):
         return stats
 
     # 2) Retry failed attempts (OVH lost the stock race) — up to 3 tries.
@@ -1783,6 +1831,8 @@ def preorder_tick(db: Session) -> Dict[str, int]:
         cfg = dict(order.configuration_payload or {})
         if not cfg.get("_preorder"):
             continue
+        if order.ovh_order_id:
+            continue  # An upstream order already exists; never buy it twice.
         attempts = int(cfg.get("_preorder_attempts") or 0)
         if attempts < 3:
             cfg["_preorder_attempts"] = attempts
@@ -1803,11 +1853,12 @@ def preorder_tick(db: Session) -> Dict[str, int]:
         is_ded = bool(plan_row and plan_row.category == ServiceCategory.DEDICATED)
         # Dedicated stock comes from the public datacenter-availabilities feed
         # (status=available for any delivery time); VPS uses the order-rule API.
-        avail = _ded_dc_availability(plan_code) if is_ded else _vps_dc_availability(plan_code)
+        avail = _ded_dc_availability(plan_row, fresh=True) if is_ded else _vps_dc_availability(plan_code)
         if not avail:
             continue
         kicked_dc = set()
         for order in orders:
+            fam = "dedicated" if is_ded else _preorder_os_family(order)
             dc = _preorder_dc(order)
             if not dc or dc in kicked_dc:
                 continue

@@ -199,6 +199,12 @@ def _plan_to_frontend(p: PlanCatalog, currency: Optional[str] = None, db: Sessio
 
     def _dur_rows():
         for d in p.durations:
+            if p.category == ServiceCategory.DEDICATED:
+                from app.services.catalog_service import dedicated_pricing
+                try:
+                    dedicated_pricing(p, d)
+                except ValueError:
+                    continue
             if allowed_vps_labels is not None and (d.interval_unit or "month").startswith("month") and d.duration_label not in allowed_vps_labels:
                 continue
             sell, disc = vps_price_map.get(d.duration_label, (d.final_price, 0.0))
@@ -394,6 +400,11 @@ def _ded_spec_display(p: PlanCatalog) -> dict:
     if p.bandwidth_mbps:
         bw = f"{p.bandwidth_mbps / 1000:g} Gbps" if p.bandwidth_mbps >= 1000 else f"{p.bandwidth_mbps} Mbps"
     fams = {f.get("name"): f for f in ((p.catalog_metadata or {}).get("addonFamilies") or []) if isinstance(f, dict)}
+    bandwidth_code = str((fams.get("bandwidth") or {}).get("default") or "")
+    traffic = _re.search(r"traffic-(\d+tb|unlimited)-(\d+)", bandwidth_code)
+    if traffic:
+        bw = f"{int(traffic.group(2)) / 1000:g} Gbps / " + (
+            "unmetered" if traffic.group(1) == "unlimited" else traffic.group(1).upper().replace("TB", " TB"))
     ram_opts = [int(m.group(1)) for a in (fams.get("memory") or {}).get("addons", []) for m in [_re.search(r"ram-(\d+)g", a.lower())] if m]
     ram_opts.append(p.ram_gb or 0)
     ram_opts = [x for x in ram_opts if x]
@@ -738,6 +749,9 @@ def admin_save_essential_vps(body: dict, db: Session = Depends(get_db), admin: U
 def admin_list_preorders(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     """Waitlist queue (FIFO) + current settings."""
     from app.services.catalog_service import get_preorder_settings
+    preorder_settings = dict(get_preorder_settings(db))
+    if preorder_settings.get("feeType") == "flat":
+        preorder_settings["displayFeeValue"] = round(float(preorder_settings.get("feeValue") or 0) * get_rate(db, "INR", currency or "INR"), 2)
     from app.services.order_service import _preorder_dc, _preorder_os_family
     ps = get_preorder_settings(db)
     orders = db.query(CustomerOrder).filter(
@@ -884,23 +898,31 @@ def _vps_dc_availability(plan_code: str) -> Dict[str, Any]:
 _DED_REGION_SUFFIX = _re.compile(r"-(mum|sgp|syd)$")
 
 
-def _ded_dc_availability(plan_code: str) -> Dict[str, Any]:
+def _ded_dc_availability(plan, fresh: bool = False) -> Dict[str, Any]:
     """Per-DC orderability for a dedicated planCode from OVH's PUBLIC no-auth
     endpoint /dedicated/server/datacenter/availabilities (the same feed the
     ovhcloud.com order page uses). Returns {dc: {status, availability,
-    deliveryHours}} merged over every memory/storage combo — the DC counts as
-    orderable when ANY config combo can be delivered there.
+    deliveryHours}} for the catalog's default memory/storage configuration.
     Availability values look like '1H-high', '24H', '72H', '480H'
     (delivery delay in hours — still orderable), 'comingSoon', 'unavailable'."""
     import time as _time
     import json as _json
     import urllib.request as _urlreq
 
-    key = "ded:" + str(plan_code)
+    plan_code = plan.plan_code
+    defaults = {f["name"]: f.get("default") or (f.get("addons") or [None])[0]
+                for f in (plan.catalog_metadata or {}).get("addonFamilies") or []}
+    base_code = _DED_REGION_SUFFIX.sub("", plan_code)
+    def stock_code(value):
+        return _re.sub(r"-" + _re.escape(base_code) + r"$", "", value or "")
+    memory, storage = stock_code(defaults.get("memory")), stock_code(defaults.get("storage"))
+    if not memory or not storage:
+        return {}
+    key = f"ded:{plan_code}:{memory}:{storage}"
     now = _time.time()
     cached = _DC_AVAIL_CACHE.get(key)
-    if cached:
-        ttl = 600 if cached[1] else 60
+    if cached and not fresh:
+        ttl = 60
         if now - cached[0] < ttl:
             return cached[1]
     best: Dict[str, Any] = {}
@@ -914,6 +936,8 @@ def _ded_dc_availability(plan_code: str) -> Dict[str, Any]:
         with _urlreq.urlopen(req, timeout=10) as resp:
             data = _json.loads(resp.read().decode())
         for row in data or []:
+            if row.get("planCode") != plan_code or row.get("memory") != memory or row.get("storage") != storage:
+                continue
             for d in row.get("datacenters") or []:
                 dc = d.get("datacenter")
                 av = str(d.get("availability") or "")
@@ -925,7 +949,7 @@ def _ded_dc_availability(plan_code: str) -> Dict[str, Any]:
                 # Keep the fastest availability across all fqn config rows.
                 if cur is None or (hrs is not None and (cur["deliveryHours"] is None or hrs < cur["deliveryHours"])):
                     best[dc] = {
-                        "status": "available" if hrs is not None else "unavailable",
+                        "status": "available" if hrs is not None else ("unavailable" if av in ("unavailable", "comingSoon") else "unknown"),
                         "availability": av,
                         "deliveryHours": hrs,
                     }
@@ -1119,7 +1143,7 @@ def plan_configuration(
         # plus -mum/-sgp/-syd APAC variants with their own price + single DC.
         # Merge them so the page can offer every location OVH's configurator
         # shows, and remember which planCode each DC must be ordered as.
-        from app.services.catalog_service import compute_sell_price
+        from app.services.catalog_service import compute_sell_price, dedicated_setup_price
 
         variant_plans: Dict[str, Any] = {}
         for fp in _ded_family_plans(db, plan):
@@ -1129,13 +1153,13 @@ def plan_configuration(
                 None,
             )
             fp_dcs = [str(v) for v in (fp_cfg.get("values") or [])] if fp_cfg else []
-            fp_avail = _ded_dc_availability(fp.plan_code)
+            fp_avail = _ded_dc_availability(fp)
             if not fp_dcs:
                 fp_dcs = list(fp_avail.keys())
             for dc in fp_dcs:
                 info = fp_avail.get(dc) or {}
                 availability[dc] = {
-                    "status": info.get("status") or "unavailable",
+                    "status": info.get("status") or "unknown",
                     "availability": info.get("availability") or "",
                     "deliveryHours": info.get("deliveryHours"),
                     "planCode": fp.plan_code,
@@ -1144,18 +1168,23 @@ def plan_configuration(
         target = str(currency or "INR").upper()
         for dc, fp in variant_plans.items():
             prices: Dict[str, float] = {}
+            totals, setup_prices = {}, {}
             for dur in fp.durations or []:
-                months = max(1, int(dur.interval or 1))
+                try:
+                    setup, _ = dedicated_setup_price(db, fp, dur, is_metal)
+                except ValueError:
+                    continue
+                months = max(1, int(dur.interval or 1)) * (12 if str(dur.interval_unit).startswith("year") else 1)
                 sell, _disc = compute_sell_price(db, fp, dur, is_metal)
-                monthly = sell / months
                 src = str(dur.currency or fp.currency or "INR").upper()
-                if target != src:
-                    try:
-                        monthly = monthly * get_rate(db, src, target)
-                    except Exception:
-                        pass
-                prices[dur.duration_label] = round(monthly, 2)
-            dc_variants[dc] = {"planCode": fp.plan_code, "prices": prices}
+                rate = get_rate(db, src, target) if target != src else 1
+                totals[dur.duration_label] = round(sell * rate, 2)
+                setup_prices[dur.duration_label] = round(setup * rate, 2)
+                prices[dur.duration_label] = round(sell * rate / months, 2)
+            dc_variants[dc] = {"planCode": fp.plan_code, "prices": prices,
+                               "totals": totals, "setupPrices": setup_prices,
+                               "spec": _ded_spec_display(fp),
+                               "osValues": next((c.get("values") or [] for c in (fp.catalog_metadata or {}).get("configurations", []) if c.get("name") == "dedicated_os"), [])}
     for cfg in catalog_configs:
         name = cfg.get("name")
         values = cfg.get("values", [])
@@ -1204,7 +1233,7 @@ def plan_configuration(
         "dcVariants": dc_variants,
         # Stock waitlist: {enabled, feeType, feeValue, refundDays} — the frontend
         # turns "out of stock" cards into payable pre-bookings when enabled.
-        "preorder": get_preorder_settings(db),
+        "preorder": preorder_settings,
     }
 
 
