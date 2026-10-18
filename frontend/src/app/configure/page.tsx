@@ -60,6 +60,28 @@ const dcMeta: Record<string, { name: string; region: keyof typeof regionLocation
   bhs1: { name: "Canada - Beauharnois (bhs1)", region: "North America" },
   gra1: { name: "France - Gravelines (gra1)", region: "Europe" },
   gra3: { name: "France - Gravelines (gra3)", region: "Europe" },
+  // Dedicated-server DC codes are lowercase; 'ynm' here is Mumbai (NOT the
+  // uppercase VPS 'YNM' alias for Beauharnois above).
+  fra: { name: "Germany - Frankfurt", region: "Europe" },
+  gra: { name: "France - Gravelines", region: "Europe" },
+  rbx: { name: "France - Roubaix", region: "Europe" },
+  sbg: { name: "France - Strasbourg", region: "Europe" },
+  lon: { name: "United Kingdom - London", region: "Europe" },
+  eri: { name: "United Kingdom - Erith", region: "Europe" },
+  waw: { name: "Poland - Warsaw", region: "Europe" },
+  "eu-west-par-a": { name: "France - Paris", region: "Europe" },
+  "eu-west-par-b": { name: "France - Paris", region: "Europe" },
+  "eu-west-par-c": { name: "France - Paris", region: "Europe" },
+  bhs: { name: "Canada - Beauharnois", region: "North America" },
+  "ca-east-tor-a": { name: "Canada - Toronto", region: "North America" },
+  vin: { name: "US East - Vint Hill", region: "North America" },
+  hil: { name: "US West - Hillsboro", region: "North America" },
+  pap: { name: "US West - Hillsboro", region: "North America" },
+  sgp: { name: "Singapore - Singapore", region: "Asia/Oceania" },
+  syd: { name: "Australia - Sydney", region: "Asia/Oceania" },
+  ynm: { name: "India - Mumbai", region: "Asia/Oceania" },
+  bom: { name: "India - Mumbai", region: "Asia/Oceania" },
+  lim: { name: "Peru - Lima", region: "Asia/Oceania" },
 };
 
 function getDcName(code: string) {
@@ -80,6 +102,16 @@ function getDcLatency(code: string) {
   const name = getDcName(code);
   if (dcLatency[name]) return dcLatency[name];
   return getDcRegion(code) === "Europe" ? { ms: "~140 ms", good: false } : { ms: "~250 ms", good: false };
+}
+
+// OVH dedicated availability is expressed as a delivery delay ("1H-low",
+// "72H", "480H"…). Convert to the same label OVH's configurator shows.
+function deliveryLabel(hours?: number | null) {
+  if (hours == null) return "Out of stock";
+  if (hours <= 1) return "Delivery in ~1 hour";
+  if (hours < 24) return `Delivery in ~${hours} hours`;
+  const days = Math.round(hours / 24);
+  return `Delivery in ${days} day${days > 1 ? "s" : ""}`;
 }
 
 const imageFamilies = [
@@ -286,7 +318,16 @@ function ConfigurePageContent() {
     (storage && storageOpt ? (diskOpts.find((d: any) => d.code === storageOpt)?.monthlyPrice || 0) : 0) +
     (licenseOpt?.monthlyPrice || 0);
   const optionsTotal = parseFloat((optionsMonthly * durationMonths * quantity).toFixed(2));
-  const subtotal = parseFloat(((selectedDuration?.finalPrice || 0) * quantity + optionsTotal).toFixed(2));
+  // Dedicated: OVH sells APAC locations as sibling planCodes (-mum/-sgp/-syd)
+  // with their own price. dcVariants[dc] = {planCode, prices:{label: monthly}}
+  // — selecting such a DC swaps the order to that planCode and reprices it.
+  const dcVariants: Record<string, { planCode?: string; prices?: Record<string, number> }> = providerConfig?.dcVariants || {};
+  const dcMonthlyPrice = (dc: string) => dcVariants[dc]?.prices?.[selectedDuration?.durationLabel] ?? selectedDuration?.monthlyPrice;
+  const effectivePlanCode = (datacenter && dcVariants[datacenter]?.planCode) || plan?.planCode;
+  const planPeriodTotal = dcVariants[datacenter]?.prices?.[selectedDuration?.durationLabel] != null
+    ? (dcVariants[datacenter].prices![selectedDuration.durationLabel] || 0) * durationMonths
+    : (selectedDuration?.finalPrice || 0);
+  const subtotal = parseFloat((planPeriodTotal * quantity + optionsTotal).toFixed(2));
   const discount = couponResult ? parseFloat((couponResult.discount || 0).toFixed(2)) : 0;
   const requiredConfigs = providerConfig?.requiredConfiguration || providerConfig?.configurations || [];
   const findConfigValues = (names: string[]) => {
@@ -507,7 +548,7 @@ function ConfigurePageContent() {
 
       if (gateway === "wallet") {
         const res = await api.billing.payWithWallet({
-          planCode: plan.planCode,
+          planCode: effectivePlanCode,
           durationLabel: selectedDuration.durationLabel,
           category: plan.category || category,
           configuration,
@@ -527,7 +568,7 @@ function ConfigurePageContent() {
         type: "ORDER",
         amount: total,
         gateway,
-        planCode: plan.planCode,
+        planCode: effectivePlanCode,
         durationLabel: selectedDuration.durationLabel,
         category: plan.category || category,
         configuration,
@@ -681,7 +722,7 @@ function ConfigurePageContent() {
                 </button>
               </label>
             </div>
-            <p className="mb-3 text-xs text-slate-600">You can host your VPS in one of our datacenters in our worldwide network.</p>
+            <p className="mb-3 text-xs text-slate-600">You can host your {isDed ? "server" : "VPS"} in one of our datacenters in our worldwide network.</p>
             <div className="mb-4 flex gap-1 border-b border-slate-200">
               {(Object.keys(regionLocations) as (keyof typeof regionLocations)[]).filter((r) => tabSourceLocations.some((dc) => getDcRegion(dc) === r)).map((r) => (
                 <button key={r} onClick={() => setRegion(r)} className={`px-4 py-2 text-xs font-bold transition ${region === r ? "border-b-2 border-[#00b7ff] text-[#00b7ff]" : "text-slate-500 hover:text-[#0f172a]"}`}>{r}</button>
@@ -732,16 +773,21 @@ function ConfigurePageContent() {
                     );
                   }
                   const sel = datacenter === dc;
+                  const dcInfo = dcConfigEntry?.availability?.[dc] || {};
                   return (
                     <label key={dc} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
                       <input type="radio" name="dc" checked={sel} onChange={() => setDatacenter(dc)} className="h-4 w-4 accent-[#00b7ff]" />
                       <span className="text-lg">{getFlag(name)}</span>
                       <div className="flex-1">
                         <p className="text-xs font-bold text-[#0f172a]">{name}</p>
-                        <p className="text-[10px] text-green-600">🟢 Available now <span className="text-slate-400">• {getDcLatency(dc).ms} from India</span></p>
+                        {isDed ? (
+                          <p className="text-[10px] text-green-600">� {deliveryLabel(dcInfo.deliveryHours)}</p>
+                        ) : (
+                          <p className="text-[10px] text-green-600">�🟢 Available now <span className="text-slate-400">• {getDcLatency(dc).ms} from India</span></p>
+                        )}
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-black text-[#0f172a]">{fmtCurrency(selectedDuration?.monthlyPrice, planCurrency)}</p>
+                        <p className="text-sm font-black text-[#0f172a]">{fmtCurrency(dcMonthlyPrice(dc), planCurrency)}</p>
                         <p className="text-[10px] text-slate-400">ex. taxes/month</p>
                       </div>
                     </label>
@@ -1065,11 +1111,11 @@ function ConfigurePageContent() {
                     if (selOpts.length) configuration._options = selOpts;
                     try {
                       await api.cart.add({
-                        planCode: plan.planCode,
+                        planCode: effectivePlanCode,
                         durationLabel: selectedDuration?.durationLabel,
                         displayName: plan.invoiceName || plan.planCode,
                         category: plan.category || category,
-                        unitPrice: selectedDuration?.monthlyPrice,
+                        unitPrice: planPeriodTotal / durationMonths,
                         configuration,
                       });
                       showToast("Added to cart", "success");
