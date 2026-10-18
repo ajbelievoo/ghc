@@ -187,6 +187,7 @@ function ConfigurePageContent() {
   const [licenseSel, setLicenseSel] = useState("");
   const [dedHw, setDedHw] = useState<Record<string, string>>({});
   const [dedLic, setDedLic] = useState<string[]>([]);
+  const [dedBwTraffic, setDedBwTraffic] = useState<Record<number, string>>({});
   const [providerConfig, setOvhConfig] = useState<any>(null);
   const [configLoading, setConfigLoading] = useState(false);
   const [imageTab, setImageTab] = useState<"dist" | "app">("dist");
@@ -335,7 +336,9 @@ function ConfigurePageContent() {
   // Dedicated hardware upgrades (OVH parity): every addonFamily with >1 choice
   // is selectable — memory/storage/bandwidth/vrack. RAM+storage also drive the
   // live per-combo stock check, so an upgrade can change DC availability.
-  const dedHwFams = isDed ? cfgOptions.filter((o: any) => !/license/i.test(o.family || "")) : [];
+  const dedHwFamOrder = ["memory", "storage", "bandwidth", "vrack", "system-storage"];
+  const dedHwFams = (isDed ? cfgOptions.filter((o: any) => !/license/i.test(o.family || "")) : [])
+    .sort((a: any, b: any) => dedHwFamOrder.indexOf(a.family) - dedHwFamOrder.indexOf(b.family));
   const dedLicFams = isDed ? cfgOptions.filter((o: any) => /license/i.test(o.family || "")) : [];
   const dedSelCode = (fam: string) => {
     const f = dedHwFams.find((o: any) => o.family === fam);
@@ -356,6 +359,60 @@ function ConfigurePageContent() {
   });
   const dedLicRows = dedLicFams.flatMap((f: any) =>
     (f.choices || []).filter((c: any) => dedLic.includes(c.code)).map((c: any) => ({ family: f.family, label: c.label, code: c.code, monthly: c.monthlyPrice || 0, included: !!c.included, total: dedChoiceTotal(c) })));
+  // OVH-style helpers: bandwidth codes are speed+traffic combos
+  // (traffic-25tb-1000 / traffic-unlimited-2000 / bandwidth-3000) — group them
+  // into one card per speed with an inner traffic dropdown; licenses group
+  // into product checkboxes (Windows Server / SQL Server / Plesk / cPanel)
+  // each with an edition dropdown.
+  const bwParse = (code: string, label: string) => {
+    const tm = String(code).match(/traffic-(unlimited|\d+tb)-(\d+)/i);
+    if (tm) {
+      const mbps = parseInt(tm[2]);
+      const unl = tm[1].toLowerCase() === "unlimited";
+      return { speed: mbps >= 1000 ? `${mbps / 1000} Gbit/s` : `${mbps} Mbit/s`, speedMbps: mbps, traffic: unl ? "unmetered" : `${parseInt(tm[1])} TB`, trafficRank: unl ? 1e9 : parseInt(tm[1]) };
+    }
+    const bm = String(code).match(/bandwidth-(\d+)/i);
+    if (bm) {
+      const mbps = parseInt(bm[1]);
+      return { speed: mbps >= 1000 ? `${mbps / 1000} Gbit/s` : `${mbps} Mbit/s`, speedMbps: mbps, traffic: "unmetered", trafficRank: 1e9 };
+    }
+    return { speed: label || code, speedMbps: 0, traffic: label || code, trafficRank: 0 };
+  };
+  const dedBwGroups = (f: any) => {
+    const g: Record<number, any> = {};
+    for (const c of f.choices || []) {
+      const p = bwParse(c.code, c.label);
+      (g[p.speedMbps] ||= { speed: p.speed, mbps: p.speedMbps, items: [] }).items.push({ ...c, ...p });
+    }
+    const arr = Object.values(g).sort((a: any, b: any) => a.mbps - b.mbps);
+    arr.forEach((gr: any) => gr.items.sort((a: any, b: any) => a.trafficRank - b.trafficRank || a.monthlyPrice - b.monthlyPrice));
+    return arr;
+  };
+  const dedBwCodeFor = (g: any) => (dedBwTraffic[g.mbps] && g.items.some((i: any) => i.code === dedBwTraffic[g.mbps])) ? dedBwTraffic[g.mbps] : g.items[0]?.code;
+  const licProduct = (code: string, label: string) => {
+    if (/^windows-server/i.test(code)) return "Windows Server";
+    if (/^sql-server|^mssql/i.test(code)) return "SQL Server";
+    if (/^plesk/i.test(code)) return "Plesk";
+    if (/^cpanel/i.test(code)) return "cPanel";
+    if (/backup/i.test(code)) return "Backup Agent";
+    return String(label || code).split(" ")[0] || code;
+  };
+  const dedLicGroups = dedLicFams.map((f: any) => {
+    const groups: Record<string, any[]> = {};
+    for (const c of f.choices || []) {
+      const p = licProduct(c.code, c.label);
+      const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const optLabel = String(c.label || "").replace(new RegExp(`^${esc}\\s*-\\s*|^${esc}\\s*`, "i"), "") || c.label;
+      (groups[p] ||= []).push({ ...c, optLabel });
+    }
+    return { family: f.family, groups: Object.entries(groups) };
+  });
+  const dedLicSet = (product: string, code: string | null) => {
+    setDedLic((cur) => {
+      const others = cur.filter((x) => licProduct(x, "") !== product);
+      return code ? [...others, code] : others;
+    });
+  };
   const dedOptionsTotal = dedHwRows.reduce((t: number, r: any) => t + r.total, 0) + dedLicRows.reduce((t: number, r: any) => t + r.total, 0);
   const subtotal = parseFloat(((planPeriodTotal + setupPrice) * quantity + optionsTotal + dedOptionsTotal).toFixed(2));
   const discount = couponResult ? parseFloat((couponResult.discount || 0).toFixed(2)) : 0;
@@ -570,6 +627,7 @@ function ConfigurePageContent() {
     // regional variant) changes so stale addon codes can't leak across plans.
     setDedHw({});
     setDedLic([]);
+    setDedBwTraffic({});
   }, [effectivePlanCode]);
 
   useEffect(() => {
@@ -931,32 +989,79 @@ function ConfigurePageContent() {
                   <div key={f.family} className="mb-5">
                     <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-700">{title}</h3>
                     <div className="space-y-2">
-                      {f.choices.map((c: any) => {
-                        const sel = selCode === c.code;
-                        return (
-                          <label key={c.code} onClick={() => setDedHw({ ...dedHw, [f.family]: c.code })} className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3.5 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
-                            <input type="radio" name={`ded-${f.family}`} checked={sel} readOnly className="h-4 w-4 accent-[#00b7ff]" />
-                            <span className="flex-1 text-sm font-bold text-[#0f172a]">{c.label}</span>
-                            <span className={`text-sm font-black ${c.included ? "text-slate-500" : "text-[#00b7ff]"}`}>{c.included ? "Included" : `+${fmtCurrency(c.monthlyPrice, planCurrency)}/mo`}</span>
-                          </label>
-                        );
-                      })}
+                      {f.family === "bandwidth" ? (
+                        // OVH parity: one card per speed, inner traffic dropdown
+                        dedBwGroups(f).map((g: any) => {
+                          const tCode = dedBwCodeFor(g);
+                          const tChoice = g.items.find((i: any) => i.code === tCode) || g.items[0];
+                          const active = g.items.some((i: any) => i.code === selCode);
+                          return (
+                            <label key={g.mbps} onClick={() => tCode && setDedHw({ ...dedHw, [f.family]: tCode })} className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3.5 transition ${active ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
+                              <input type="radio" name={`ded-${f.family}`} checked={active} readOnly className="h-4 w-4 accent-[#00b7ff]" />
+                              <div className="flex-1">
+                                <p className="text-sm font-bold text-[#0f172a]">{g.speed}</p>
+                                <p className="text-[10px] text-slate-400">Select the traffic associated with your public bandwidth.</p>
+                                <select
+                                  value={tCode}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => { setDedBwTraffic({ ...dedBwTraffic, [g.mbps]: e.target.value }); setDedHw({ ...dedHw, [f.family]: e.target.value }); }}
+                                  className="mt-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-xs"
+                                >
+                                  {g.items.map((i: any) => <option key={i.code} value={i.code}>{i.traffic}</option>)}
+                                </select>
+                              </div>
+                              <span className={`text-sm font-black ${tChoice?.included ? "text-slate-500" : "text-[#00b7ff]"}`}>{tChoice?.included ? "Included" : `+${fmtCurrency(tChoice?.monthlyPrice || 0, planCurrency)}/mo`}</span>
+                            </label>
+                          );
+                        })
+                      ) : f.selectable === false ? (
+                        // Single mandatory choice (e.g. 25Gbps vRack) — fixed card
+                        <div className="flex items-center gap-3 rounded-lg border-2 border-[#00b7ff] bg-slate-100 p-3.5">
+                          <span className="inline-block h-4 w-4 rounded-full border-[5px] border-[#00b7ff] bg-white" />
+                          <span className="flex-1 text-sm font-bold text-[#0f172a]">{f.choices[0]?.label}</span>
+                          <span className="text-sm font-black text-slate-500">Included</span>
+                        </div>
+                      ) : (
+                        f.choices.map((c: any) => {
+                          const sel = selCode === c.code;
+                          return (
+                            <label key={c.code} onClick={() => setDedHw({ ...dedHw, [f.family]: c.code })} className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3.5 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
+                              <input type="radio" name={`ded-${f.family}`} checked={sel} readOnly className="h-4 w-4 accent-[#00b7ff]" />
+                              <span className="flex-1 text-sm font-bold text-[#0f172a]">{c.label}</span>
+                              <span className={`text-sm font-black ${c.included ? "text-slate-500" : "text-[#00b7ff]"}`}>{c.included ? "Included" : `+${fmtCurrency(c.monthlyPrice, planCurrency)}/mo`}</span>
+                            </label>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 );
               })}
-              {dedLicFams.map((f: any) => (
-                <div key={f.family} className="mb-5">
-                  <h3 className="mb-2 text-sm font-black uppercase tracking-wide text-slate-700">{f.family === "application-license" ? "Application licenses (optional)" : "Distribution licenses (optional)"}</h3>
+              {dedLicGroups.length > 0 && <h3 className="mb-2 mt-6 text-sm font-black uppercase tracking-wide text-slate-700">Add options</h3>}
+              {dedLicGroups.map((g: any) => (
+                <div key={g.family} className="mb-5">
+                  <p className="mb-2 text-xs font-bold text-slate-600">{g.family === "distribution-license" ? "Operating system" : g.family === "application-license" ? "Applications and licenses" : g.family}</p>
                   <div className="space-y-2">
-                    {f.choices.map((c: any) => {
-                      const sel = dedLic.includes(c.code);
+                    {g.groups.map(([product, items]: any) => {
+                      const selCode = items.find((i: any) => dedLic.includes(i.code))?.code;
+                      const selChoice = items.find((i: any) => i.code === selCode);
+                      const shown = selChoice || items[0];
                       return (
-                        <label key={c.code} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${sel ? "border-[#00b7ff] bg-slate-100" : "border-slate-200 hover:border-[#00b7ff]"}`}>
-                          <input type="checkbox" checked={sel} onChange={(e) => setDedLic(e.target.checked ? [...dedLic, c.code] : dedLic.filter((x) => x !== c.code))} className="h-4 w-4 accent-[#00b7ff]" />
-                          <span className="flex-1 text-sm font-bold text-[#0f172a]">{c.label}</span>
-                          <span className="text-sm font-black text-[#00b7ff]">+{fmtCurrency(c.monthlyPrice, planCurrency)}/mo</span>
-                        </label>
+                        <div key={product} className={`flex items-center gap-3 rounded-lg border p-3 transition ${selCode ? "border-[#00b7ff] bg-slate-100" : "border-slate-200"}`}>
+                          <input type="checkbox" checked={!!selCode} onChange={(e) => dedLicSet(product, e.target.checked ? shown.code : null)} className="h-4 w-4 accent-[#00b7ff]" />
+                          <div className="flex-1">
+                            <p className="text-sm font-bold text-[#0f172a]">{product}</p>
+                            <select
+                              disabled={!selCode}
+                              value={selCode || shown.code}
+                              onChange={(e) => dedLicSet(product, e.target.value)}
+                              className="mt-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-xs disabled:opacity-50"
+                            >
+                              {items.map((i: any) => <option key={i.code} value={i.code}>{i.optLabel}</option>)}
+                            </select>
+                          </div>
+                          <span className={`text-sm font-black ${selCode ? "text-[#00b7ff]" : "text-slate-400"}`}>{shown?.monthlyPrice ? `+${fmtCurrency(shown.monthlyPrice, planCurrency)}/mo` : "Free"}</span>
+                        </div>
                       );
                     })}
                   </div>
