@@ -79,6 +79,29 @@ export default function MetalDedicatedClient({ initialPlans }: { initialPlans: a
     return () => { alive = false; };
   }, [currency]);
 
+  // Deep links like /metal/dedicated#advance: the range anchors only mount
+  // after plans render, so retry scrolling until the element exists — and keep
+  // honoring hash changes while staying on the page.
+  useEffect(() => {
+    const scrollToHash = () => {
+      const id = window.location.hash.replace("#", "");
+      if (!id) return;
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        return true;
+      }
+      return false;
+    };
+    let tries = 0;
+    const timer = setInterval(() => {
+      if (scrollToHash() || ++tries > 25) clearInterval(timer);
+    }, 160);
+    const onHash = () => setTimeout(scrollToHash, 60);
+    window.addEventListener("hashchange", onHash);
+    return () => { clearInterval(timer); window.removeEventListener("hashchange", onHash); };
+  }, [plans]);
+
   const groups = useMemo(() => {
     const map = new Map<string, { p: any; d: any }[]>();
     for (const p of plans) {

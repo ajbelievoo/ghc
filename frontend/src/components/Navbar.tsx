@@ -594,7 +594,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
               <p className={`mb-3 text-xs font-bold uppercase tracking-wide ${megaColTitle}`}>{grp.title}</p>
               <div className="space-y-3">
                 {grp.items.map((sub) => (
-                  <Link key={sub.label} href={sub.href} className="group block">
+                  <Link key={sub.label} href={sub.href} onClick={() => setOpenMega(null)} className="group block">
                     <p className={`text-sm font-semibold ${megaItemTitle}`}>{sub.label}</p>
                     {sub.desc && <p className={`text-xs ${megaItemDesc}`}>{sub.desc}</p>}
                   </Link>
@@ -718,6 +718,7 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                       <Link
                         key={s.label}
                         href={s.href}
+                        onClick={() => setOpenMega(null)}
                         onMouseEnter={() => setSubIdx(si)}
                         className={`flex items-center justify-between px-5 py-3.5 text-sm font-bold ${subIdx === si ? "text-[#00b7ff]" : dark ? "text-slate-700 hover:text-[#00b7ff]" : "text-[#0f172a] hover:text-[#00b7ff]"}`}
                       >
@@ -733,9 +734,9 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                         {sub.tagline && <p className={`px-6 pt-5 text-sm font-black ${dark ? "text-white" : "text-[#0f172a]"}`}>{sub.tagline}</p>}
                         {renderMegaColumns(sub.columns, sub.cols === 2 ? "grid-cols-2" : sub.cols && sub.cols >= 4 ? "grid-cols-4" : "grid-cols-3")}
                         <div className={`${megaFooterBg} flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3 rounded-br-lg`}>
-                          <Link href={sub.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>View all {sub.label} solutions</Link>
+                          <Link href={sub.href} onClick={() => setOpenMega(null)} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>View all {sub.label} solutions</Link>
                           {(sub.footerLinks || []).map((l) => (
-                            <Link key={l.label} href={l.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>{l.label}</Link>
+                            <Link key={l.label} href={l.href} onClick={() => setOpenMega(null)} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>{l.label}</Link>
                           ))}
                         </div>
                       </div>
@@ -746,9 +747,9 @@ export default function Navbar({ theme = "light" }: { theme?: "light" | "dark" }
                 <div className={`absolute left-1/2 top-full -translate-x-1/2 ${widthCls} max-w-[calc(100vw-1rem)] rounded-b-lg ${megaBg}`}>
                   {renderMegaColumns(item.columns || [], gridCls)}
                   <div className={`${megaFooterBg} flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-3 rounded-b-lg`}>
-                    <Link href={item.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>View all {item.label} solutions</Link>
+                    <Link href={item.href} onClick={() => setOpenMega(null)} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>View all {item.label} solutions</Link>
                     {(item.footerLinks || []).map((l) => (
-                      <Link key={l.label} href={l.href} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>{l.label}</Link>
+                      <Link key={l.label} href={l.href} onClick={() => setOpenMega(null)} className={`text-xs font-bold ${megaFooterLink} hover:underline`}>{l.label}</Link>
                     ))}
                   </div>
                 </div>
