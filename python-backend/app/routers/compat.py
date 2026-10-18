@@ -878,6 +878,76 @@ def _vps_dc_availability(plan_code: str) -> Dict[str, Any]:
     return result
 
 
+# OVH splits each dedicated model into a base planCode (EU/CA DCs) plus
+# region-suffixed siblings for APAC locations: -mum (Mumbai/ynm), -sgp
+# (Singapore), -syd (Sydney). Same product, different price + DC list.
+_DED_REGION_SUFFIX = _re.compile(r"-(mum|sgp|syd)$")
+
+
+def _ded_dc_availability(plan_code: str) -> Dict[str, Any]:
+    """Per-DC orderability for a dedicated planCode from OVH's PUBLIC no-auth
+    endpoint /dedicated/server/datacenter/availabilities (the same feed the
+    ovhcloud.com order page uses). Returns {dc: {status, availability,
+    deliveryHours}} merged over every memory/storage combo — the DC counts as
+    orderable when ANY config combo can be delivered there.
+    Availability values look like '1H-high', '24H', '72H', '480H'
+    (delivery delay in hours — still orderable), 'comingSoon', 'unavailable'."""
+    import time as _time
+    import json as _json
+    import urllib.request as _urlreq
+
+    key = "ded:" + str(plan_code)
+    now = _time.time()
+    cached = _DC_AVAIL_CACHE.get(key)
+    if cached:
+        ttl = 600 if cached[1] else 60
+        if now - cached[0] < ttl:
+            return cached[1]
+    best: Dict[str, Any] = {}
+    try:
+        import ovh as _ovhlib
+
+        settings = get_settings()
+        base = (_ovhlib.client.ENDPOINTS.get(settings.ovh_endpoint) or "https://ca.api.ovh.com/1.0").rstrip("/")
+        url = f"{base}/dedicated/server/datacenter/availabilities?planCode={plan_code}"
+        req = _urlreq.Request(url, headers={"Accept": "application/json"})
+        with _urlreq.urlopen(req, timeout=10) as resp:
+            data = _json.loads(resp.read().decode())
+        for row in data or []:
+            for d in row.get("datacenters") or []:
+                dc = d.get("datacenter")
+                av = str(d.get("availability") or "")
+                if not dc:
+                    continue
+                m = _re.match(r"^(\d+)H", av)
+                hrs = int(m.group(1)) if m else None
+                cur = best.get(dc)
+                # Keep the fastest availability across all fqn config rows.
+                if cur is None or (hrs is not None and (cur["deliveryHours"] is None or hrs < cur["deliveryHours"])):
+                    best[dc] = {
+                        "status": "available" if hrs is not None else "unavailable",
+                        "availability": av,
+                        "deliveryHours": hrs,
+                    }
+    except Exception as e:
+        logger.warning(f"Dedicated datacenter availability probe failed for {plan_code}: {e}")
+    _DC_AVAIL_CACHE[key] = (now, best)
+    return best
+
+
+def _ded_family_plans(db: Session, plan) -> List[Any]:
+    """Base plan + its APAC region variants (-mum/-sgp/-syd) — same product
+    sold per-DC, so the configure page can offer every location OVH shows."""
+    base = _DED_REGION_SUFFIX.sub("", str(plan.plan_code or ""))
+    return [
+        p for p in db.query(PlanCatalog).filter(
+            PlanCatalog.category == ServiceCategory.DEDICATED,
+            PlanCatalog.is_active == True,
+        ).all()
+        if p.plan_code and _DED_REGION_SUFFIX.sub("", p.plan_code) == base
+    ]
+
+
 _VPS_ADDON_CACHE: Dict[str, Any] = {}
 
 
@@ -1033,6 +1103,8 @@ def plan_configuration(
     # out-of-stock locations exactly like the OVH configurator does.
     availability: Dict[str, Any] = {}
     siblings: Dict[str, Any] = {}
+    dc_variants: Dict[str, Any] = {}
+    is_metal = str(brand or "").lower() == "metal"
     if plan.category == ServiceCategory.VPS:
         availability = _vps_dc_availability(plan.plan_code)
         sibling_codes = [
@@ -1042,6 +1114,48 @@ def plan_configuration(
         ]
         if sibling_codes:
             siblings = _vps_plans_availability(sibling_codes)
+    elif plan.category == ServiceCategory.DEDICATED:
+        # One OVH dedicated model = several planCodes: the base (EU/CA DCs)
+        # plus -mum/-sgp/-syd APAC variants with their own price + single DC.
+        # Merge them so the page can offer every location OVH's configurator
+        # shows, and remember which planCode each DC must be ordered as.
+        from app.services.catalog_service import compute_sell_price
+
+        variant_plans: Dict[str, Any] = {}
+        for fp in _ded_family_plans(db, plan):
+            fp_meta = fp.catalog_metadata or {}
+            fp_cfg = next(
+                (c for c in fp_meta.get("configurations") or [] if c.get("name") == "dedicated_datacenter"),
+                None,
+            )
+            fp_dcs = [str(v) for v in (fp_cfg.get("values") or [])] if fp_cfg else []
+            fp_avail = _ded_dc_availability(fp.plan_code)
+            if not fp_dcs:
+                fp_dcs = list(fp_avail.keys())
+            for dc in fp_dcs:
+                info = fp_avail.get(dc) or {}
+                availability[dc] = {
+                    "status": info.get("status") or "unavailable",
+                    "availability": info.get("availability") or "",
+                    "deliveryHours": info.get("deliveryHours"),
+                    "planCode": fp.plan_code,
+                }
+                variant_plans[dc] = fp
+        target = str(currency or "INR").upper()
+        for dc, fp in variant_plans.items():
+            prices: Dict[str, float] = {}
+            for dur in fp.durations or []:
+                months = max(1, int(dur.interval or 1))
+                sell, _disc = compute_sell_price(db, fp, dur, is_metal)
+                monthly = sell / months
+                src = str(dur.currency or fp.currency or "INR").upper()
+                if target != src:
+                    try:
+                        monthly = monthly * get_rate(db, src, target)
+                    except Exception:
+                        pass
+                prices[dur.duration_label] = round(monthly, 2)
+            dc_variants[dc] = {"planCode": fp.plan_code, "prices": prices}
     for cfg in catalog_configs:
         name = cfg.get("name")
         values = cfg.get("values", [])
@@ -1049,17 +1163,26 @@ def plan_configuration(
             entry = {"label": name, "values": values}
             if availability and "datacenter" in str(name).lower():
                 entry["availability"] = availability
-                # Linux is the default image family — pre-compute the DCs that
-                # can host a Linux VPS. Frontend re-filters for Windows images.
-                linux_vals = [v for v in values if (availability.get(str(v)) or {}).get("linuxStatus") == "available"]
-                win_vals = [v for v in values if (availability.get(str(v)) or {}).get("windowsStatus") == "available"]
-                entry["availableValues"] = linux_vals
-                entry["availableWindowsValues"] = win_vals
-                # Full DC universe: catalog ∪ rule-endpoint DCs (auto-includes
-                # new OVH locations) ∪ extras OVH shows but never orders (BOM).
-                entry["allDatacenters"] = sorted(
-                    {str(v) for v in values} | set(availability.keys()) | _VPS_EXTRA_DCS
-                )
+                if plan.category == ServiceCategory.VPS:
+                    # Linux is the default image family — pre-compute the DCs that
+                    # can host a Linux VPS. Frontend re-filters for Windows images.
+                    linux_vals = [v for v in values if (availability.get(str(v)) or {}).get("linuxStatus") == "available"]
+                    win_vals = [v for v in values if (availability.get(str(v)) or {}).get("windowsStatus") == "available"]
+                    entry["availableValues"] = linux_vals
+                    entry["availableWindowsValues"] = win_vals
+                    # Full DC universe: catalog ∪ rule-endpoint DCs (auto-includes
+                    # new OVH locations) ∪ extras OVH shows but never orders (BOM).
+                    entry["allDatacenters"] = sorted(
+                        {str(v) for v in values} | set(availability.keys()) | _VPS_EXTRA_DCS
+                    )
+                else:
+                    # Dedicated: stock isn't OS-split, and APAC DCs live on the
+                    # -mum/-sgp/-syd sibling planCodes — availability already
+                    # carries the merged per-DC view for the whole family.
+                    avail_dcs = [dc for dc, i in availability.items() if i.get("status") == "available"]
+                    entry["availableValues"] = avail_dcs
+                    entry["availableWindowsValues"] = avail_dcs
+                    entry["allDatacenters"] = sorted({str(v) for v in values} | set(availability.keys()))
             configs.append(entry)
     # Also expose common frontend keys
     from app.services.catalog_service import get_preorder_settings
@@ -1075,6 +1198,10 @@ def plan_configuration(
         # Paid add-ons (snapshot / premium backup / extra disk / licenses) with
         # real OVH catalog prices + this channel's margin applied.
         "options": _vps_options_for_plan(db, plan, str(brand or "").lower() == "metal", currency or "INR") if plan.category == ServiceCategory.VPS else [],
+        # Dedicated only: {dc: {planCode, prices:{durationLabel: monthlySell}}}
+        # — which sibling planCode to order for each location (OVH sells APAC
+        # dedicated DCs as separate planCodes with their own price).
+        "dcVariants": dc_variants,
         # Stock waitlist: {enabled, feeType, feeValue, refundDays} — the frontend
         # turns "out of stock" cards into payable pre-bookings when enabled.
         "preorder": get_preorder_settings(db),

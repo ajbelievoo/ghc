@@ -1751,7 +1751,7 @@ def preorder_tick(db: Session) -> Dict[str, int]:
     attempts roll back into the queue (max 3 attempts before admin review).
     """
     from app.services.catalog_service import get_preorder_settings
-    from app.routers.compat import _vps_dc_availability
+    from app.routers.compat import _vps_dc_availability, _ded_dc_availability
 
     stats = {"refunded": 0, "queued": 0, "kicked": 0, "requeued": 0}
     ps = get_preorder_settings(db)
@@ -1799,7 +1799,11 @@ def preorder_tick(db: Session) -> Dict[str, int]:
         by_plan.setdefault(order.plan_code or "", []).append(order)
 
     for plan_code, orders in by_plan.items():
-        avail = _vps_dc_availability(plan_code)
+        plan_row = db.query(PlanCatalog).filter(PlanCatalog.plan_code == plan_code).first()
+        is_ded = bool(plan_row and plan_row.category == ServiceCategory.DEDICATED)
+        # Dedicated stock comes from the public datacenter-availabilities feed
+        # (status=available for any delivery time); VPS uses the order-rule API.
+        avail = _ded_dc_availability(plan_code) if is_ded else _vps_dc_availability(plan_code)
         if not avail:
             continue
         kicked_dc = set()
@@ -1807,8 +1811,12 @@ def preorder_tick(db: Session) -> Dict[str, int]:
             dc = _preorder_dc(order)
             if not dc or dc in kicked_dc:
                 continue
-            fam = _preorder_os_family(order)
-            st = (avail.get(dc) or {}).get("linuxStatus" if fam == "linux" else "windowsStatus")
+            if is_ded:
+                info = avail.get(str(dc)) or avail.get(str(dc).lower())
+                st = "available" if (info or {}).get("status") == "available" else None
+            else:
+                fam = _preorder_os_family(order)
+                st = (avail.get(dc) or {}).get("linuxStatus" if fam == "linux" else "windowsStatus")
             if st != "available":
                 continue
             cfg = dict(order.configuration_payload or {})
