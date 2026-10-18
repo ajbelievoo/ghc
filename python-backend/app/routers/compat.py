@@ -1089,11 +1089,12 @@ def _ded_options_for_plan(db, plan, is_metal: bool, target_currency: str = "INR"
                 "currency": target_currency or p["currency"],
                 "stockKey": _ded_stock_code(plan.plan_code, code),
             })
-        if len(choices) > 1 or (choices and not choices[0]["included"]):
+        if choices:
             out.append({
                 "family": name,
                 "mandatory": bool(fam.get("mandatory")),
                 "exclusive": bool(fam.get("exclusive", True)),
+                "selectable": len(choices) > 1,
                 "includedCode": default,
                 "choices": sorted(choices, key=lambda c: c["monthlyPrice"]),
             })
