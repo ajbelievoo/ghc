@@ -237,7 +237,9 @@ function ConfigurePageContent() {
     const load = () => {
       setLoading(true);
       Promise.all([
-        brand === "metal" ? api.server.metalVpsPlans() : api.server.plans(category),
+        brand === "metal"
+          ? (category === "DEDICATED" ? api.server.metalDedicatedPlans() : api.server.metalVpsPlans())
+          : api.server.plans(category),
         api.server.gateways(),
         localStorage.getItem("token") ? api.auth.me().catch(() => null) : Promise.resolve(null),
       ])
@@ -520,7 +522,7 @@ function ConfigurePageContent() {
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-[#00b7ff]">{category} Configurator</p>
           <h1 className="mt-1 text-3xl font-black">
-            Configure your {brand === "metal" ? "Metal " : ""}Virtual Private Server
+            Configure your {brand === "metal" ? "Metal " : ""}{(plan?.category || category) === "DEDICATED" ? "Dedicated Server" : "Virtual Private Server"}
             {brand === "metal" && <span className="ml-2 rounded-full bg-[#ff3d00] px-2 py-0.5 align-middle text-[10px] font-black uppercase tracking-wide text-white">Metal</span>}
           </h1>
 
