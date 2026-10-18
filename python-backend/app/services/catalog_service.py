@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -500,7 +501,6 @@ def _ded_auto_names(plans: List[PlanCatalog], prefix: str) -> Dict[str, str]:
 
     Sequential numbering per family (+ variant letter for hci a/i and Flex A/I)
     across all generations, so two generations never collide on a name."""
-    from collections import defaultdict
     groups: Dict[Tuple[str, str], List[str]] = defaultdict(list)
     for p in plans:
         fam, letter, base = _ded_name_parts(p.plan_code)
@@ -536,19 +536,69 @@ def metal_ded_auto_name(db: Session, plan_code: str) -> str:
     return metal_ded_auto_names(plans).get(_ded_base_code(plan_code)) or f"Metal {plan_code}"
 
 
+_VPS_TIER_NAMES = {
+    "starter": "Lite", "value": "Go", "essential": "Plus",
+    "comfort": "Pro", "elite": "Ultra", "le": "Max", "discovery": "Air",
+}
+
+
+def _vps_auto_names(plans: List[PlanCatalog], prefix: str, product: str) -> Dict[str, str]:
+    """{plan_code: '<prefix> <product> N' / '<prefix> <product> <Tier> N'}.
+
+    Modern models keep their model number; legacy families get sequential
+    numbers per tier ordered by specs — no cryptic spec/years in names."""
+    modern: List[Tuple[int, bool, str]] = []
+    tiered: Dict[str, List[str]] = defaultdict(list)
+    for p in plans:
+        code = (p.plan_code or "").lower()
+        m = re.match(r"^vps-\d+-model(\d+)(\.lz)?$", code)
+        if m:
+            modern.append((int(m.group(1)), bool(m.group(2)), p.plan_code))
+            continue
+        m2 = re.match(r"^vps-([a-z]+)-(.+)$", code)
+        if m2:
+            tiered[_VPS_TIER_NAMES.get(m2.group(1), m2.group(1).title())].append(p.plan_code)
+            continue
+        tiered["One"].append(p.plan_code)
+    out: Dict[str, str] = {}
+    for num, lz, code in sorted(modern):
+        out[code.lower()] = f"{prefix} {product} {num}" + (" LZ" if lz else "")
+    for tier, codes in tiered.items():
+        def skey(c: str):
+            return [int(x) for x in re.findall(r"\d+", c or "")]
+        for i, code in enumerate(sorted(set(codes), key=skey), 1):
+            out[code.lower()] = f"{prefix} {product} {tier} {i}"
+    return out
+
+
+def metal_vps_auto_names(plans: List[PlanCatalog]) -> Dict[str, str]:
+    return _vps_auto_names(plans, "Metal", "Bolt")
+
+
+def essential_vps_auto_names(plans: List[PlanCatalog]) -> Dict[str, str]:
+    return _vps_auto_names(plans, "Essential", "Spark")
+
+
+def metal_vps_auto_name(db: Session, plan_code: str) -> str:
+    plans = get_active_plans(db, ServiceCategory.VPS)
+    return metal_vps_auto_names(plans).get((plan_code or "").lower()) or f"Metal Bolt {plan_code}"
+
+
+def essential_vps_auto_name(db: Session, plan_code: str) -> str:
+    plans = get_active_plans(db, ServiceCategory.VPS)
+    return essential_vps_auto_names(plans).get((plan_code or "").lower()) or f"Essential Spark {plan_code}"
+
+
 def default_metal_vps_name(plan_code: str) -> str:
-    """Original Metal VPS names — 'vps-2027-model3' -> 'Metal Bolt 3'."""
+    """String-only Metal VPS fallback (no DB) — used when the plan list isn't handy."""
     code = (plan_code or "").lower()
     m = re.match(r"vps-\d+-model(\d+)(\.lz)?", code)
     if m:
         return f"Metal Bolt {m.group(1)}" + (" LZ" if m.group(2) else "")
     m2 = re.match(r"vps-([a-z]+)-(.+)", code)
     if m2:
-        tier = {
-            "starter": "Lite", "value": "Go", "essential": "Plus",
-            "comfort": "Pro", "elite": "Ultra", "le": "Max", "discovery": "Air",
-        }.get(m2.group(1), m2.group(1).title())
-        return f"Metal Bolt {tier} {m2.group(2)}"
+        tier = _VPS_TIER_NAMES.get(m2.group(1), m2.group(1).title())
+        return f"Metal Bolt {tier}"
     return f"Metal Bolt {plan_code}"
 
 
@@ -612,11 +662,8 @@ def default_essential_vps_name(plan_code: str, invoice_name: str = "") -> str:
         return f"Essential Spark {m.group(1)}" + (" LZ" if m.group(2) else "")
     m2 = re.match(r"vps-([a-z]+)-(.+)", code)
     if m2:
-        tier = {
-            "starter": "Lite", "value": "Go", "essential": "Plus",
-            "comfort": "Pro", "elite": "Ultra", "le": "Max", "discovery": "Air",
-        }.get(m2.group(1), m2.group(1).title())
-        return f"Essential Spark {tier} {m2.group(2)}"
+        tier = _VPS_TIER_NAMES.get(m2.group(1), m2.group(1).title())
+        return f"Essential Spark {tier}"
     return f"Essential Spark {plan_code}"
 
 

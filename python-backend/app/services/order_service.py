@@ -243,13 +243,13 @@ def create_customer_order(
                 or metal_ded_auto_name(db, resolved_code)
             )
         else:
-            from app.services.catalog_service import default_metal_vps_name
+            from app.services.catalog_service import metal_vps_auto_name
             metal_names = get_metal_vps_names(db)
             metal_names_norm = {_normalize_public_plan_code(k): v for k, v in metal_names.items()}
             metal_name = (
                 metal_names.get(resolved_code)
                 or metal_names_norm.get(_normalize_public_plan_code(resolved_code))
-                or default_metal_vps_name(resolved_code)
+                or metal_vps_auto_name(db, resolved_code)
             )
         if metal_name:
             config = {**(config or {}), "display_name": metal_name}
@@ -271,13 +271,13 @@ def create_customer_order(
                     or essential_ded_auto_name(db, resolved_code)
                 )
             else:
-                from app.services.catalog_service import get_essential_vps_names, default_essential_vps_name
+                from app.services.catalog_service import get_essential_vps_names, essential_vps_auto_name
                 ess_names = get_essential_vps_names(db)
                 ess_norm = {_normalize_public_plan_code(k): v for k, v in ess_names.items()}
                 ess_name = (
                     ess_names.get(resolved_code)
                     or ess_norm.get(_normalize_public_plan_code(resolved_code))
-                    or default_essential_vps_name(resolved_code)
+                    or essential_vps_auto_name(db, resolved_code)
                 )
             if ess_name:
                 config = {**(config or {}), "display_name": ess_name}

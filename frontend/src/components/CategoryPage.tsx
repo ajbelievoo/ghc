@@ -239,14 +239,16 @@ function getStorageInfo(plan: Plan) {
 }
 
 function getBandwidthInfo(plan: Plan) {
-  if (plan.bandwidthMbps) return `${plan.bandwidthMbps} Mbps`;
+  const suffix = plan.category === "VPS" ? " unmetered" : "";
+  const fmt = (mbps: number) => mbps >= 1000 ? `${mbps % 1000 === 0 ? mbps / 1000 : (mbps / 1000).toFixed(1)} Gbps` : `${mbps} Mbps`;
+  if (plan.bandwidthMbps) return `${fmt(plan.bandwidthMbps)}${suffix}`;
   const meta = plan.metadata || {};
   const t = meta?.product?.blobs?.technical || meta?.blobs?.technical || {};
   const pub = t.network?.public?.bandwidth || t.bandwidth?.level;
-  if (pub) return `${pub} Mbps`;
+  if (pub) return `${fmt(Number(pub) || 0)}${suffix}`;
   const db = getSpecsFromDb(plan.invoiceName);
-  if (db) return db.bandwidth;
-  return "-";
+  if (db) return db.bandwidth + suffix;
+  return plan.category === "VPS" ? "Unmetered" : "-";
 }
 
 function getTechBlob(plan: Plan) {
