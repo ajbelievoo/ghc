@@ -398,6 +398,9 @@ function ConfigurePageContent() {
     return () => { alive = false; };
   }, [plan?.planCode, plan?.category, category, durationLabel]);
 
+  // Stable signature — displayedLocations is a fresh array every render, so a
+  // raw array dep would refire on EVERY render and undo manual region clicks.
+  const displayedSig = displayedLocations.join(",");
   useEffect(() => {
     // Only re-evaluate when the available set itself changes (config load / OS
     // switch) — NOT on manual region-tab clicks, otherwise a click on a region
@@ -410,7 +413,8 @@ function ConfigurePageContent() {
           : r
       );
     }
-  }, [displayedLocations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedSig]);
 
   useEffect(() => {
     if (providerImages.length > 0 && !image) {
