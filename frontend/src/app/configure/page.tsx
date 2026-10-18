@@ -626,18 +626,38 @@ function ConfigurePageContent() {
             ) : (
               <div className="rounded border border-slate-200 p-5 text-sm text-slate-600">No datacenter selection required.</div>
             )}
-            {dcConfigEntry && !displayedLocations.some((dc) => getDcRegion(dc) === region) && (
-              <div className="mt-4 rounded-lg border border-[#00b7ff]/30 bg-[#00b7ff]/10 p-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-lg">ℹ️</span>
-                  <div>
-                    <p className="text-sm font-bold text-[#0f172a]">VPS temporarily unavailable</p>
-                    <p className="mt-1 text-xs text-slate-600">This plan has no available datacenter in {region} for the selected OS. Alternative solution: pick a different plan or OS, still at the best price.</p>
-                    <Link href="/vps" className="mt-2 inline-flex items-center gap-1 rounded bg-[#00b7ff] px-4 py-2 text-xs font-bold text-[#0f172a] hover:bg-[#0f0c29] hover:text-white">See other plans →</Link>
+            {dcConfigEntry && !displayedLocations.some((dc) => getDcRegion(dc) === region) && (() => {
+              const siblings = providerConfig?.siblingsAvailability || {};
+              const stockKey = isWindowsImage ? "windows" : "linux";
+              const inStockPlans = (plans || []).filter((p: any) => p.planCode && p.planCode !== plan?.planCode && siblings[p.planCode]?.[stockKey]);
+              return (
+                <div className="mt-4 rounded-lg border border-[#00b7ff]/30 bg-[#00b7ff]/10 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">ℹ️</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-[#0f172a]">VPS temporarily unavailable</p>
+                      <p className="mt-1 text-xs text-slate-600">This plan has no available datacenter in {region} for the selected OS. Alternative solution: pick a plan that's in stock right now.</p>
+                      {inStockPlans.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Available right now:</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {inStockPlans.map((p: any) => {
+                              const q = new URLSearchParams({ category: category || "VPS", plan: p.planCode, durationLabel });
+                              if (brand) q.set("brand", brand);
+                              return (
+                                <Link key={p.planCode} href={`/configure?${q.toString()}`} className="rounded-full border border-[#00b7ff]/60 bg-white px-3 py-1.5 text-xs font-bold text-[#0f172a] transition hover:border-[#00b7ff] hover:bg-[#00b7ff]/10">
+                                  {p.displayName || p.invoiceName || p.planCode}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             <div className="mt-4 rounded-lg border border-[#00b7ff]/30 bg-[#00b7ff]/10 p-4">
               <div className="flex items-start gap-3">
                 <span className="text-lg">ℹ️</span>
