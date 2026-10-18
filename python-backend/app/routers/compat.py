@@ -749,9 +749,6 @@ def admin_save_essential_vps(body: dict, db: Session = Depends(get_db), admin: U
 def admin_list_preorders(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     """Waitlist queue (FIFO) + current settings."""
     from app.services.catalog_service import get_preorder_settings
-    preorder_settings = dict(get_preorder_settings(db))
-    if preorder_settings.get("feeType") == "flat":
-        preorder_settings["displayFeeValue"] = round(float(preorder_settings.get("feeValue") or 0) * get_rate(db, "INR", currency or "INR"), 2)
     from app.services.order_service import _preorder_dc, _preorder_os_family
     ps = get_preorder_settings(db)
     orders = db.query(CustomerOrder).filter(
@@ -1215,6 +1212,9 @@ def plan_configuration(
             configs.append(entry)
     # Also expose common frontend keys
     from app.services.catalog_service import get_preorder_settings
+    preorder_settings = dict(get_preorder_settings(db))
+    if preorder_settings.get("feeType") == "flat":
+        preorder_settings["displayFeeValue"] = round(float(preorder_settings.get("feeValue") or 0) * get_rate(db, "INR", currency or "INR"), 2)
     return {
         "planCode": planCode,
         "category": plan.category.value,

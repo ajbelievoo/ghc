@@ -626,6 +626,15 @@ def _duration_to_cycle(duration_label: str):
     return mapping.get(duration_label, (30, BillingCycle.MONTHLY))
 
 
+def _subscription_amount(order):
+    """Dedicated setup and booking fees are charged only on the first invoice."""
+    cfg = order.configuration_payload or {}
+    if order.category != ServiceCategory.DEDICATED:
+        return order.customer_amount
+    once = float(cfg.get("_setup_price") or 0) + float(cfg.get("_preorder_fee") or 0)
+    return round(max(0, float(order.customer_amount) - once * (1 + float(order.tax_rate or 0))), 2)
+
+
 def _ensure_invoice_and_subscription(db: Session, order: CustomerOrder):
     """Create a paid invoice and a PENDING subscription if checkout failed after payment."""
     if not order.invoice:
@@ -661,7 +670,7 @@ def _ensure_invoice_and_subscription(db: Session, order: CustomerOrder):
                 billing_cycle=billing_cycle,
                 auto_renew=True,
                 next_bill_date=datetime.utcnow() + timedelta(days=cycle_days),
-                price_amount=order.customer_amount,
+                price_amount=_subscription_amount(order),
                 currency=order.currency,
             )
             db.add(sub)
@@ -1214,7 +1223,7 @@ def _complete_provisioning(db: Session, ovh: OvhClient, order: CustomerOrder, pl
         billing_cycle=billing_cycle,
         auto_renew=True,
         next_bill_date=datetime.utcnow() + timedelta(days=cycle_days),
-        price_amount=order.customer_amount,
+        price_amount=_subscription_amount(order),
         currency=order.currency,
     )
     db.add(subscription)

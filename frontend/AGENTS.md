@@ -6,6 +6,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Deploy & theming notes
 
+- Dedicated configure locations use `dcVariants`: picking a regional sibling updates the submitted plan code, commitment pricing, installation fee, OS values and specs. The catalog stock feed matches default RAM/storage. `unknown` stock cannot be purchased/pre-booked; known out-of-stock locations use the existing waitlist.
+- Dedicated durations are native OVH terms; installation fees appear separately, paid only once. One dedicated server per order is currently supported. Use the included hardware configuration; upgrade option selectors are not implemented.
+
 - `next build` exports statically to `dist2/` (`output: 'export'`). The FastAPI backend (`believoo-ghc.service`, `FRONTEND_DIST=frontend/dist`) serves `dist/`, so after building run: `rsync -a --delete --exclude='.well-known' dist2/ dist/` (`.well-known/acme-challenge` in dist/ is root-owned — keep it, needed for cert renewals).
 - Theming is class-based: the inline script in `src/app/layout.tsx` adds `light`/`dark` to `<html>`. `globals.css` carries a long list of `html.dark .some-class { ... !important }` overrides that remap the light-first Tailwind classes — extend that list rather than refactoring components when a class looks wrong in dark mode.
 - Light-mode dashboard sidebar: `.ghc-dash-sidebar` hook class + `html.light` scoped overrides in globals.css. `.ghc-logo-chip` is always dark (`#0b1020`) so the logo mark keeps contrast in both themes.

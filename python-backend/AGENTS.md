@@ -1,5 +1,13 @@
 # GHC Python Backend Notes
 
+## Dedicated configuration / stock
+
+- `/server/plans/configuration` merges active `-mum`, `-sgp`, `-syd` siblings, returning `dcVariants` with exact plan codes, currency-converted period totals, monthly prices, installation fees, default specs and OS values.
+- `_ded_dc_availability(plan)` uses the public `/dedicated/server/datacenter/availabilities` feed, matching the catalog's **default RAM and storage**, never the fastest unrelated configuration. Unknown/error stock is not payable or pre-bookable. Dedicated `ynm` is Mumbai; keep it distinct from VPS aliases.
+- Dedicated orders validate native catalog durations, image, location and stock before payment. Provisioning uses the native pricing mode (`upfront12`/`upfront24` where supplied) and catalog default mandatory addons. Installation is charged once, excluded from the subscription's recurring amount.
+- Dedicated pre-orders reuse the fee/refund queue and probe the same exact hardware on restock. Never retry a failed preorder with an existing upstream order ID. Tests in `tests/test_dedicated_configuration.py` mock provisioning and payment writes.
+- The configurator currently offers the included hardware configuration and one dedicated server per order; arbitrary hardware upgrades and multiple server quantities are not implemented.
+
 ## Transactional Email
 
 - SMTP configured in `.env` and `admin_configs` table: host `mail.believoo.com`, port `587`, user `noreply@believoo.com`, from `GHC - Go Host Cloud <noreply@believoo.com>`.
