@@ -230,6 +230,21 @@ def create_customer_order(
             sell = float(apply_margin(Decimal(str(p["monthlyPrice"])), opt_margin))
             options_total += sell * months
         options_total = round(options_total * rate, 2)
+
+    # License add-ons must pair with a matching licensed OS image — OVH bills
+    # them regardless, so never attach an orphan license; and a licensed image
+    # without its license addon would provision a panel that never activates.
+    _os_img = str((config or {}).get("os") or "").lower()
+    if any(c.startswith("option-cpanel") for c in sel_options) and "cpanel" not in _os_img:
+        raise ValueError("cPanel license requires a cPanel OS image")
+    if any(c.startswith("option-plesk") for c in sel_options) and "plesk" not in _os_img:
+        raise ValueError("Plesk license requires a Plesk OS image")
+    if plan.category == ServiceCategory.VPS and (
+        ("cpanel" in _os_img and not any(c.startswith("option-cpanel") for c in sel_options))
+        or ("plesk" in _os_img and not any(c.startswith("option-plesk") for c in sel_options))
+    ):
+        raise ValueError("A cPanel/Plesk image requires its license add-on in _options")
+    if sel_options:
         config = {**(config or {}), "_options": sel_options, "_options_price": options_total}
 
     # Pre-order (stock waitlist): customer pays now for an out-of-stock DC;

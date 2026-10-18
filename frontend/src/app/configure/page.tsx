@@ -435,7 +435,7 @@ function ConfigurePageContent() {
     if (!plan?.planCode || !durationLabel) return;
     let alive = true;
     setConfigLoading(true);
-    api.server.planConfiguration({ planCode: plan.planCode, category: plan.category || category, durationLabel })
+    api.server.planConfiguration({ planCode: plan.planCode, category: plan.category || category, durationLabel, brand })
       .then((data: any) => {
         if (!alive) return;
         setOvhConfig(data);

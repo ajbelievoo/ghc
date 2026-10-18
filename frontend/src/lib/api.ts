@@ -250,8 +250,8 @@ export const api = {
       request(`/metal/vps/plans?currency=${selectedCurrency()}`).then(sanitizePlans),
     metalDedicatedPlans: () =>
       request(`/metal/dedicated/plans?currency=${selectedCurrency()}`).then(sanitizePlans),
-    planConfiguration: (body: { planCode: string; category?: string; durationLabel?: string }) =>
-      request(`/server/plans/configuration?planCode=${encodeURIComponent(body.planCode)}${body.category ? `&category=${encodeURIComponent(body.category)}` : ""}${body.durationLabel ? `&durationLabel=${encodeURIComponent(body.durationLabel)}` : ""}`),
+    planConfiguration: (body: { planCode: string; category?: string; durationLabel?: string; brand?: string; currency?: string }) =>
+      request(`/server/plans/configuration?planCode=${encodeURIComponent(body.planCode)}${body.category ? `&category=${encodeURIComponent(body.category)}` : ""}${body.durationLabel ? `&durationLabel=${encodeURIComponent(body.durationLabel)}` : ""}${body.brand ? `&brand=${encodeURIComponent(body.brand)}` : ""}&currency=${encodeURIComponent(body.currency || selectedCurrency())}`),
     gateways: () => request("/server/gateways"),
     margins: () => request("/server/margins"),
     domains: () => request(`/server/domains?currency=${selectedCurrency()}`),

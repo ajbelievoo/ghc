@@ -891,6 +891,7 @@ def plan_configuration(
     category: Optional[str] = None,
     durationLabel: Optional[str] = None,
     brand: Optional[str] = None,
+    currency: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     plan = _resolve_plan_code(db, planCode)
@@ -945,7 +946,7 @@ def plan_configuration(
         "siblingsAvailability": siblings,
         # Paid add-ons (snapshot / premium backup / extra disk / licenses) with
         # real OVH catalog prices + this channel's margin applied.
-        "options": _vps_options_for_plan(db, plan, str(brand or "").lower() == "metal") if plan.category == ServiceCategory.VPS else [],
+        "options": _vps_options_for_plan(db, plan, str(brand or "").lower() == "metal", currency or "INR") if plan.category == ServiceCategory.VPS else [],
         # Stock waitlist: {enabled, feeType, feeValue, refundDays} — the frontend
         # turns "out of stock" cards into payable pre-bookings when enabled.
         "preorder": get_preorder_settings(db),

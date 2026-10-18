@@ -121,3 +121,10 @@ every site offline permanently.
 - DC matching is OS-family aware: `_preorder_os_family()` → `linuxStatus`/`windowsStatus`. Validation: `_validate_configuration` accepts preorder DCs in the wider DC universe (rule-endpoint ∪ extras like BOM), not just catalog values.
 - Admin APIs: `GET /api/admin/preorders` (settings + queue), `POST /api/admin/preorder-settings`, `POST /api/admin/preorders/{id}/refund` (manual early refund). Public settings exposed at `plan_configuration.preorder`.
 - Caveat: OVH does NOT reserve stock — fulfillment rechecks live stock and can still lose the race; attempts are recorded in `configuration_payload._preorder_attempts`.
+
+## Paid VPS add-ons / real option pricing (added 2026-10-18)
+
+- `GET /api/server/plans/configuration` now returns `options`: per-family (`snapshot`, `automatedBackup`, `additionalDisk`, `cpanel`, `plesk`) choices with real OVH catalog prices + channel margin, converted to `?currency=`. `_vps_addon_prices()` reads the public catalog `/order/catalog/public/vps` (microcents ÷1e8, 30-min cache); `_vps_options_for_plan` applies Metal (`metal_vps_margin`) vs category margin via `brand=metal`.
+- Frontend sends `configuration._options = [addonPlanCode...]`. `create_customer_order` validates codes against the plan's `addonFamilies` (excluding `os`/`storage`), prices them `sell × months × currency-rate`, adds to `taxable`, stores `_options`/`_options_price` in the payload. Bogus codes → 400.
+- License safety: `option-cpanel-*`/`option-plesk-*` require a matching OS image string containing `cpanel`/`plesk`, and a licensed VPS image without its license code is rejected — OVH bills licenses regardless of activation.
+- `_add_mandatory_options` honors `_options`: a selected addon replaces its family's mandatory default (premium backup replaces standard), non-mandatory families add only what the customer picked.

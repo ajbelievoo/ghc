@@ -69,3 +69,9 @@ get explicit user approval first. See python-backend/AGENTS.md for details.
 - Backend charges plan + fee now, queues the order as WAITING_STOCK, and auto-provisions FIFO when OVH restocks that DC for the selected OS family; auto-refunds to wallet after `refundDays`.
 - Dashboard order badge: WAITING_STOCK renders as violet "PRE-BOOKED".
 - Admin: `/admin` → Margins tab → amber "PRE-BOOKING" block — enable toggle, fee type (percent/flat ₹), fee value, refund days, plus the live FIFO queue with manual refund buttons (`/api/admin/preorders`, `/api/admin/preorder-settings`, `/api/admin/preorders/{id}/refund`).
+
+## Real add-on pricing (added 2026-10-18)
+
+- "Choose your options" on `/configure` is driven by `providerConfig.options` (`/api/server/plans/configuration?...&brand&currency`) — real OVH addon prices with channel margin, per plan (backup/snapshot codes differ per VPS model). Never hardcode ₹/$ values there.
+- Selected choices go in `configuration._options` as exact OVH addon plan codes; backend re-prices and validates server-side (never trust client amounts).
+- cPanel/Plesk app images auto-attach their license add-on (dropdown in the image card; "License billed below" in the sidebar) — the image cannot be ordered without it.
