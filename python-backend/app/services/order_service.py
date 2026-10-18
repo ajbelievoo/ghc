@@ -253,6 +253,32 @@ def create_customer_order(
             )
         if metal_name:
             config = {**(config or {}), "display_name": metal_name}
+    elif plan.category in (ServiceCategory.VPS, ServiceCategory.DEDICATED) and "display_name" not in (config or {}):
+        # Essential channel — same upstream plans under the Essential public
+        # identity; never surface the raw upstream invoice name to customers.
+        if plan.category == ServiceCategory.DEDICATED:
+            from app.services.catalog_service import get_essential_ded_names, essential_ded_auto_name, _ded_base_code
+            ess_names = get_essential_ded_names(db)
+            ess_norm = {_normalize_public_plan_code(k): v for k, v in ess_names.items()}
+            base_pub = _ded_base_code(resolved_code)
+            ess_name = (
+                ess_names.get(resolved_code)
+                or ess_names.get(base_pub)
+                or ess_norm.get(_normalize_public_plan_code(resolved_code))
+                or ess_norm.get(_normalize_public_plan_code(base_pub))
+                or essential_ded_auto_name(db, resolved_code)
+            )
+        else:
+            from app.services.catalog_service import get_essential_vps_names, default_essential_vps_name
+            ess_names = get_essential_vps_names(db)
+            ess_norm = {_normalize_public_plan_code(k): v for k, v in ess_names.items()}
+            ess_name = (
+                ess_names.get(resolved_code)
+                or ess_norm.get(_normalize_public_plan_code(resolved_code))
+                or default_essential_vps_name(resolved_code)
+            )
+        if ess_name:
+            config = {**(config or {}), "display_name": ess_name}
 
     # One pricing path for listings AND orders: upstream raw -> channel/plan
     # margin -> commitment-duration discount. Guarantees the charged amount

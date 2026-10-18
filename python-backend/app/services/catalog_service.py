@@ -495,8 +495,8 @@ def _ded_name_parts(plan_code: str) -> Tuple[str, str, str]:
     return METAL_DED_FAMILIES.get(m.group(1), m.group(1).title()), (m.group(2) or ""), base
 
 
-def metal_ded_auto_names(plans: List[PlanCatalog]) -> Dict[str, str]:
-    """{lowercase base plan_code: 'Metal Core 1' / 'Metal Grid A3' …}.
+def _ded_auto_names(plans: List[PlanCatalog], prefix: str) -> Dict[str, str]:
+    """{lowercase base plan_code: '<prefix> Core 1' / '<prefix> Grid A3' …}.
 
     Sequential numbering per family (+ variant letter for hci a/i and Flex A/I)
     across all generations, so two generations never collide on a name."""
@@ -509,13 +509,26 @@ def metal_ded_auto_names(plans: List[PlanCatalog]) -> Dict[str, str]:
     for (fam, letter), bases in groups.items():
         for i, code in enumerate(sorted(set(bases)), 1):
             if letter:
-                name = f"Metal {fam} {letter.upper()}{i}"
+                name = f"{prefix} {fam} {letter.upper()}{i}"
             elif fam.endswith((" A", " I")):
-                name = f"Metal {fam}{i}"
+                name = f"{prefix} {fam}{i}"
             else:
-                name = f"Metal {fam} {i}"
+                name = f"{prefix} {fam} {i}"
             out[code] = name
     return out
+
+
+def metal_ded_auto_names(plans: List[PlanCatalog]) -> Dict[str, str]:
+    return _ded_auto_names(plans, "Metal")
+
+
+def essential_ded_auto_names(plans: List[PlanCatalog]) -> Dict[str, str]:
+    return _ded_auto_names(plans, "Essential")
+
+
+def essential_ded_auto_name(db: Session, plan_code: str) -> str:
+    plans = get_active_plans(db, ServiceCategory.DEDICATED)
+    return essential_ded_auto_names(plans).get(_ded_base_code(plan_code)) or f"Essential {plan_code}"
 
 
 def metal_ded_auto_name(db: Session, plan_code: str) -> str:
@@ -587,17 +600,24 @@ def set_essential_ded_names(db: Session, names: Dict[str, str]) -> None:
     _set_names_map(db, ESS_DED_NAMES_KEY, names)
 
 
-def default_essential_vps_name(plan_code: str, invoice_name: str) -> str:
-    """Public name on the standard VPS channel — 'Essential' brand, never 'Metal'.
+def default_essential_vps_name(plan_code: str, invoice_name: str = "") -> str:
+    """Public name on the standard VPS channel — original 'Essential Spark'
+    naming, never upstream 'VPS-N' labels.
 
-    vps-2027-model3 → 'Essential VPS-3'; other families keep a cleaned
-    invoice-style name (e.g. 'VPS Elite 8-16-640')."""
+    vps-2027-model3 → 'Essential Spark 3'; older families → tiered
+    'Essential Spark <Tier> <spec>' (e.g. 'Essential Spark Pro 4-8-80')."""
     code = (plan_code or "").lower()
     m = re.match(r"vps-\d+-model(\d+)(\.lz)?", code)
     if m:
-        return f"Essential VPS-{m.group(1)}" + (" LZ" if m.group(2) else "")
-    base = re.sub(r"\s+", " ", (invoice_name or "").split("|")[0].strip())
-    return base or f"Essential {plan_code}"
+        return f"Essential Spark {m.group(1)}" + (" LZ" if m.group(2) else "")
+    m2 = re.match(r"vps-([a-z]+)-(.+)", code)
+    if m2:
+        tier = {
+            "starter": "Lite", "value": "Go", "essential": "Plus",
+            "comfort": "Pro", "elite": "Ultra", "le": "Max", "discovery": "Air",
+        }.get(m2.group(1), m2.group(1).title())
+        return f"Essential Spark {tier} {m2.group(2)}"
+    return f"Essential Spark {plan_code}"
 
 
 COMMITMENT_MONTHS = (6, 12)

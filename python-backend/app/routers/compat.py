@@ -347,15 +347,18 @@ def server_plans(category: Optional[str] = None, family: Optional[str] = None, c
     if cat == ServiceCategory.DEDICATED:
         # Standard storefront = "Essential" brand (never Metal). Admin can
         # override each plan's public name via /admin/essential-dedicated.
-        from app.services.catalog_service import get_essential_ded_names, default_dedicated_display_name
+        from app.services.catalog_service import get_essential_ded_names, essential_ded_auto_names, _ded_base_code
         ess_names = get_essential_ded_names(db)
         ess_norm = {_normalize_public_plan_code(k): v for k, v in ess_names.items()}
+        ess_auto = essential_ded_auto_names(plans)
         for p, d in zip(plans, out):
             d["spec"] = _ded_spec_display(p)
             d["displayName"] = (
                 ess_names.get(p.plan_code)
                 or ess_norm.get(_normalize_public_plan_code(p.plan_code))
-                or default_dedicated_display_name(p.invoice_name or "", p.plan_code, prefix="Essential")
+                or ess_names.get(_ded_base_code(p.plan_code))
+                or ess_auto.get(_ded_base_code(p.plan_code))
+                or f"Essential {p.plan_code}"
             )
         d_brand = "essential"
         for d in out:
@@ -808,10 +811,11 @@ def admin_refund_preorder(order_id: str, db: Session = Depends(get_db), admin: U
 
 @router.get("/admin/essential-dedicated")
 def admin_get_essential_dedicated(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    from app.services.catalog_service import get_essential_ded_names, default_dedicated_display_name, get_margin_for_category
+    from app.services.catalog_service import get_essential_ded_names, essential_ded_auto_names, get_margin_for_category, _ded_base_code
     names = get_essential_ded_names(db)
     names_norm = {_normalize_public_plan_code(k): v for k, v in names.items()}
     plans = get_active_plans(db, ServiceCategory.DEDICATED)
+    ess_auto = essential_ded_auto_names(plans)
     return {
         "marginPercent": float(get_margin_for_category(db, ServiceCategory.DEDICATED)),
         "names": names,
@@ -819,8 +823,8 @@ def admin_get_essential_dedicated(db: Session = Depends(get_db), admin: User = D
             {
                 "planCode": p.plan_code,
                 "invoiceName": p.invoice_name,
-                "essentialName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or "",
-                "autoName": default_dedicated_display_name(p.invoice_name or "", p.plan_code, prefix="Essential"),
+                "essentialName": names.get(p.plan_code) or names_norm.get(_normalize_public_plan_code(p.plan_code)) or names.get(_ded_base_code(p.plan_code)) or "",
+                "autoName": ess_auto.get(_ded_base_code(p.plan_code)) or f"Essential {p.plan_code}",
             }
             for p in plans
         ],
