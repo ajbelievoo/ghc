@@ -373,13 +373,18 @@ function ConfigurePageContent() {
   }, [plan?.planCode, plan?.category, category, durationLabel]);
 
   useEffect(() => {
+    // Only re-evaluate when the available set itself changes (config load / OS
+    // switch) — NOT on manual region-tab clicks, otherwise a click on a region
+    // with zero available DCs instantly snaps back to the first stocked region.
     if (displayedLocations.length > 0) {
-      if (!datacenter) setDatacenter(displayedLocations[0]);
-      if (!region || !displayedLocations.some((dc) => getDcRegion(dc) === region)) {
-        setRegion(getDcRegion(displayedLocations[0]));
-      }
+      setDatacenter((dc) => dc || displayedLocations[0]);
+      setRegion((r) =>
+        !r || !displayedLocations.some((dc) => getDcRegion(dc) === r)
+          ? getDcRegion(displayedLocations[0])
+          : r
+      );
     }
-  }, [displayedLocations, datacenter, region]);
+  }, [displayedLocations]);
 
   useEffect(() => {
     if (providerImages.length > 0 && !image) {
