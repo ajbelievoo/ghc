@@ -1018,7 +1018,7 @@ function ConfigurePageContent() {
                                       onChange={(e) => { setDedBwTraffic({ ...dedBwTraffic, [g.mbps]: e.target.value }); setDedHw({ ...dedHw, [f.family]: e.target.value }); }}
                                       className="mt-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-xs"
                                     >
-                                      {g.items.map((i: any) => <option key={i.code} value={i.code}>{i.traffic}</option>)}
+                                      {g.items.map((i: any) => <option key={i.code} value={i.code}>{i.traffic}  ·  {i.included ? "Included" : `+${fmtCurrency(i.monthlyPrice, planCurrency)}/mo`}</option>)}
                                     </select>
                                   </>
                                 ) : (
@@ -1072,7 +1072,7 @@ function ConfigurePageContent() {
                               onChange={(e) => dedLicSet(product, e.target.value)}
                               className="mt-1.5 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-xs disabled:opacity-50"
                             >
-                              {items.map((i: any) => <option key={i.code} value={i.code}>{i.optLabel}</option>)}
+                              {items.map((i: any) => <option key={i.code} value={i.code}>{i.optLabel}{i.monthlyPrice ? `  ·  +${fmtCurrency(i.monthlyPrice, planCurrency)}/mo` : ""}</option>)}
                             </select>
                           </div>
                           <span className={`text-sm font-black ${selCode ? "text-[#00b7ff]" : "text-slate-400"}`}>{shown?.monthlyPrice ? `+${fmtCurrency(shown.monthlyPrice, planCurrency)}/mo` : "Free"}</span>
