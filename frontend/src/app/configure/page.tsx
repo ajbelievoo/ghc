@@ -290,8 +290,15 @@ function ConfigurePageContent() {
   const savePct = (d: any) => (monthlyBase && d.monthlyPrice && d.monthlyPrice < monthlyBase)
     ? Math.round((1 - d.monthlyPrice / monthlyBase) * 100) : 0;
   const commitmentDiscount = savePct(selectedDuration) > 0 ? `Save ${savePct(selectedDuration)}% per month` : "";
-  // Show all provider locations; fallback to raw code if no friendly meta exists
-  const displayedLocations = providerDatacenters;
+  // Show all provider locations; fallback to raw code if no friendly meta exists.
+  // Collapse duplicate codes that resolve to the same city (BHS & YNM are both Beauharnois).
+  const seenDcCities = new Set<string>();
+  const displayedLocations = providerDatacenters.filter((dc: string) => {
+    const city = (getDcName(dc).split(" - ").pop() || dc).toLowerCase();
+    if (seenDcCities.has(city)) return false;
+    seenDcCities.add(city);
+    return true;
+  });
 
   useEffect(() => {
     if (durations[0] && !durations.find((d: any) => d.durationLabel === durationLabel)) {
