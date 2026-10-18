@@ -267,6 +267,7 @@ function ConfigurePageContent() {
     .filter((d: any) => ["1_month", "3_month", "6_month", "12_month"].includes(d.durationLabel))
     .map((d: any) => ({ durationLabel: d.durationLabel, finalPrice: d.finalPrice, monthlyPrice: d.monthlyPrice, originalPrice: d.rawPrice || d.finalPrice }));
   const selectedDuration = durations.find((d: any) => d.durationLabel === durationLabel) || durations[0] || { durationLabel: "1_month", finalPrice: 0, originalPrice: 0 };
+  const isDed = (plan?.category || category) === "DEDICATED";
   // Real paid add-ons from the OVH catalog (plan_configuration.options) —
   // monthly sell prices already carry this channel's margin.
   const cfgOptions: any[] = providerConfig?.options || [];
@@ -563,7 +564,10 @@ function ConfigurePageContent() {
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-9 max-w-7xl items-center gap-2 px-6 text-xs text-slate-500">
           <Link href="/" className="hover:text-[#00b7ff]">🏠</Link><span className="text-slate-300">›</span>
-          <Link href={brand === "metal" ? "/metal/vps" : "/vps"} className="hover:text-[#00b7ff]">{brand === "metal" ? "Metal VPS" : "VPS"}</Link><span className="text-slate-300">›</span>
+          <Link
+            href={brand === "metal" ? (isDed ? "/metal/dedicated" : "/metal/vps") : (isDed ? "/dedicated-servers" : "/vps")}
+            className="hover:text-[#00b7ff]"
+          >{brand === "metal" ? (isDed ? "Metal Dedicated" : "Metal VPS") : (isDed ? "Dedicated servers" : "VPS")}</Link><span className="text-slate-300">›</span>
           <span className="text-[#0f172a]">Configurator</span>
         </div>
       </div>
@@ -650,9 +654,9 @@ function ConfigurePageContent() {
           </section>
 
           <section className="mt-8">
-            <h2 className="mb-3 text-lg font-black">Select the number of VPS</h2>
+            <h2 className="mb-3 text-lg font-black">Select the number of {isDed ? "servers" : "VPS"}</h2>
             <div className="flex max-w-xl items-center justify-between rounded-lg border border-slate-200 px-4 py-3">
-              <span className="text-sm font-bold text-[#0f172a]">Number of VPS</span>
+              <span className="text-sm font-bold text-[#0f172a]">Number of {isDed ? "servers" : "VPS"}</span>
               <div className="flex items-center rounded border border-slate-200">
                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-3 py-1 text-lg text-[#0f172a] hover:bg-[#f8faff]">−</button>
                 <span className="w-10 text-center text-sm font-black">{quantity}</span>
@@ -663,7 +667,7 @@ function ConfigurePageContent() {
 
           <section className="mt-8">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-lg font-black">Select the location of your VPS</h2>
+              <h2 className="text-lg font-black">Select the location of your {isDed ? "server" : "VPS"}</h2>
               <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-500">
                 Show unavailable locations
                 <button
