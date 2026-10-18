@@ -563,7 +563,7 @@ ESS_DED_NAMES_KEY = "essential_ded_names"
 
 def _get_names_map(db: Session, key: str) -> Dict[str, str]:
     row = db.query(AdminConfig).filter(AdminConfig.key == key).first()
-    if row and row.value:
+    if row is not None and getattr(row, "value", None):
         try:
             data = json.loads(row.value)
             if isinstance(data, dict):
