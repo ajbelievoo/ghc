@@ -51,13 +51,11 @@ function pinIcon(r: MapRegion, mine: boolean, active: boolean) {
   });
 }
 
-function FlyTo({ target }: { target: [number, number] | null }) {
+function FlyTo({ target }: { target: { lat: number; lng: number; z?: number } | null }) {
   const map = useMap();
-  const flown = useRef(false);
   useEffect(() => {
-    if (target && !flown.current) {
-      flown.current = true;
-      const t = setTimeout(() => map.flyTo([target[1], target[0]], 4, { duration: 2.2 }), 700);
+    if (target) {
+      const t = setTimeout(() => map.flyTo([target.lat, target.lng], target.z ?? 4, { duration: 2.2 }), 400);
       return () => clearTimeout(t);
     }
   }, [target, map]);
@@ -69,11 +67,13 @@ export default function DCMap({
   myRegionName,
   selectedName,
   onSelect,
+  flyTo,
 }: {
   regions: MapRegion[];
   myRegionName: string | null;
   selectedName: string | null;
   onSelect: (r: MapRegion) => void;
+  flyTo?: { lat: number; lng: number; z?: number } | null;
 }) {
   const [satellite, setSatellite] = useState(true);
   const myRegion = regions.find((r) => r.regionName === myRegionName);
@@ -119,7 +119,7 @@ export default function DCMap({
           />
         ))}
 
-        <FlyTo target={myRegion ? [myRegion.lng, myRegion.lat] : null} />
+        <FlyTo target={flyTo ?? (myRegion ? { lat: myRegion.lat, lng: myRegion.lng, z: 4 } : null)} />
       </MapContainer>
 
       {/* layer toggle */}

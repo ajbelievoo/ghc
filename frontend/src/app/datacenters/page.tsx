@@ -11,7 +11,7 @@ const DCMap = dynamic(() => import("@/components/DCMap"), {
   ssr: false,
   loading: () => <div className="flex h-[480px] items-center justify-center text-sm font-bold text-cyan-300"><span className="live-dot mr-2" /> Loading satellite map…</div>,
 });
-import { Globe, MapPin, Search, ChevronDown, Server, ShieldCheck, Zap, Radio, Plus, Minus, Maximize2, Cpu } from "lucide-react";
+import { Globe, MapPin, Search, ChevronDown, Server, ShieldCheck, Zap, Radio, Cpu } from "lucide-react";
 
 type Zone = { name: string; dcs?: string[] };
 type Region = {
@@ -134,7 +134,6 @@ export default function DatacentersPage() {
   const [showDc, setShowDc] = useState(true);
   const [showLz, setShowLz] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [activePin, setActivePin] = useState<string | null>(null);
   const [sel, setSel] = useState<Region | null>(null);
   const [finder, setFinder] = useState("");
   const [myGeo, setMyGeo] = useState<GeoInfo | null>(null);
@@ -147,7 +146,7 @@ export default function DatacentersPage() {
   const visible = useMemo(() => REGIONS.filter(matches), [showDc, showLz, query]);
   const tableRows = visible.filter((r) => r.continent === continent);
 
-  const zoomTo = (z: number) => setPos((p) => ({ ...p, z: Math.min(8, Math.max(0.9, z)) }));
+  const [flyTo, setFlyTo] = useState<{ lat: number; lng: number; z?: number } | null>(null);
 
   const nearest = useMemo(() => {
     const city = FINDER_CITIES.find((c) => c.name === finder);
@@ -233,113 +232,16 @@ export default function DatacentersPage() {
       <section className="mx-auto max-w-7xl px-6 py-12">
         <div className="map-frame relative overflow-hidden rounded-2xl border border-cyan-400/20 shadow-[0_0_60px_-15px_rgba(0,240,255,.25)]">
           <div className="scanline" />
-          <ComposableMap projection="geoEqualEarth" projectionConfig={{ scale: 175, center: [15, 15] }} height={480} style={{ width: "100%" }}>
-            <defs>
-              <radialGradient id="oceanGrad" cx="50%" cy="40%" r="80%">
-                <stop offset="0%" stopColor="#0d0d28" />
-                <stop offset="100%" stopColor="#08081a" />
-              </radialGradient>
-            </defs>
-            <rect x={-200} y={-200} width={1400} height={900} fill="url(#oceanGrad)" />
-            <ZoomableGroup
-              center={pos.c}
-              zoom={pos.z}
-              minZoom={0.9}
-              maxZoom={8}
-              onMoveEnd={(p) => setPos({ c: (p.coordinates || pos.c) as [number, number], z: p.zoom || pos.z })}
-            >
-              <Graticule stroke="#1e1e46" strokeWidth={0.4} strokeOpacity={0.6} step={[15, 15]} />
-              <Geographies geography={topo as never}>
-                {({ geographies }) =>
-                  geographies.map((geo, gi) => (
-                    <Geography
-                      key={geo.rsmKey}
-                      geography={geo}
-                      fill="#1a1a3e"
-                      stroke="#31316b"
-                      strokeWidth={0.5}
-                      className="country-fade"
-                      style={{ animationDelay: `${(gi % 40) * 0.02}s`, default: { outline: "none" }, hover: { outline: "none", fill: "#222255" }, pressed: { outline: "none" } } as never}
-                    />
-                  ))
-                }
-              </Geographies>
-
-              {/* backbone arcs — base line + traveling packets */}
-              {ARCS.map((a, i) => (
-                <g key={i}>
-                  <Line from={a.from} to={a.to} stroke="#00b7ff" strokeWidth={1} strokeOpacity={0.28} strokeLinecap="round" />
-                  <Line
-                    from={a.from}
-                    to={a.to}
-                    stroke="#4ff2ff"
-                    strokeWidth={1.6}
-                    strokeLinecap="round"
-                    strokeDasharray="0.1 26"
-                    className="packet"
-                    style={{ animationDelay: `${i * 0.42}s`, filter: "drop-shadow(0 0 3px #00f0ff)" }}
-                  />
-                </g>
-              ))}
-
-              {visible.map((r, i) => {
-                const isLz = r.type === "LOCAL-ZONE";
-                const isMine = myRegion?.r.regionName === r.regionName;
-                const c = isMine ? "#fbbf24" : isLz ? "#34d399" : "#00f0ff";
-                const big = !isLz && (r.dcCount || 0) > 3;
-                return (
-                  <Marker key={r.regionName} coordinates={[r.lng, r.lat]}>
-                    <g
-                      className="pin-enter"
-                      style={{ animationDelay: `${0.4 + i * 0.03}s` }}
-                      onMouseEnter={() => setActivePin(r.regionName)}
-                      onMouseLeave={() => setActivePin(null)}
-                      onClick={() => setSel(r)}
-                    >
-                      <g transform={`scale(${pinScale})`}>
-                        {isMine && (
-                          <>
-                            <circle r={10} fill="none" stroke="#fbbf24" strokeWidth={1.6} className="sel-ring" />
-                            <circle r={5} fill="none" stroke="#fbbf24" strokeWidth={1} className="ripple" />
-                            <text y={-26} textAnchor="middle" fontSize={8.5} fontWeight={800} fill="#fbbf24" className="tip-pop" style={{ textShadow: "0 0 8px #000" }}>★ YOUR CLOSEST REGION</text>
-                          </>
-                        )}
-                        {sel?.regionName === r.regionName && !isMine && (
-                          <circle r={13} fill="none" stroke={c} strokeWidth={1.4} className="sel-ring" />
-                        )}
-                        <circle r={4} fill="none" stroke={c} strokeWidth={0.9} className="ripple" style={{ animationDelay: `${(i % 6) * 0.4}s` }} />
-                        <circle r={4} fill="none" stroke={c} strokeWidth={0.9} className="ripple" style={{ animationDelay: `${(i % 6) * 0.4 + 1}s` }} />
-                        <circle
-                          r={big ? 6.5 : isLz ? 3.2 : 4.2}
-                          fill={c}
-                          stroke="#070714"
-                          strokeWidth={1.4}
-                          className="pin-core"
-                          style={{ filter: `drop-shadow(0 0 6px ${c})` }}
-                        />
-                        {big ? (
-                          <text y={3} textAnchor="middle" fontSize={6.5} fontWeight={800} fill="#070714" className="pointer-events-none">{r.dcCount}</text>
-                        ) : null}
-                        {activePin === r.regionName && (
-                          <g transform="translate(0,-15)" className="tip-pop">
-                            <rect x={-(r.location.length * 3.1 + 16)} y={-18} width={r.location.length * 6.2 + 32} height={22} rx={5} fill="#0c0c24" stroke={c} strokeOpacity={0.5} />
-                            <text y={-3.5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#e0f9ff">{r.location}</text>
-                          </g>
-                        )}
-                      </g>
-                    </g>
-                  </Marker>
-                );
-              })}
-            </ZoomableGroup>
-          </ComposableMap>
-
-          {/* zoom controls */}
-          <div className="absolute right-4 top-16 flex flex-col gap-1.5">
-            <button onClick={() => zoomTo(pos.z * 1.6)} className="zoom-btn" aria-label="Zoom in"><Plus className="h-4 w-4" /></button>
-            <button onClick={() => zoomTo(pos.z / 1.6)} className="zoom-btn" aria-label="Zoom out"><Minus className="h-4 w-4" /></button>
-            <button onClick={() => setPos({ c: [15, 15], z: 1 })} className="zoom-btn" aria-label="Reset view"><Maximize2 className="h-3.5 w-3.5" /></button>
-          </div>
+          <DCMap
+            regions={visible.map((r) => ({ regionName: r.regionName, location: r.location, type: r.type, dcCount: r.dcCount, lat: r.lat, lng: r.lng }))}
+            myRegionName={myRegion?.r.regionName ?? null}
+            selectedName={sel?.regionName ?? null}
+            onSelect={(mr) => {
+              const full = REGIONS.find((x) => x.regionName === mr.regionName);
+              if (full) setSel(full);
+            }}
+            flyTo={flyTo}
+          />
 
           {/* filter card */}
           <div className="anim-fade-up delay-2 absolute left-4 top-4 w-56 rounded-xl border border-white/10 bg-[#0c0c24]/85 p-4 shadow-2xl backdrop-blur-md">
@@ -364,7 +266,7 @@ export default function DatacentersPage() {
             </label>
             {myRegion && (
               <button
-                onClick={() => { setSel(myRegion.r); setPos({ c: [myRegion.r.lng, myRegion.r.lat], z: 3 }); }}
+                onClick={() => { setSel(myRegion.r); setFlyTo({ lat: myRegion.r.lat, lng: myRegion.r.lng, z: 5 }); }}
                 className="mt-3 w-full rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-2 text-left transition hover:bg-amber-400/20"
               >
                 <p className="text-[9px] font-black uppercase tracking-widest text-amber-300">★ Your closest</p>
