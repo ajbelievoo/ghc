@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup } from "react-simple-maps";
-import topo from "world-atlas/countries-110m.json";
+import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup, Graticule } from "react-simple-maps";
+import topo from "world-atlas/countries-50m.json";
+import { getGeo, type GeoInfo } from "@/lib/geoip";
 import { Globe, MapPin, Search, ChevronDown, Server, ShieldCheck, Zap, Radio, Plus, Minus, Maximize2, Cpu } from "lucide-react";
 
 type Zone = { name: string; dcs?: string[] };
@@ -80,6 +81,24 @@ const ARCS: { from: [number, number]; to: [number, number] }[] = [
   { from: [-122.99, 45.52], to: [151.21, -33.87] },
 ];
 
+const FINDER_CITIES: { name: string; lat: number; lng: number }[] = [
+  { name: "Delhi, India", lat: 28.6, lng: 77.2 }, { name: "Mumbai, India", lat: 19.1, lng: 72.9 },
+  { name: "Bangalore, India", lat: 12.97, lng: 77.6 }, { name: "London, UK", lat: 51.5, lng: -0.1 },
+  { name: "Paris, France", lat: 48.85, lng: 2.35 }, { name: "Frankfurt, Germany", lat: 50.1, lng: 8.7 },
+  { name: "Amsterdam, Netherlands", lat: 52.4, lng: 4.9 }, { name: "New York, USA", lat: 40.7, lng: -74.0 },
+  { name: "Los Angeles, USA", lat: 34.05, lng: -118.24 }, { name: "Toronto, Canada", lat: 43.65, lng: -79.38 },
+  { name: "Singapore", lat: 1.35, lng: 103.82 }, { name: "Sydney, Australia", lat: -33.87, lng: 151.21 },
+  { name: "Dubai, UAE", lat: 25.2, lng: 55.27 }, { name: "Tokyo, Japan", lat: 35.7, lng: 139.7 },
+  { name: "São Paulo, Brazil", lat: -23.55, lng: -46.63 }, { name: "Johannesburg, South Africa", lat: -26.2, lng: 28.05 },
+];
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371, d = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * d, dLng = (b.lng - a.lng) * d;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * d) * Math.cos(b.lat * d) * Math.sin(dLng / 2) ** 2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s)));
+}
+
 const FAQS = [
   { q: "What is a geographic zone?", a: "A geographic zone (continent-level area such as Europe, North America or Asia Pacific) groups all of our regions by location. Choosing a zone close to your users reduces latency and helps you meet local data-residency requirements." },
   { q: "What is a 3-AZ region?", a: "A 3-AZ region contains three independent availability zones — physically separate datacentres with isolated power, cooling and networking, connected by a low-latency private backbone. Replicating your workload across all three zones protects you even if an entire datacentre goes offline." },
@@ -125,6 +144,9 @@ export default function DatacentersPage() {
   const [showLz, setShowLz] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activePin, setActivePin] = useState<string | null>(null);
+  const [sel, setSel] = useState<Region | null>(null);
+  const [finder, setFinder] = useState("");
+  const [myGeo, setMyGeo] = useState<GeoInfo | null>(null);
   const [tableKey, setTableKey] = useState(0);
   const [pos, setPos] = useState<{ c: [number, number]; z: number }>({ c: [15, 15], z: 1 });
 
@@ -136,6 +158,33 @@ export default function DatacentersPage() {
   const tableRows = visible.filter((r) => r.continent === continent);
 
   const zoomTo = (z: number) => setPos((p) => ({ ...p, z: Math.min(8, Math.max(0.9, z)) }));
+
+  const nearest = useMemo(() => {
+    const city = FINDER_CITIES.find((c) => c.name === finder);
+    if (!city) return null;
+    let best: { r: Region; km: number } | null = null;
+    for (const r of REGIONS) {
+      const km = haversineKm(city, r);
+      if (!best || km < best.km) best = { r, km };
+    }
+    return best;
+  }, [finder]);
+
+  // Detect the visitor's location once and highlight their closest region
+  useEffect(() => { getGeo().then(setMyGeo); }, []);
+
+  const myRegion = useMemo(() => {
+    if (!myGeo) return null;
+    let best: { r: Region; km: number } | null = null;
+    for (const r of REGIONS) {
+      const km = haversineKm(myGeo, r);
+      if (!best || km < best.km) best = { r, km };
+    }
+    return best;
+  }, [myGeo]);
+
+  // Counter-scale so pins stay constant size while zooming (satellite-style)
+  const pinScale = 1 / Math.sqrt(pos.z);
 
   return (
     <div className="min-h-screen bg-[#070714] text-slate-200">
@@ -212,17 +261,18 @@ export default function DatacentersPage() {
               maxZoom={8}
               onMoveEnd={(p) => setPos({ c: (p.coordinates || pos.c) as [number, number], z: p.zoom || pos.z })}
             >
+              <Graticule stroke="#1e1e46" strokeWidth={0.4} strokeOpacity={0.6} step={[15, 15]} />
               <Geographies geography={topo as never}>
                 {({ geographies }) =>
                   geographies.map((geo, gi) => (
                     <Geography
                       key={geo.rsmKey}
                       geography={geo}
-                      fill="#171738"
-                      stroke="#2c2c5c"
-                      strokeWidth={0.6}
+                      fill="#1a1a3e"
+                      stroke="#31316b"
+                      strokeWidth={0.5}
                       className="country-fade"
-                      style={{ animationDelay: `${(gi % 40) * 0.02}s`, default: { outline: "none" }, hover: { outline: "none", fill: "#1e1e4a" }, pressed: { outline: "none" } } as never}
+                      style={{ animationDelay: `${(gi % 40) * 0.02}s`, default: { outline: "none" }, hover: { outline: "none", fill: "#222255" }, pressed: { outline: "none" } } as never}
                     />
                   ))
                 }
@@ -247,7 +297,8 @@ export default function DatacentersPage() {
 
               {visible.map((r, i) => {
                 const isLz = r.type === "LOCAL-ZONE";
-                const c = isLz ? "#34d399" : "#00f0ff";
+                const isMine = myRegion?.r.regionName === r.regionName;
+                const c = isMine ? "#fbbf24" : isLz ? "#34d399" : "#00f0ff";
                 const big = !isLz && (r.dcCount || 0) > 3;
                 return (
                   <Marker key={r.regionName} coordinates={[r.lng, r.lat]}>
@@ -256,26 +307,39 @@ export default function DatacentersPage() {
                       style={{ animationDelay: `${0.4 + i * 0.03}s` }}
                       onMouseEnter={() => setActivePin(r.regionName)}
                       onMouseLeave={() => setActivePin(null)}
+                      onClick={() => setSel(r)}
                     >
-                      <circle r={5} fill="none" stroke={c} strokeWidth={0.9} className="ripple" style={{ animationDelay: `${(i % 6) * 0.4}s` }} />
-                      <circle r={5} fill="none" stroke={c} strokeWidth={0.9} className="ripple" style={{ animationDelay: `${(i % 6) * 0.4 + 1}s` }} />
-                      <circle
-                        r={big ? 7.5 : isLz ? 3.6 : 4.6}
-                        fill={c}
-                        stroke="#070714"
-                        strokeWidth={1.4}
-                        className="pin-core"
-                        style={{ filter: `drop-shadow(0 0 6px ${c})` }}
-                      />
-                      {big ? (
-                        <text y={3.2} textAnchor="middle" fontSize={7.5} fontWeight={800} fill="#070714" className="pointer-events-none">{r.dcCount}</text>
-                      ) : null}
-                      {activePin === r.regionName && (
-                        <g transform="translate(0,-17)" className="tip-pop">
-                          <rect x={-(r.location.length * 3.1 + 16)} y={-18} width={r.location.length * 6.2 + 32} height={22} rx={5} fill="#0c0c24" stroke={c} strokeOpacity={0.5} />
-                          <text y={-3.5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#e0f9ff">{r.location}</text>
-                        </g>
-                      )}
+                      <g transform={`scale(${pinScale})`}>
+                        {isMine && (
+                          <>
+                            <circle r={10} fill="none" stroke="#fbbf24" strokeWidth={1.6} className="sel-ring" />
+                            <circle r={5} fill="none" stroke="#fbbf24" strokeWidth={1} className="ripple" />
+                            <text y={-26} textAnchor="middle" fontSize={8.5} fontWeight={800} fill="#fbbf24" className="tip-pop" style={{ textShadow: "0 0 8px #000" }}>★ YOUR CLOSEST REGION</text>
+                          </>
+                        )}
+                        {sel?.regionName === r.regionName && !isMine && (
+                          <circle r={13} fill="none" stroke={c} strokeWidth={1.4} className="sel-ring" />
+                        )}
+                        <circle r={4} fill="none" stroke={c} strokeWidth={0.9} className="ripple" style={{ animationDelay: `${(i % 6) * 0.4}s` }} />
+                        <circle r={4} fill="none" stroke={c} strokeWidth={0.9} className="ripple" style={{ animationDelay: `${(i % 6) * 0.4 + 1}s` }} />
+                        <circle
+                          r={big ? 6.5 : isLz ? 3.2 : 4.2}
+                          fill={c}
+                          stroke="#070714"
+                          strokeWidth={1.4}
+                          className="pin-core"
+                          style={{ filter: `drop-shadow(0 0 6px ${c})` }}
+                        />
+                        {big ? (
+                          <text y={3} textAnchor="middle" fontSize={6.5} fontWeight={800} fill="#070714" className="pointer-events-none">{r.dcCount}</text>
+                        ) : null}
+                        {activePin === r.regionName && (
+                          <g transform="translate(0,-15)" className="tip-pop">
+                            <rect x={-(r.location.length * 3.1 + 16)} y={-18} width={r.location.length * 6.2 + 32} height={22} rx={5} fill="#0c0c24" stroke={c} strokeOpacity={0.5} />
+                            <text y={-3.5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#e0f9ff">{r.location}</text>
+                          </g>
+                        )}
+                      </g>
                     </g>
                   </Marker>
                 );
@@ -311,12 +375,58 @@ export default function DatacentersPage() {
               <input type="checkbox" checked={showLz} onChange={(e) => setShowLz(e.target.checked)} className="h-3.5 w-3.5 accent-emerald-400" />
               <span className="legend-dot inline-block h-2.5 w-2.5 rounded-full bg-emerald-400" style={{ animationDelay: "0.6s" }} /> Local zones
             </label>
+            {myRegion && (
+              <button
+                onClick={() => { setSel(myRegion.r); setPos({ c: [myRegion.r.lng, myRegion.r.lat], z: 3 }); }}
+                className="mt-3 w-full rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 py-2 text-left transition hover:bg-amber-400/20"
+              >
+                <p className="text-[9px] font-black uppercase tracking-widest text-amber-300">★ Your closest</p>
+                <p className="mt-0.5 truncate text-[11px] font-bold text-amber-100">{myRegion.r.location}</p>
+                <p className="font-mono text-[10px] text-amber-300/70">~{myRegion.km.toLocaleString()} km</p>
+              </button>
+            )}
           </div>
 
           {/* live badge */}
           <div className="anim-fade-up delay-3 absolute right-4 top-4 flex items-center gap-2 rounded-full border border-emerald-400/30 bg-[#0c0c24]/85 px-3 py-1.5 text-[11px] font-bold text-emerald-300 shadow backdrop-blur-md">
             <span className="live-dot" /> {visible.length} locations online
           </div>
+
+          {/* region detail drawer */}
+          {sel && (
+            <div className="drawer-in absolute bottom-4 left-4 right-4 z-10 rounded-xl border border-cyan-400/25 bg-[#0c0c24]/92 p-4 shadow-2xl backdrop-blur-md md:left-auto md:w-[340px]">
+              <button onClick={() => setSel(null)} className="absolute right-3 top-3 rounded-md p-1 text-slate-500 transition hover:bg-white/10 hover:text-white" aria-label="Close">✕</button>
+              <p className="mb-1 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-cyan-300">
+                <span className={`inline-block h-2 w-2 rounded-full ${sel.type === "LOCAL-ZONE" ? "bg-emerald-400" : "bg-cyan-400"}`} />
+                {sel.type} · {sel.continent}
+              </p>
+              <h3 className="text-base font-black text-white">{sel.location}</h3>
+              <p className="mt-0.5 font-mono text-xs text-cyan-300/80">{sel.regionName}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                  <p className="text-sm font-black text-white">{sel.dcCount ?? "—"}</p>
+                  <p className="text-[9px] font-bold uppercase text-slate-500">Datacentres</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                  <p className="text-sm font-black text-white">{sel.zones.length}</p>
+                  <p className="text-[9px] font-bold uppercase text-slate-500">AZ</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 p-2">
+                  <p className="text-sm font-black text-white">{sel.year}</p>
+                  <p className="text-[9px] font-bold uppercase text-slate-500">Opened</p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {sel.zones.flatMap((z) => z.dcs || []).slice(0, 9).map((d) => (
+                  <span key={d} className="rounded border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 font-mono text-[10px] text-cyan-300">{d}</span>
+                ))}
+                {sel.zones.flatMap((z) => z.dcs || []).length > 9 && <span className="px-1 py-0.5 text-[10px] text-slate-500">+{sel.zones.flatMap((z) => z.dcs || []).length - 9} more</span>}
+              </div>
+              <Link href="/dedicated-servers" className="mt-3 block rounded-lg bg-cyan-400 px-4 py-2 text-center text-xs font-black text-[#070714] transition hover:bg-cyan-300">
+                Deploy in {sel.location.split("—")[1]?.trim() || sel.location} →
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* live feed ticker */}
@@ -329,6 +439,84 @@ export default function DatacentersPage() {
               </span>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ============ CLOSEST REGION FINDER ============ */}
+      <section className="mx-auto max-w-7xl px-6 pb-12">
+        <div className="anim-fade-up overflow-hidden rounded-2xl border border-cyan-400/20 bg-gradient-to-r from-[#0c0c24] to-[#0b1140] p-6 shadow-[0_0_50px_-18px_rgba(0,240,255,.4)] md:p-8">
+          <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
+            <div className="flex-1">
+              <p className="mb-1 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-cyan-300"><MapPin className="h-3.5 w-3.5" /> Latency check</p>
+              <h3 className="text-xl font-black text-white md:text-2xl">Find your closest region</h3>
+              <p className="mt-1 text-sm text-slate-400">Apna sheher chuno — hum bata denge sabse paas ka datacenter kitne km door hai.</p>
+              <select
+                value={finder}
+                onChange={(e) => setFinder(e.target.value)}
+                className="mt-4 w-full max-w-xs rounded-xl border border-white/10 bg-[#070714] px-4 py-2.5 text-sm text-slate-200 outline-none transition focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/20"
+              >
+                <option value="">Select your city…</option>
+                {FINDER_CITIES.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="w-full flex-1">
+              {nearest ? (
+                <div className="finder-pop rounded-xl border border-cyan-400/30 bg-cyan-400/[.06] p-5" key={nearest.r.regionName}>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">Closest region</p>
+                  <p className="mt-1 text-lg font-black text-white">{nearest.r.location}</p>
+                  <p className="font-mono text-xs text-cyan-300/80">{nearest.r.regionName} · {nearest.r.type}</p>
+                  <div className="mt-3 flex items-end gap-2">
+                    <span className="text-3xl font-black text-cyan-300" style={{ textShadow: "0 0 18px rgba(0,240,255,.6)" }}>{nearest.km.toLocaleString()}</span>
+                    <span className="pb-1 text-xs font-bold text-slate-400">km away {nearest.km < 1500 ? "— excellent latency ⚡" : nearest.km < 5000 ? "— great latency" : "— consider a local zone nearby"}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-white/10 p-5 text-center text-sm text-slate-500">
+                  👆 Select a city to see your nearest datacenter
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ WHY LOCATION MATTERS ============ */}
+      <section className="mx-auto max-w-7xl px-6 pb-14">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { icon: Zap, t: "Lower latency", d: "Every ~100 km adds roughly 1 ms of round-trip time. Deploying in the closest region makes apps, games and APIs feel instant.", c: "text-yellow-300" },
+            { icon: ShieldCheck, t: "Compliance & sovereignty", d: "Keep data inside the jurisdiction your business needs — EU regions for GDPR workloads, sovereign snc zones for regulated industries.", c: "text-cyan-300" },
+            { icon: Globe, t: "Resiliency by geography", d: "3-AZ regions like Paris and Milan spread your service across three independent datacentres — one can fail and your app keeps running.", c: "text-violet-300" },
+          ].map((f, i) => (
+            <div key={f.t} className="why-card anim-fade-up rounded-2xl border border-white/10 bg-[#0c0c24]/70 p-6 transition hover:border-cyan-400/40 hover:bg-[#0d0d2e]" style={{ animationDelay: `${i * 0.12}s` }}>
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+                <f.icon className={`h-5 w-5 ${f.c}`} />
+              </div>
+              <h4 className="text-base font-black text-white">{f.t}</h4>
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{f.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ EXPANSION TIMELINE ============ */}
+      <section className="mx-auto max-w-7xl px-6 pb-14">
+        <h2 className="mb-8 text-center text-2xl font-black text-white">Our infrastructure keeps <span className="hero-shimmer">expanding</span></h2>
+        <div className="relative mx-auto max-w-3xl">
+          <div className="absolute bottom-0 left-[19px] top-0 w-px bg-gradient-to-b from-cyan-400 via-cyan-400/40 to-transparent" />
+          {[
+            { y: "2007", t: "First datacentre — Roubaix, France", d: "RBX region opens and grows to 9 datacentres — still our largest European footprint." },
+            { y: "2012–2016", t: "Going global", d: "Beauharnois (Canada), Warsaw, Sydney and Singapore come online — 4 continents covered." },
+            { y: "2017–2021", t: "Density + Asia", d: "Strasbourg, Limburg, Erith, Vint Hill, Hillsboro and Mumbai join the backbone." },
+            { y: "2023–2025", t: "3-AZ regions & local zones", d: "Paris and Milan 3-AZ regions launch, plus 20+ local zones bringing compute to the edge." },
+          ].map((m, i) => (
+            <div key={m.y} className="anim-fade-up relative mb-8 pl-14" style={{ animationDelay: `${i * 0.15}s` }}>
+              <div className="timeline-dot absolute left-3 top-1" />
+              <p className="text-xs font-black uppercase tracking-widest text-cyan-300">{m.y}</p>
+              <h4 className="mt-0.5 font-black text-white">{m.t}</h4>
+              <p className="mt-1 text-sm text-slate-400">{m.d}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -488,4 +676,16 @@ g.pin-enter:hover .pin-core { transform: scale(1.4); }
 .faq-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
 .faq-body > p { overflow: hidden; }
 .faq-open { grid-template-rows: 1fr; }
+
+@keyframes selPulse { 0% { r: 10; opacity: .9; } 100% { r: 20; opacity: 0; } }
+@keyframes drawerIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes finderPop { 0% { opacity: 0; transform: scale(.92); } 70% { transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes tlDot { 0%,100% { box-shadow: 0 0 0 0 rgba(0,240,255,.5); } 50% { box-shadow: 0 0 0 7px rgba(0,240,255,0); } }
+
+.sel-ring { animation: selPulse 1.4s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+.drawer-in { animation: drawerIn .3s cubic-bezier(.2,.8,.3,1) both; }
+.finder-pop { animation: finderPop .35s cubic-bezier(.2,.9,.3,1.2) both; }
+.timeline-dot { width: 15px; height: 15px; border-radius: 9999px; background: #00f0ff; box-shadow: 0 0 12px #00f0ff; animation: tlDot 2.2s ease-in-out infinite; }
+.why-card { box-shadow: 0 0 0 rgba(0,240,255,0); }
+.why-card:hover { box-shadow: 0 12px 40px -14px rgba(0,240,255,.35); transform: translateY(-3px); }
 `;

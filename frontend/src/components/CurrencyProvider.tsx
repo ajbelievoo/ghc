@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { getGeo, currencyForCountry } from "@/lib/geoip";
 
 export const CURRENCIES = [
   "USD", "EUR", "GBP", "INR", "CAD", "AUD", "SGD", "JPY", "CNY", "HKD",
@@ -37,7 +38,19 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     const stored = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
     if (stored && CURRENCIES.includes(stored)) {
       setCurrencyState(stored);
+      return;
     }
+    // No saved preference — auto-detect the visitor's country and pick a local
+    // currency (IN → INR, EU → EUR, …). Falls back to USD on any failure.
+    getGeo().then((g) => {
+      if (!g) return;
+      const c = currencyForCountry(g.cc);
+      if (c !== "USD" && CURRENCIES.includes(c)) {
+        setCurrencyState(c);
+        localStorage.setItem(STORAGE_KEY, c);
+        window.dispatchEvent(new CustomEvent("currencychange", { detail: c }));
+      }
+    });
   }, []);
 
   const setCurrency = (c: string) => {
