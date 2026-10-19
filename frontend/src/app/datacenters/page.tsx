@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, Marker, Line } from "react-simple-maps";
 import topo from "world-atlas/countries-110m.json";
-import { Globe, MapPin, Search, ChevronDown, Server, ShieldCheck, Zap } from "lucide-react";
+import { Globe, MapPin, Search, ChevronDown, Server, ShieldCheck, Zap, Radio } from "lucide-react";
 
 type Zone = { name: string; dcs?: string[] };
 type Region = {
@@ -67,6 +67,20 @@ const REGIONS: Region[] = [
 
 const CONTINENTS = ["Europe", "North America", "Asia Pacific", "Africa"] as const;
 
+// Backbone arcs between major hubs (network traffic animation)
+const ARCS: { from: [number, number]; to: [number, number] }[] = [
+  { from: [-73.87, 45.32], to: [3.2, 50.69] },      // BHS -> Roubaix
+  { from: [-73.87, 45.32], to: [0.18, 51.48] },    // BHS -> London
+  { from: [-122.99, 45.52], to: [-73.87, 45.32] }, // Hillsboro -> BHS
+  { from: [-77.67, 38.75], to: [2.13, 50.99] },    // Vint Hill -> Gravelines
+  { from: [3.2, 50.69], to: [72.88, 19.08] },      // Roubaix -> Mumbai
+  { from: [72.88, 19.08], to: [103.82, 1.35] },    // Mumbai -> Singapore
+  { from: [103.82, 1.35], to: [151.21, -33.87] },  // Singapore -> Sydney
+  { from: [7.75, 48.57], to: [72.88, 19.08] },     // Strasbourg -> Mumbai
+  { from: [-6.83, 34.02], to: [2.13, 50.99] },     // Rabat -> Gravelines
+  { from: [-122.99, 45.52], to: [151.21, -33.87] },// Hillsboro -> Sydney
+];
+
 const FAQS = [
   { q: "What is a geographic zone?", a: "A geographic zone (continent-level area such as Europe, North America or Asia Pacific) groups all of our regions by location. Choosing a zone close to your users reduces latency and helps you meet local data-residency requirements." },
   { q: "What is a 3-AZ region?", a: "A 3-AZ region contains three independent availability zones — physically separate datacentres with isolated power, cooling and networking, connected by a low-latency private backbone. Replicating your workload across all three zones protects you even if an entire datacentre goes offline." },
@@ -76,12 +90,34 @@ const FAQS = [
   { q: "What is a sovereign cloud region?", a: "Sovereign (snc) regions run under strict European jurisdiction with certified data protection — designed for regulated industries, healthcare and public-sector workloads that must keep data inside specific legal boundaries." },
 ];
 
-const stats = [
-  { n: String(REGIONS.length), l: "locations worldwide" },
-  { n: String(REGIONS.filter((r) => r.type !== "LOCAL-ZONE").reduce((a, r) => a + (r.dcCount || 0), 0)), l: "datacentres" },
-  { n: String(new Set(REGIONS.map((r) => r.location.split("—")[0].trim())).size), l: "countries" },
-  { n: "30+", l: "global network PoPs" },
-];
+function useCountUp(target: number, duration = 1200) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      setVal(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return val;
+}
+
+function Stat({ n, l, suffix = "" }: { n: number; l: string; suffix?: string }) {
+  const v = useCountUp(n);
+  return (
+    <div className="anim-fade-up">
+      <div className="stat-num text-2xl font-black text-white md:text-3xl">{v}{suffix}</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-sky-300">{l}</div>
+    </div>
+  );
+}
+
+const dcTotal = REGIONS.filter((r) => r.type !== "LOCAL-ZONE").reduce((a, r) => a + (r.dcCount || 0), 0);
+const countryTotal = new Set(REGIONS.map((r) => r.location.split("—")[0].trim())).size;
 
 export default function DatacentersPage() {
   const [continent, setContinent] = useState<(typeof CONTINENTS)[number]>("Europe");
@@ -90,41 +126,53 @@ export default function DatacentersPage() {
   const [showLz, setShowLz] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activePin, setActivePin] = useState<string | null>(null);
+  const [tableKey, setTableKey] = useState(0);
 
   const matches = (r: Region) =>
     (r.type === "LOCAL-ZONE" ? showLz : showDc) &&
     (!query || `${r.location} ${r.regionName}`.toLowerCase().includes(query.toLowerCase()));
 
-  const visible = REGIONS.filter(matches);
+  const visible = useMemo(() => REGIONS.filter(matches), [showDc, showLz, query]);
   const tableRows = visible.filter((r) => r.continent === continent);
 
   return (
     <div className="min-h-screen bg-white text-[#0f172a]">
+      <style>{CSS}</style>
       <Navbar />
 
-      {/* Hero */}
-      <section className="bg-[#000e9c] text-white">
-        <div className="mx-auto flex max-w-7xl flex-col items-start gap-8 px-6 py-16 md:flex-row md:items-center md:py-20">
+      {/* ============ HERO ============ */}
+      <section className="hero-anim relative overflow-hidden bg-[#000e9c] text-white">
+        {/* floating glow orbs */}
+        <div className="orb orb-1" />
+        <div className="orb orb-2" />
+        <div className="orb orb-3" />
+        {/* grid overlay */}
+        <div className="hero-grid" />
+
+        <div className="relative mx-auto flex max-w-7xl flex-col items-start gap-8 px-6 py-16 md:flex-row md:items-center md:py-20">
           <div className="flex-1">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-sky-300">Infrastructure locations by region</p>
-            <h1 className="text-3xl font-black leading-tight md:text-5xl">A global infrastructure,<br />closer to your users</h1>
-            <p className="mt-4 max-w-xl text-sm leading-relaxed text-sky-100 md:text-base">
+            <p className="anim-fade-up mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-sky-300">
+              <span className="live-dot" /> Infrastructure locations by region
+            </p>
+            <h1 className="anim-fade-up delay-1 text-3xl font-black leading-tight md:text-5xl">
+              A global infrastructure,<br />
+              <span className="hero-shimmer">closer to your users</span>
+            </h1>
+            <p className="anim-fade-up delay-2 mt-4 max-w-xl text-sm leading-relaxed text-sky-100 md:text-base">
               Discover the GHC global infrastructure: regions, availability zones (AZ), datacentres and network presence points (PoP).
               Choose the locations best suited to your performance, resiliency, compliance and sovereignty requirements.
             </p>
             <div className="mt-6 flex flex-wrap gap-6">
-              {stats.map((s) => (
-                <div key={s.l}>
-                  <div className="text-2xl font-black text-white md:text-3xl">{s.n}</div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-sky-300">{s.l}</div>
-                </div>
-              ))}
+              <Stat n={REGIONS.length} l="locations worldwide" />
+              <Stat n={dcTotal} l="datacentres" />
+              <Stat n={countryTotal} l="countries" />
+              <Stat n={30} l="network PoPs" suffix="+" />
             </div>
           </div>
           <div className="hidden flex-1 justify-end md:flex">
             <div className="grid grid-cols-3 gap-3">
-              {[Server, Globe, ShieldCheck, Zap, MapPin, NetworkIcon].map((Icon, i) => (
-                <div key={i} className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
+              {[Server, Globe, ShieldCheck, Zap, MapPin, Radio].map((Icon, i) => (
+                <div key={i} className={`hero-tile delay-${(i % 3) + 1} flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20`} style={{ animationDelay: `${0.15 * i}s` }}>
                   <Icon className="h-8 w-8 text-sky-300" />
                 </div>
               ))}
@@ -133,53 +181,94 @@ export default function DatacentersPage() {
         </div>
       </section>
 
-      {/* Map + filter */}
+      {/* ============ MAP ============ */}
       <section className="mx-auto max-w-7xl px-6 py-10">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-[#eaf4f8]">
+        <div className="map-frame relative overflow-hidden rounded-2xl border border-slate-200">
+          {/* scanline sweep */}
+          <div className="scanline" />
           <ComposableMap projection="geoEqualEarth" projectionConfig={{ scale: 175, center: [15, 15] }} height={460} style={{ width: "100%" }}>
+            <defs>
+              <linearGradient id="oceanGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#e8f4fa" />
+                <stop offset="100%" stopColor="#dcedf5" />
+              </linearGradient>
+            </defs>
+            <rect x={-200} y={-200} width={1400} height={900} fill="url(#oceanGrad)" />
             <Geographies geography={topo as never}>
               {({ geographies }) =>
-                geographies.map((geo) => (
-                  <Geography key={geo.rsmKey} geography={geo} fill="#d9e6ee" stroke="#b8cdd9" strokeWidth={0.5} style={{ default: { outline: "none" }, hover: { outline: "none" }, pressed: { outline: "none" } } as never} />
+                geographies.map((geo, gi) => (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    fill="#cfe0ea"
+                    stroke="#aec9d8"
+                    strokeWidth={0.5}
+                    className="country-fade"
+                    style={{ animationDelay: `${(gi % 40) * 0.02}s`, default: { outline: "none" }, hover: { outline: "none", fill: "#c3d9e6" }, pressed: { outline: "none" } } as never}
+                  />
                 ))
               }
             </Geographies>
-            {visible.map((r) => (
-              <Marker key={r.regionName} coordinates={[r.lng, r.lat]}>
-                <g
-                  onMouseEnter={() => setActivePin(r.regionName)}
-                  onMouseLeave={() => setActivePin(null)}
-                  className="cursor-pointer"
-                >
-                  {r.type === "LOCAL-ZONE" ? (
-                    <>
-                      <circle r={5} fill="#22c55e" fillOpacity={0.25} />
-                      <circle r={3.2} fill="#16a34a" stroke="#fff" strokeWidth={1.2} />
-                    </>
-                  ) : (
-                    <>
-                      <circle r={r.dcCount && r.dcCount > 3 ? 11 : 7} fill="#0050d7" fillOpacity={0.2} />
-                      <circle r={r.dcCount && r.dcCount > 3 ? 7.5 : 4.2} fill="#0050d7" stroke="#fff" strokeWidth={1.4} />
-                      {r.dcCount && r.dcCount > 3 ? (
-                        <text y={3} textAnchor="middle" fontSize={7.5} fontWeight={800} fill="#fff">{r.dcCount}</text>
-                      ) : null}
-                    </>
-                  )}
-                  {activePin === r.regionName && (
-                    <g transform="translate(0,-14)">
-                      <rect x={-((r.location.length * 3.1) + 14)} y={-16} width={(r.location.length * 6.2) + 28} height={20} rx={4} fill="#0f172a" />
-                      <text y={-2.5} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#fff">{r.location}</text>
-                    </g>
-                  )}
-                </g>
-              </Marker>
+
+            {/* Animated backbone arcs */}
+            {ARCS.map((a, i) => (
+              <Line
+                key={i}
+                from={a.from}
+                to={a.to}
+                stroke="#0050d7"
+                strokeWidth={1.2}
+                strokeLinecap="round"
+                strokeDasharray="4 6"
+                className="arc-flow"
+                style={{ animationDelay: `${i * 0.35}s`, opacity: 0.55 }}
+              />
             ))}
+
+            {/* Region markers */}
+            {visible.map((r, i) => {
+              const isLz = r.type === "LOCAL-ZONE";
+              const c = isLz ? "#16a34a" : "#0050d7";
+              const big = !isLz && (r.dcCount || 0) > 3;
+              return (
+                <Marker key={r.regionName} coordinates={[r.lng, r.lat]}>
+                  <g
+                    className="pin-enter"
+                    style={{ animationDelay: `${0.4 + i * 0.03}s` }}
+                    onMouseEnter={() => setActivePin(r.regionName)}
+                    onMouseLeave={() => setActivePin(null)}
+                  >
+                    {/* ripple waves */}
+                    <circle r={4} fill="none" stroke={c} strokeWidth={1} className="ripple" style={{ animationDelay: `${(i % 6) * 0.4}s` }} />
+                    <circle r={4} fill="none" stroke={c} strokeWidth={1} className="ripple" style={{ animationDelay: `${(i % 6) * 0.4 + 0.9}s` }} />
+                    {/* core dot */}
+                    <circle
+                      r={big ? 7.5 : isLz ? 3.6 : 4.6}
+                      fill={c}
+                      stroke="#fff"
+                      strokeWidth={1.4}
+                      className="pin-core"
+                      style={{ filter: `drop-shadow(0 0 5px ${c}aa)` }}
+                    />
+                    {big ? (
+                      <text y={3.2} textAnchor="middle" fontSize={7.5} fontWeight={800} fill="#fff" className="pointer-events-none">{r.dcCount}</text>
+                    ) : null}
+                    {activePin === r.regionName && (
+                      <g transform="translate(0,-16)" className="tip-pop">
+                        <rect x={-(r.location.length * 3.1 + 14)} y={-17} width={r.location.length * 6.2 + 28} height={21} rx={5} fill="#0f172a" />
+                        <text y={-3} textAnchor="middle" fontSize={9.5} fontWeight={700} fill="#fff">{r.location}</text>
+                      </g>
+                    )}
+                  </g>
+                </Marker>
+              );
+            })}
           </ComposableMap>
 
           {/* Filter card */}
-          <div className="absolute left-4 top-4 w-56 rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+          <div className="anim-fade-up delay-2 absolute left-4 top-4 w-56 rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-xl backdrop-blur-sm">
             <p className="mb-2 text-[11px] font-black uppercase tracking-widest text-slate-500">Filter</p>
-            <div className="mb-3 flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5">
+            <div className="mb-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 transition focus-within:border-[#0050d7] focus-within:ring-2 focus-within:ring-[#0050d7]/20">
               <Search className="h-3.5 w-3.5 text-slate-400" />
               <input
                 value={query}
@@ -189,34 +278,40 @@ export default function DatacentersPage() {
               />
             </div>
             <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">Type</p>
-            <label className="mb-1 flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700">
+            <label className="mb-1 flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700 transition hover:text-slate-900">
               <input type="checkbox" checked={showDc} onChange={(e) => setShowDc(e.target.checked)} className="h-3.5 w-3.5 accent-[#0050d7]" />
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#0050d7]" /> Data centers
+              <span className="legend-dot inline-block h-2.5 w-2.5 rounded-full bg-[#0050d7]" /> Data centers
             </label>
-            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700">
+            <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-700 transition hover:text-slate-900">
               <input type="checkbox" checked={showLz} onChange={(e) => setShowLz(e.target.checked)} className="h-3.5 w-3.5 accent-[#16a34a]" />
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#16a34a]" /> Local zones
+              <span className="legend-dot inline-block h-2.5 w-2.5 rounded-full bg-[#16a34a]" style={{ animationDelay: "0.6s" }} /> Local zones
             </label>
+          </div>
+
+          {/* live badge */}
+          <div className="anim-fade-up delay-3 absolute right-4 top-4 flex items-center gap-2 rounded-full border border-emerald-200 bg-white/90 px-3 py-1.5 text-[11px] font-bold text-emerald-700 shadow backdrop-blur-sm">
+            <span className="live-dot" /> {visible.length} locations online
           </div>
         </div>
       </section>
 
-      {/* Region table */}
+      {/* ============ TABLE ============ */}
       <section className="mx-auto max-w-7xl px-6 pb-14">
-        <h2 className="mb-2 text-2xl font-black">Regions and availability zones by geography</h2>
+        <h2 className="anim-fade-up mb-2 text-2xl font-black">Regions and availability zones by geography</h2>
         <div className="mb-4 flex gap-1 border-b border-slate-200">
           {CONTINENTS.map((c) => (
             <button
               key={c}
-              onClick={() => setContinent(c)}
-              className={`px-4 py-2.5 text-sm font-bold transition ${continent === c ? "border-b-2 border-[#0050d7] text-[#0050d7]" : "text-slate-500 hover:text-slate-800"}`}
+              onClick={() => { setContinent(c); setTableKey((k) => k + 1); }}
+              className={`tab-btn relative px-4 py-2.5 text-sm font-bold transition ${continent === c ? "text-[#0050d7]" : "text-slate-500 hover:text-slate-800"}`}
             >
               {c}
+              {continent === c && <span className="tab-underline" />}
             </button>
           ))}
         </div>
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full min-w-[900px] text-left text-sm">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+          <table className="w-full min-w-[900px] text-left text-sm" key={tableKey}>
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
                 <th className="px-4 py-3">Location</th>
@@ -229,10 +324,10 @@ export default function DatacentersPage() {
               </tr>
             </thead>
             <tbody>
-              {tableRows.map((r) => (
-                <tr key={r.regionName} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+              {tableRows.map((r, i) => (
+                <tr key={r.regionName} className="row-anim border-b border-slate-100 last:border-0 hover:bg-sky-50/60" style={{ animationDelay: `${i * 0.035}s` }}>
                   <td className="px-4 py-3 font-semibold">
-                    <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${r.type === "LOCAL-ZONE" ? "bg-[#16a34a]" : "bg-[#0050d7]"}`} />
+                    <span className={`mr-2 inline-block h-2.5 w-2.5 rounded-full ${r.type === "LOCAL-ZONE" ? "bg-[#16a34a] legend-dot" : "bg-[#0050d7] legend-dot"}`} />
                     {r.location} {r.type === "LOCAL-ZONE" && <span className="text-xs font-bold text-slate-400">(lz)</span>}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">{r.regionName}</td>
@@ -256,27 +351,30 @@ export default function DatacentersPage() {
         </p>
       </section>
 
-      {/* CTA */}
-      <section className="bg-[#000e9c] py-14 text-center text-white">
-        <h2 className="text-2xl font-black md:text-3xl">Ready to deploy closer to your users?</h2>
-        <p className="mx-auto mt-3 max-w-lg text-sm text-sky-100">Pick any region at checkout — your server is provisioned automatically with live stock and delivery estimates.</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link href="/vps" className="rounded-xl bg-white px-6 py-3 text-sm font-bold text-[#0050d7] transition hover:bg-sky-50">Browse VPS plans</Link>
-          <Link href="/dedicated-servers" className="rounded-xl bg-white/10 px-6 py-3 text-sm font-bold text-white ring-1 ring-white/30 transition hover:bg-white/20">Browse dedicated servers</Link>
+      {/* ============ CTA ============ */}
+      <section className="cta-anim relative overflow-hidden bg-[#000e9c] py-14 text-center text-white">
+        <div className="orb orb-2" style={{ opacity: 0.5 }} />
+        <h2 className="relative text-2xl font-black md:text-3xl">Ready to deploy closer to your users?</h2>
+        <p className="relative mx-auto mt-3 max-w-lg text-sm text-sky-100">Pick any region at checkout — your server is provisioned automatically with live stock and delivery estimates.</p>
+        <div className="relative mt-6 flex flex-wrap justify-center gap-3">
+          <Link href="/vps" className="btn-glow rounded-xl bg-white px-6 py-3 text-sm font-bold text-[#0050d7] transition hover:bg-sky-50">Browse VPS plans</Link>
+          <Link href="/dedicated-servers" className="btn-glow rounded-xl bg-white/10 px-6 py-3 text-sm font-bold text-white ring-1 ring-white/30 transition hover:bg-white/20">Browse dedicated servers</Link>
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* ============ FAQ ============ */}
       <section className="mx-auto max-w-4xl px-6 py-14">
         <h2 className="mb-6 text-center text-2xl font-black">Your questions answered</h2>
         <div className="divide-y divide-slate-200 rounded-2xl border border-slate-200">
           {FAQS.map((f, i) => (
             <div key={f.q}>
-              <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-bold hover:bg-slate-50">
+              <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-bold transition hover:bg-sky-50/50">
                 {f.q}
-                <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${openFaq === i ? "rotate-180" : ""}`} />
+                <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-300 ${openFaq === i ? "rotate-180" : ""}`} />
               </button>
-              {openFaq === i && <p className="px-5 pb-4 text-sm leading-relaxed text-slate-600">{f.a}</p>}
+              <div className={`faq-body ${openFaq === i ? "faq-open" : ""}`}>
+                <p className="px-5 pb-4 text-sm leading-relaxed text-slate-600">{f.a}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -287,10 +385,56 @@ export default function DatacentersPage() {
   );
 }
 
-function NetworkIcon(props: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
-      <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
-    </svg>
-  );
-}
+const CSS = `
+@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pinIn { 0% { opacity: 0; transform: scale(0); } 70% { opacity: 1; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes rippleOut { 0% { r: 4; opacity: 0.8; } 100% { r: 22; opacity: 0; } }
+@keyframes dashMove { to { stroke-dashoffset: -40; } }
+@keyframes pulseDot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.75); } }
+@keyframes floatTile { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes orbDrift { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-20px) scale(1.15); } 100% { transform: translate(0,0) scale(1); } }
+@keyframes scanMove { 0% { left: -15%; } 100% { left: 110%; } }
+@keyframes shimmerTxt { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+@keyframes rowIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes tipIn { from { opacity: 0; transform: translateY(4px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes countryIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes heroBg { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+.anim-fade-up { animation: fadeUp 0.7s cubic-bezier(.2,.7,.3,1) both; }
+.delay-1 { animation-delay: 0.12s; } .delay-2 { animation-delay: 0.24s; } .delay-3 { animation-delay: 0.36s; }
+
+.hero-anim { background: linear-gradient(120deg, #000e9c 0%, #0033c8 45%, #000e9c 100%); background-size: 220% 220%; animation: heroBg 9s ease-in-out infinite; }
+.hero-shimmer { background: linear-gradient(90deg, #7dd3fc, #fff, #7dd3fc); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmerTxt 3.2s linear infinite; }
+.hero-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 44px 44px; mask-image: radial-gradient(ellipse at 30% 40%, #000 30%, transparent 75%); }
+.orb { position: absolute; border-radius: 9999px; filter: blur(60px); pointer-events: none; animation: orbDrift 10s ease-in-out infinite; }
+.orb-1 { width: 340px; height: 340px; background: #38bdf8; opacity: 0.22; top: -80px; right: 8%; }
+.orb-2 { width: 260px; height: 260px; background: #818cf8; opacity: 0.2; bottom: -70px; left: 12%; animation-delay: 2.5s; }
+.orb-3 { width: 180px; height: 180px; background: #22d3ee; opacity: 0.16; top: 30%; left: 45%; animation-delay: 5s; }
+.hero-tile { animation: fadeUp 0.6s both, floatTile 4s ease-in-out infinite; animation-delay: inherit, 1s; }
+
+.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 9999px; background: #34d399; box-shadow: 0 0 0 0 rgba(52,211,153,.6); animation: pulseDot 1.6s ease-in-out infinite; }
+.stat-num { text-shadow: 0 0 18px rgba(125,211,252,.5); }
+
+.map-frame { background: linear-gradient(180deg,#eaf4f8,#e2eef6); box-shadow: 0 10px 40px -12px rgba(0,80,215,.18); }
+.scanline { position: absolute; top: 0; bottom: 0; width: 90px; background: linear-gradient(90deg, transparent, rgba(0,80,215,.07), transparent); animation: scanMove 7s linear infinite; pointer-events: none; z-index: 2; }
+.country-fade { animation: countryIn 0.8s ease both; }
+.pin-enter { animation: pinIn 0.5s cubic-bezier(.2,.9,.3,1.4) both; cursor: pointer; }
+.pin-core { transition: transform 0.2s; transform-origin: center; transform-box: fill-box; }
+g.pin-enter:hover .pin-core { transform: scale(1.35); }
+.ripple { animation: rippleOut 2.4s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+.arc-flow { animation: dashMove 1.6s linear infinite; }
+.tip-pop { animation: tipIn 0.18s ease-out both; pointer-events: none; }
+.legend-dot { box-shadow: 0 0 0 0 rgba(0,80,215,.4); animation: pulseDot 2s ease-in-out infinite; }
+
+.tab-btn:hover { color: #0050d7; }
+.tab-underline { position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: #0050d7; border-radius: 2px; animation: rowIn 0.3s ease both; }
+.row-anim { animation: rowIn 0.4s ease both; transition: background 0.2s; }
+
+.btn-glow { position: relative; transition: transform 0.2s, box-shadow 0.3s; }
+.btn-glow:hover { transform: translateY(-2px); box-shadow: 0 8px 30px -6px rgba(56,189,248,.6); }
+.cta-anim { background: linear-gradient(120deg,#000e9c,#0029a8,#000e9c); background-size: 200% 200%; animation: heroBg 8s ease-in-out infinite; }
+
+.faq-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; }
+.faq-body > p { overflow: hidden; }
+.faq-open { grid-template-rows: 1fr; }
+`;
