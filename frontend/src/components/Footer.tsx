@@ -35,6 +35,8 @@ export default function Footer() {
               <Link href="/dedicated-servers" className="block hover:text-white">Dedicated Servers</Link>
               <Link href="/web-hosting" className="block hover:text-white">Web Hosting</Link>
               <Link href="/domain" className="block hover:text-white">Domains</Link>
+              <Link href="/datacenters" className="block hover:text-white">Datacenter locations</Link>
+              <Link href="/status" className="block hover:text-white">Service status</Link>
             </div>
           </div>
           <div>

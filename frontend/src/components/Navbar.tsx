@@ -258,6 +258,7 @@ const megaMenu: MegaEntry[] = [
         ],
         footerLinks: [
           { label: "All network products", href: "/network" },
+          { label: "Datacenter locations", href: "/datacenters" },
           { label: "Guides & Documentation", href: "/kb" },
         ],
       },
