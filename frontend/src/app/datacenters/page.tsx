@@ -2,11 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup, Graticule } from "react-simple-maps";
-import topo from "world-atlas/countries-50m.json";
 import { getGeo, type GeoInfo } from "@/lib/geoip";
+
+const DCMap = dynamic(() => import("@/components/DCMap"), {
+  ssr: false,
+  loading: () => <div className="flex h-[480px] items-center justify-center text-sm font-bold text-cyan-300"><span className="live-dot mr-2" /> Loading satellite map…</div>,
+});
 import { Globe, MapPin, Search, ChevronDown, Server, ShieldCheck, Zap, Radio, Plus, Minus, Maximize2, Cpu } from "lucide-react";
 
 type Zone = { name: string; dcs?: string[] };
@@ -67,19 +71,6 @@ const REGIONS: Region[] = [
 ];
 
 const CONTINENTS = ["Europe", "North America", "Asia Pacific", "Africa"] as const;
-
-const ARCS: { from: [number, number]; to: [number, number] }[] = [
-  { from: [-73.87, 45.32], to: [3.2, 50.69] },
-  { from: [-73.87, 45.32], to: [0.18, 51.48] },
-  { from: [-122.99, 45.52], to: [-73.87, 45.32] },
-  { from: [-77.67, 38.75], to: [2.13, 50.99] },
-  { from: [3.2, 50.69], to: [72.88, 19.08] },
-  { from: [72.88, 19.08], to: [103.82, 1.35] },
-  { from: [103.82, 1.35], to: [151.21, -33.87] },
-  { from: [7.75, 48.57], to: [72.88, 19.08] },
-  { from: [-6.83, 34.02], to: [2.13, 50.99] },
-  { from: [-122.99, 45.52], to: [151.21, -33.87] },
-];
 
 const FINDER_CITIES: { name: string; lat: number; lng: number }[] = [
   { name: "Delhi, India", lat: 28.6, lng: 77.2 }, { name: "Mumbai, India", lat: 19.1, lng: 72.9 },
@@ -148,7 +139,6 @@ export default function DatacentersPage() {
   const [finder, setFinder] = useState("");
   const [myGeo, setMyGeo] = useState<GeoInfo | null>(null);
   const [tableKey, setTableKey] = useState(0);
-  const [pos, setPos] = useState<{ c: [number, number]; z: number }>({ c: [15, 15], z: 1 });
 
   const matches = (r: Region) =>
     (r.type === "LOCAL-ZONE" ? showLz : showDc) &&
@@ -182,9 +172,6 @@ export default function DatacentersPage() {
     }
     return best;
   }, [myGeo]);
-
-  // Counter-scale so pins stay constant size while zooming (satellite-style)
-  const pinScale = 1 / Math.sqrt(pos.z);
 
   return (
     <div className="min-h-screen bg-[#070714] text-slate-200">
