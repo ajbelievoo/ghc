@@ -572,6 +572,37 @@ g.pin-enter:hover .pin-core { transform: scale(1.4); }
 @keyframes tlDot { 0%,100% { box-shadow: 0 0 0 0 rgba(0,240,255,.5); } 50% { box-shadow: 0 0 0 7px rgba(0,240,255,0); } }
 
 .sel-ring { animation: selPulse 1.4s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+
+/* ===== Leaflet satellite map ===== */
+.dcmap-root { position: relative; }
+.leaflet-container { background: #05050f; font-family: inherit; }
+.leaflet-container .leaflet-control-zoom { border: 1px solid rgba(255,255,255,.15) !important; border-radius: 10px !important; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,.5); }
+.leaflet-container .leaflet-control-zoom a { background: rgba(12,12,36,.9) !important; color: #7dd3fc !important; border: none !important; width: 32px !important; height: 32px !important; line-height: 32px !important; backdrop-filter: blur(6px); transition: all .2s; }
+.leaflet-container .leaflet-control-zoom a:hover { background: rgba(0,240,255,.18) !important; color: #00f0ff !important; }
+.sat-tiles { filter: brightness(.82) saturate(1.05) contrast(1.05); }
+.label-tiles { filter: brightness(1.15); }
+.dark-tiles { filter: brightness(.9); }
+.leaflet-pane { z-index: 1; }
+.leaflet-marker-pane { z-index: 600 !important; }
+.leaflet-overlay-pane path.packet { animation: packetMove 1.6s linear infinite; filter: drop-shadow(0 0 4px #00f0ff); }
+
+.dc-pin-wrap { background: transparent; border: none; }
+.dc-pin { position: relative; width: 0; height: 0; }
+.dc-pin .dot { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: #00f0ff; border: 2px solid #070714; box-shadow: 0 0 10px #00f0ff, 0 0 22px rgba(0,240,255,.6); animation: dotPulse 2s ease-in-out infinite; }
+.dc-pin.big .dot { left: -10px; top: -10px; width: 20px; height: 20px; }
+.dc-pin.lz .dot { left: -5px; top: -5px; width: 10px; height: 10px; background: #34d399; box-shadow: 0 0 8px #34d399, 0 0 16px rgba(52,211,153,.5); }
+.dc-pin.mine .dot { background: #fbbf24; box-shadow: 0 0 12px #fbbf24, 0 0 26px rgba(251,191,36,.7); border-color: #070714; }
+.dc-pin.active .dot { transform: scale(1.3); }
+.dc-pin .dc-count { position: absolute; left: 0; top: -3.4px; transform: translateX(-50%); font-size: 9px; font-weight: 900; color: #070714; }
+.dc-pin .ring { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #00f0ff; opacity: .8; animation: ping2 2.6s cubic-bezier(0,0,.2,1) infinite; }
+.dc-pin .ring.r2 { animation-delay: .9s; }
+.dc-pin .ring.r3 { animation-delay: 1.7s; }
+.dc-pin.lz .ring { left: -5px; top: -5px; width: 10px; height: 10px; border-color: #34d399; }
+.dc-pin.mine .ring { border-color: #fbbf24; }
+.dc-pin.big .ring { left: -10px; top: -10px; width: 20px; height: 20px; }
+@keyframes ping2 { 0% { transform: scale(1); opacity: .85; } 100% { transform: scale(3.4); opacity: 0; } }
+@keyframes dotPulse { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+
 .drawer-in { animation: drawerIn .3s cubic-bezier(.2,.8,.3,1) both; }
 .finder-pop { animation: finderPop .35s cubic-bezier(.2,.9,.3,1.2) both; }
 .timeline-dot { width: 15px; height: 15px; border-radius: 9999px; background: #00f0ff; box-shadow: 0 0 12px #00f0ff; animation: tlDot 2.2s ease-in-out infinite; }
