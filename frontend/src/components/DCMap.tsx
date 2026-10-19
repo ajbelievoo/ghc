@@ -38,14 +38,15 @@ function arcPoints(from: [number, number], to: [number, number], lift = 12, n = 
   return pts;
 }
 
-function pinIcon(r: MapRegion, mine: boolean, active: boolean) {
+function pinIcon(r: MapRegion, mine: boolean, active: boolean, delay: number) {
   const isLz = r.type === "LOCAL-ZONE";
   const big = !isLz && (r.dcCount || 0) > 3;
-  const cls = `dc-pin ${isLz ? "lz" : ""} ${mine ? "mine" : ""} ${active ? "active" : ""} ${big ? "big" : ""}`;
+  const cls = `dc-pin pin-pop ${isLz ? "lz" : ""} ${mine ? "mine" : ""} ${active ? "active" : ""} ${big ? "big" : ""}`;
   const inner = big && r.dcCount ? `<span class="dc-count">${r.dcCount}</span>` : "";
+  const tag = mine ? `<span class="mine-tag">★ YOUR REGION</span>` : "";
   return L.divIcon({
     className: "dc-pin-wrap",
-    html: `<div class="${cls}"><span class="ring"></span><span class="ring r2"></span><span class="ring r3"></span><span class="dot"></span>${inner}</div>`,
+    html: `<div class="${cls}" style="animation-delay:${delay}ms">${tag}<span class="ring"></span><span class="ring r2"></span><span class="ring r3"></span><span class="dot"></span>${inner}</div>`,
     iconSize: [0, 0],
     iconAnchor: [0, 0],
   });
@@ -96,7 +97,7 @@ export default function DCMap({
             <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}" maxNativeZoom={17} opacity={0.9} className="label-tiles" />
           </>
         ) : (
-          <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" maxNativeZoom={17} className="dark-tiles" />
+          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" maxNativeZoom={16} className="dark-tiles" />
         )}
 
         {/* animated backbone arcs */}
@@ -110,11 +111,11 @@ export default function DCMap({
           );
         })}
 
-        {regions.map((r) => (
+        {regions.map((r, i) => (
           <Marker
             key={r.regionName}
             position={[r.lat, r.lng]}
-            icon={pinIcon(r, r.regionName === myRegionName, r.regionName === selectedName)}
+            icon={pinIcon(r, r.regionName === myRegionName, r.regionName === selectedName, 300 + i * 45)}
             eventHandlers={{ click: () => onSelect(r) }}
           />
         ))}

@@ -125,6 +125,37 @@ function Stat({ n, l, suffix = "" }: { n: number; l: string; suffix?: string }) 
   );
 }
 
+const FACTS = [
+  "Roubaix alone hosts 9 datacentres — our largest single-site footprint in Europe.",
+  "Beauharnois (Canada) runs almost entirely on hydro-electric power — clean energy, cool climate.",
+  "Mumbai region opened in 2021 — giving Indian users single-digit-ms latency to their servers.",
+  "A 3-AZ region can lose an entire datacentre and your service stays online — zero downtime design.",
+  "Our backbone links every region on private fiber — traffic never touches the public internet between DCs.",
+  "Local Zones put compute within ~20 ms of major cities — perfect for game servers and live apps.",
+];
+
+function FactRotator() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((v) => (v + 1) % FACTS.length), 3800);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="relative min-h-[72px]">
+      {FACTS.map((f, k) => (
+        <p key={k} className={`fact-slide absolute inset-0 text-sm leading-relaxed text-slate-300 ${k === i ? "fact-on" : ""}`}>
+          <span className="mr-2 text-lg font-black text-cyan-300">{k + 1}.</span>{f}
+        </p>
+      ))}
+      <div className="absolute -bottom-1 left-0 flex gap-1.5">
+        {FACTS.map((_, k) => (
+          <button key={k} onClick={() => setI(k)} className={`h-1.5 rounded-full transition-all ${k === i ? "w-6 bg-cyan-400" : "w-1.5 bg-white/20 hover:bg-white/40"}`} aria-label={`Fact ${k + 1}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const dcTotal = REGIONS.filter((r) => r.type !== "LOCAL-ZONE").reduce((a, r) => a + (r.dcCount || 0), 0);
 const countryTotal = new Set(REGIONS.map((r) => r.location.split("—")[0].trim())).size;
 
@@ -230,6 +261,15 @@ export default function DatacentersPage() {
 
       {/* ============ MAP ============ */}
       <section className="mx-auto max-w-7xl px-6 py-12">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">Fly to:</span>
+          {([["Europe", [50, 15], 4], ["North America", [42, -100], 3.2], ["Asia Pacific", [10, 115], 3.5], ["Africa", [5, 15], 3]] as const).map(([label, c, z]) => (
+            <button key={label} onClick={() => setFlyTo({ lat: c[0], lng: c[1], z })} className="cont-chip rounded-full border border-white/10 bg-[#0c0c24]/80 px-4 py-1.5 text-xs font-bold text-slate-300 backdrop-blur transition hover:border-cyan-400/50 hover:text-cyan-300">
+              ✈ {label}
+            </button>
+          ))}
+          <button onClick={() => setFlyTo({ lat: 28, lng: 15, z: 2.4 })} className="cont-chip rounded-full border border-white/10 bg-[#0c0c24]/80 px-4 py-1.5 text-xs font-bold text-slate-300 backdrop-blur transition hover:border-cyan-400/50 hover:text-cyan-300">🌍 Reset</button>
+        </div>
         <div className="map-frame relative overflow-hidden rounded-2xl border border-cyan-400/20 shadow-[0_0_60px_-15px_rgba(0,240,255,.25)]">
           <div className="scanline" />
           <DCMap
@@ -385,6 +425,78 @@ export default function DatacentersPage() {
               <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{f.d}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ============ INSIDE THE DATACENTER ============ */}
+      <section className="mx-auto max-w-7xl px-6 pb-14">
+        <h2 className="mb-2 text-center text-2xl font-black text-white">What powers <span className="hero-shimmer">every datacenter</span></h2>
+        <p className="mb-8 text-center text-sm text-slate-400">Four redundant layers keep your servers running 24/7 — har layer ka backup ka bhi backup hai.</p>
+        <div className="grid gap-4 md:grid-cols-4">
+          {[
+            { icon: "⚡", t: "Power", d: "Dual feeds + UPS + diesel generators. Even a full grid outage can't take your server down.", anim: "pwr-anim", bar: "bg-yellow-400" },
+            { icon: "❄️", t: "Cooling", d: "Hot/cold aisle containment with N+1 chillers — hardware stays cool even at 100% load.", anim: "cool-anim", bar: "bg-cyan-400" },
+            { icon: "🌐", t: "Network", d: "Multiple fiber carriers on diverse paths + private backbone. No single point of failure.", anim: "net-anim", bar: "bg-violet-400" },
+            { icon: "🛡️", t: "Security", d: "24/7 guards, biometric access, CCTV and always-on Anti-DDoS scrubbing at the edge.", anim: "sec-anim", bar: "bg-emerald-400" },
+          ].map((f, i) => (
+            <div key={f.t} className="why-card anim-fade-up rounded-2xl border border-white/10 bg-[#0c0c24]/70 p-6 text-center transition hover:border-cyan-400/40" style={{ animationDelay: `${i * 0.12}s` }}>
+              <div className={`layer-visual ${f.anim} mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl`}>{f.icon}</div>
+              <div className={`mx-auto mb-3 h-1 w-10 rounded-full ${f.bar} opacity-70`} />
+              <h4 className="text-base font-black text-white">{f.t}</h4>
+              <p className="mt-1.5 text-xs leading-relaxed text-slate-400">{f.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ============ GIANT SERVER RACK ============ */}
+      <section className="mx-auto max-w-7xl px-6 pb-14">
+        <div className="overflow-hidden rounded-2xl border border-cyan-400/20 bg-gradient-to-b from-[#0c0c24] to-[#08081a] p-6 md:p-10">
+          <div className="flex flex-col items-center gap-8 md:flex-row">
+            <div className="flex-1">
+              <p className="mb-1 text-[11px] font-black uppercase tracking-widest text-cyan-300">Inside a rack</p>
+              <h3 className="text-2xl font-black text-white">Every unit, always on</h3>
+              <p className="mt-2 max-w-md text-sm text-slate-400">Enterprise-grade bare metal in every region — NVMe storage, ECC memory, redundant PSUs and out-of-band management. The same class of hardware runs in all 43+ facilities.</p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {["NVMe SSD", "ECC RAM", "Redundant PSU", "IPMI/KVM", "Anti-DDoS", "24/7 NOC"].map((t) => (
+                  <span key={t} className="rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 text-[11px] font-bold text-cyan-200">{t}</span>
+                ))}
+              </div>
+            </div>
+            <div className="rack-big w-full max-w-sm rounded-xl border border-white/10 bg-[#070714] p-3">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((u) => (
+                <div key={u} className="rack-u mb-1.5 flex items-center gap-2 rounded-md border border-white/[.06] bg-[#0d0d24] px-3 py-2" style={{ animationDelay: `${u * 0.09}s` }}>
+                  <span className="led" style={{ animationDelay: `${u * 0.21}s` }} />
+                  <span className="led" style={{ animationDelay: `${u * 0.21 + 0.4}s` }} />
+                  <div className="mx-1 h-3 flex-1 rounded bg-white/[.04]">
+                    <div className="u-load h-full rounded bg-gradient-to-r from-cyan-500/60 to-cyan-300/80" style={{ animationDelay: `${u * 0.35}s`, width: `${35 + ((u * 17) % 55)}%` }} />
+                  </div>
+                  <span className="font-mono text-[9px] text-slate-500">U{u + 1}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ ROTATING FACTS + CERTS ============ */}
+      <section className="mx-auto max-w-7xl px-6 pb-14">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-[#0c0c24]/70 p-6">
+            <p className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-cyan-300"><Radio className="h-3.5 w-3.5" /> Did you know?</p>
+            <FactRotator />
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-[#0c0c24]/70 p-6">
+            <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-cyan-300">Certified & compliant</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {["ISO 27001", "SOC 2 Type II", "GDPR Ready", "Tier III+ Facilities", "PCI-DSS Zones", "Energy Efficient"].map((c, i) => (
+                <div key={c} className="cert-chip anim-fade-up flex items-center gap-2 rounded-lg border border-white/10 bg-white/[.03] px-3 py-2.5" style={{ animationDelay: `${i * 0.08}s` }}>
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <span className="text-xs font-bold text-slate-200">{c}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -608,4 +720,37 @@ g.pin-enter:hover .pin-core { transform: scale(1.4); }
 .timeline-dot { width: 15px; height: 15px; border-radius: 9999px; background: #00f0ff; box-shadow: 0 0 12px #00f0ff; animation: tlDot 2.2s ease-in-out infinite; }
 .why-card { box-shadow: 0 0 0 rgba(0,240,255,0); }
 .why-card:hover { box-shadow: 0 12px 40px -14px rgba(0,240,255,.35); transform: translateY(-3px); }
+
+/* marker pop + your-region tag */
+@keyframes pinPop { 0% { transform: scale(0); opacity: 0; } 70% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+.pin-pop { animation: pinPop .5s cubic-bezier(.2,.9,.3,1.4) both; }
+.mine-tag { position: absolute; left: 0; top: -26px; transform: translateX(-50%); white-space: nowrap; font-size: 9px; font-weight: 900; letter-spacing: .06em; color: #fbbf24; text-shadow: 0 0 8px #000, 0 1px 2px #000; animation: dotPulse 2s ease-in-out infinite; }
+
+/* continent fly chips */
+.cont-chip { transition: all .2s; }
+.cont-chip:hover { box-shadow: 0 0 16px rgba(0,240,255,.3); transform: translateY(-1px); }
+
+/* datacenter layer icons */
+@keyframes pwrZap { 0%,80%,100% { transform: scale(1); } 90% { transform: scale(1.15) rotate(-6deg); } }
+@keyframes coolSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes netPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(167,139,250,.4); } 50% { box-shadow: 0 0 0 12px rgba(167,139,250,0); } }
+@keyframes secShield { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.5); } }
+.pwr-anim { animation: pwrZap 2.2s ease-in-out infinite; }
+.cool-anim { animation: coolSpin 6s linear infinite; }
+.net-anim { animation: netPulse 2.4s ease-in-out infinite; }
+.sec-anim { animation: secShield 2s ease-in-out infinite; }
+
+/* big rack */
+.rack-big { box-shadow: 0 0 50px -14px rgba(0,240,255,.3), inset 0 0 24px rgba(0,240,255,.04); }
+.rack-u { animation: rackIn .45s cubic-bezier(.2,.8,.3,1) both; }
+.u-load { animation: loadGrow 1.2s cubic-bezier(.2,.8,.3,1) both; }
+@keyframes loadGrow { from { width: 0; } }
+
+/* facts rotator */
+.fact-slide { opacity: 0; transform: translateY(8px); transition: opacity .45s ease, transform .45s ease; }
+.fact-slide.fact-on { opacity: 1; transform: translateY(0); }
+
+/* cert chips */
+.cert-chip { transition: all .2s; }
+.cert-chip:hover { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.08); transform: translateY(-1px); }
 `;
